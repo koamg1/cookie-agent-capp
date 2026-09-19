@@ -111,10 +111,11 @@ export const App: React.FC = () => {
     setLogs((prev) => [...prev.slice(-45), entry]);
   }, []);
 
-  // Submenu Navigation State (fleet vs burn)
+  // Submenu Navigation State (fleet vs vault vs burn)
   const [activeTab, setActiveTab] = useState<NavTab>(() => {
-    if (typeof window !== 'undefined' && window.location.hash === '#burn') {
-      return 'burn';
+    if (typeof window !== 'undefined') {
+      if (window.location.hash === '#burn') return 'burn';
+      if (window.location.hash === '#vault') return 'vault';
     }
     return 'fleet';
   });
@@ -123,6 +124,8 @@ export const App: React.FC = () => {
     const handleHashChange = () => {
       if (window.location.hash === '#burn') {
         setActiveTab('burn');
+      } else if (window.location.hash === '#vault') {
+        setActiveTab('vault');
       } else if (window.location.hash === '#fleet' || window.location.hash === '') {
         setActiveTab('fleet');
       }
@@ -133,9 +136,10 @@ export const App: React.FC = () => {
 
   const handleSelectTab = (tab: NavTab) => {
     setActiveTab(tab);
-    window.location.hash = tab === 'burn' ? '#burn' : '#fleet';
+    window.location.hash = `#${tab}`;
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    addLog('NAV', `Navigated to ${tab === 'burn' ? '🔥 Burn Oven & Monster' : '🛸 Fleet & Swarm'} submenu`, 'text-cyan-300');
+    const tabName = tab === 'burn' ? '🔥 Burn Oven & Monster' : tab === 'vault' ? '⚡ Cookie HyperArb Vault' : '🛸 Fleet & Swarm';
+    addLog('NAV', `Navigated to ${tabName} submenu`, 'text-cyan-300');
   };
 
   // Detect Installed Wallets
@@ -469,7 +473,7 @@ export const App: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
         
-        {activeTab === 'fleet' ? (
+        {activeTab === 'fleet' && (
           <>
             {/* Hero Banner */}
             <HeroBanner />
@@ -507,28 +511,32 @@ export const App: React.FC = () => {
                 balanceCookie={balanceCookie}
                 onOpenBridgeModal={() => setIsBridgeModalOpen(true)}
                 onNavigateToBurn={() => handleSelectTab('burn')}
+                onNavigateToVault={() => handleSelectTab('vault')}
               />
               <McpKitchen />
             </div>
-
-            {/* HyperArb Automated Dual-Leg Vault (Autonomous 24/7 MEV Engine) */}
-            <HyperArbVault
-              connectedAddress={connectedAddress}
-              activeWalletType={activeWalletType}
-              activeProvider={activeProvider}
-              balanceCookie={balanceCookie}
-              onOpenWalletModal={() => {
-                setModalStatus('idle');
-                setIsModalOpen(true);
-              }}
-              onOpenBridgeModal={() => setIsBridgeModalOpen(true)}
-              onRefreshBalance={() => {
-                if (connectedAddress) fetchBalance(connectedAddress);
-              }}
-              onAddLog={addLog}
-            />
           </>
-        ) : (
+        )}
+
+        {activeTab === 'vault' && (
+          <HyperArbVault
+            connectedAddress={connectedAddress}
+            activeWalletType={activeWalletType}
+            activeProvider={activeProvider}
+            balanceCookie={balanceCookie}
+            onOpenWalletModal={() => {
+              setModalStatus('idle');
+              setIsModalOpen(true);
+            }}
+            onOpenBridgeModal={() => setIsBridgeModalOpen(true)}
+            onRefreshBalance={() => {
+              if (connectedAddress) fetchBalance(connectedAddress);
+            }}
+            onAddLog={addLog}
+          />
+        )}
+
+        {activeTab === 'burn' && (
           <CookieBurnOven
             connectedAddress={connectedAddress}
             activeWalletType={activeWalletType}

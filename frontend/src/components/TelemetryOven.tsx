@@ -15,6 +15,7 @@ interface TelemetryOvenProps {
   balanceCookie?: number;
   onOpenBridgeModal?: () => void;
   onNavigateToBurn?: () => void;
+  onNavigateToVault?: () => void;
 }
 
 export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
@@ -27,7 +28,8 @@ export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
   selectedAgent,
   balanceCookie = 0,
   onOpenBridgeModal,
-  onNavigateToBurn
+  onNavigateToBurn,
+  onNavigateToVault
 }) => {
   const [agentId, setAgentId] = useState('Sentinel Prime Orchestrator');
   const [memoPayload, setMemoPayload] = useState('prime:swarm_heartbeat | agents_synced:50/50 | network:operational');
@@ -174,20 +176,34 @@ export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
         </div>
       )}
 
-      {onNavigateToBurn && (
-        <div className="pt-2 border-t border-[#0b1f3a]/10 flex items-center justify-between">
+      {(onNavigateToVault || onNavigateToBurn) && (
+        <div className="pt-2 border-t border-[#0b1f3a]/10 flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs font-bold text-[#0b1f3a]/75 flex items-center gap-1.5">
             <span>🍪</span>
-            <span>Looking for $COOKIE Burn Oven & Monster?</span>
+            <span>Explore other protocol submenus:</span>
           </span>
-          <button
-            type="button"
-            onClick={onNavigateToBurn}
-            className="text-xs font-black text-[#991b1b] bg-[#fed7aa] hover:bg-[#fca5a5] px-2.5 py-1 rounded-full border border-[#0b1f3a] shadow-[0_1px_0_#0b1f3a] cursor-pointer flex items-center gap-1 hover:translate-y-[-1px] transition-transform"
-          >
-            <span>🔥 Open Burn Oven</span>
-            <span>&rarr;</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {onNavigateToVault && (
+              <button
+                type="button"
+                onClick={onNavigateToVault}
+                className="text-xs font-black text-[#854d0e] bg-[#fef08a] hover:bg-[#fde047] px-2.5 py-1 rounded-full border border-[#0b1f3a] shadow-[0_1px_0_#0b1f3a] cursor-pointer flex items-center gap-1 hover:translate-y-[-1px] transition-transform"
+              >
+                <span>⚡ HyperArb Vault</span>
+                <span>&rarr;</span>
+              </button>
+            )}
+            {onNavigateToBurn && (
+              <button
+                type="button"
+                onClick={onNavigateToBurn}
+                className="text-xs font-black text-[#991b1b] bg-[#fed7aa] hover:bg-[#fca5a5] px-2.5 py-1 rounded-full border border-[#0b1f3a] shadow-[0_1px_0_#0b1f3a] cursor-pointer flex items-center gap-1 hover:translate-y-[-1px] transition-transform"
+              >
+                <span>🔥 Burn Oven</span>
+                <span>&rarr;</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

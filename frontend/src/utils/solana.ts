@@ -371,12 +371,13 @@ export const COOKIE_MAINNET_MINT = '36ZrtQoab5MhhySaP1YSTwUahSk6GRVUTtZ6cuVfm9e1
 export const CANONICAL_BURN_ADDRESS = '1nc1nerator11111111111111111111111111111111';
 
 export function getSolanaMainnetRpcUrl(): string {
+  // Always prioritize the active origin's local RPC proxy
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return `${window.location.origin}/api/v1/solana/rpc`;
+  }
   const endpoint = apiUrl('/api/v1/solana/rpc');
   if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
     return endpoint;
-  }
-  if (typeof window !== 'undefined' && window.location && window.location.origin) {
-    return `${window.location.origin}${endpoint}`;
   }
   return `http://127.0.0.1:8080${endpoint}`;
 }
@@ -390,8 +391,8 @@ export async function executeSolanaMainnetBurn(
   onStageChange?: (stage: 'preparing' | 'signing' | 'confirming') => void
 ): Promise<string> {
   if (onStageChange) onStageChange('preparing');
-  const rpcUrl = getSolanaMainnetRpcUrl();
-  const connection = new solanaWeb3.Connection(rpcUrl, {
+  let rpcUrl = getSolanaMainnetRpcUrl();
+  let connection = new solanaWeb3.Connection(rpcUrl, {
     commitment: "confirmed",
     wsEndpoint: ""
   });
@@ -412,7 +413,29 @@ export async function executeSolanaMainnetBurn(
   });
 
   const transaction = new solanaWeb3.Transaction().add(burnIx, memoIx);
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+
+  let blockhash: string;
+  let lastValidBlockHeight: number;
+  try {
+    const res = await connection.getLatestBlockhash("confirmed");
+    blockhash = res.blockhash;
+    lastValidBlockHeight = res.lastValidBlockHeight;
+  } catch (primaryErr) {
+    console.warn("Primary RPC failed to get blockhash, trying localhost fallback:", primaryErr);
+    const fallbackUrl = "http://127.0.0.1:8080/api/v1/solana/rpc";
+    if (rpcUrl !== fallbackUrl) {
+      connection = new solanaWeb3.Connection(fallbackUrl, {
+        commitment: "confirmed",
+        wsEndpoint: ""
+      });
+      const res = await connection.getLatestBlockhash("confirmed");
+      blockhash = res.blockhash;
+      lastValidBlockHeight = res.lastValidBlockHeight;
+    } else {
+      throw primaryErr;
+    }
+  }
+
   transaction.recentBlockhash = blockhash;
   transaction.feePayer = owner;
 
@@ -455,7 +478,7 @@ export async function executeCookieChainBurn(
   });
 
   const memoProgramId = new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
-  const memoPayload = `[Cookie Monster Testnet Burn] Deflation: Burned ${amount} $COOKIE`;
+  const memoPayload = `[Cookie Monster Burn] Deflation: Burned ${amount} $COOKIE on Cookie Chain SVM`;
   const memoIx = new solanaWeb3.TransactionInstruction({
     keys: [{ pubkey: owner, isSigner: true, isWritable: true }],
     programId: memoProgramId,
