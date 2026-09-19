@@ -21,7 +21,7 @@ export const HeroBanner: React.FC = () => {
         </h1>
 
         <p className="text-xs sm:text-sm font-semibold text-[#0b1f3a]/80 max-w-3xl leading-relaxed">
-          Broadcast cryptographic AI telemetry directly to Cookie Chain SVM, benchmark real-time node RPC latency, and equip autonomous agents with standard Model Context Protocol (MCP) tools. 100% authentic Web3, zero mockups.
+          Broadcast cryptographic AI telemetry directly to Cookie Chain SVM, benchmark real-time node RPC latency, and equip autonomous agents with standard Model Context Protocol (MCP) tools. Production-ready SVM infrastructure for the Cookie ecosystem.
         </p>
 
         <div className="pt-2 flex flex-wrap items-center gap-2 text-[11px] font-bold">

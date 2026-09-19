@@ -75,12 +75,12 @@ export const AgentFleet: React.FC<AgentFleetProps> = ({ onSelectAgent, selectedA
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-black text-[#0b1f3a]">Telemetry Agent Sentinel Swarm</h2>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#86efac] border-2 border-[#0b1f3a] text-[#0b1f3a]">
-                ● 50 SENTINELS LIVE
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#d8f1ff] border-2 border-[#0b1f3a] text-[#0b1f3a] shadow-[0_1px_0_#0b1f3a]">
+                ● 50 SENTINEL RPC PROBES
               </span>
             </div>
             <p className="text-[11px] font-bold text-[#0b1f3a]/65">
-              Autonomous Telemetry Agent Mesh on Cookie Chain (SVM) &bull; 5 Strategic Squads
+              Distributed Telemetry Agent Registry &bull; 5 Strategic Squads probing Cookie Chain SVM live health
             </p>
           </div>
         </div>

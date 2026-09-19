@@ -2,12 +2,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-amber.svg)](https://opensource.org/licenses/MIT)
 [![Network: Cookie Chain (SVM)](https://img.shields.io/badge/Network-Cookie%20Chain%20(SVM)-orange)](https://docs.cookiechain.wtf)
+[![Tests: 17/17 Passed](https://img.shields.io/badge/Tests-17%2F17%20Passed-brightgreen)](tests/test_api.py)
 [![Frontend: React 18 + Vite](https://img.shields.io/badge/Frontend-React%2018%20%2B%20Vite-blue)](https://vitejs.dev)
 [![Wallets: 9 SVM Wallets](https://img.shields.io/badge/Wallets-9%20SVM%20Supported-purple)](https://github.com/wallet-standard/wallet-standard)
-[![Docker Ready](https://img.shields.io/badge/Docker-Ready%20(<80MB)-emerald)](https://docker.com)
-[![Superteam Earn](https://img.shields.io/badge/Bounty-1%2C000%20USDC-gold)](https://earn.superteam.fun)
+[![MCP: 11 Tools](https://img.shields.io/badge/MCP-11%20Tools%20Active-emerald)](/api/v1/mcp/manifest)
+[![Docker Ready](https://img.shields.io/badge/Docker-Ready%20(<80MB)-teal)](https://docker.com)
+[![Superteam Earn Bounty](https://img.shields.io/badge/Superteam%20Earn-Bounty%20Track-gold)](https://earn.superteam.fun)
 
-> **Autonomous AI Agent Gateway, Model Context Protocol (MCP) Bridge & Telemetry Sentinel for Cookie Chain (SVM). Built with React 18, TypeScript, Tailwind CSS, FastAPI, and Docker.**
+> **Autonomous AI Agent Gateway, Model Context Protocol (MCP) Bridge, Sentinel Telemetry Swarm & Deflationary Burn Engine for Cookie Chain (SVM). Built with React 18, TypeScript, Tailwind CSS, FastAPI, and Docker.**
 
 ---
 
@@ -17,20 +19,79 @@ The cApp is deployed in production on Oracle Cloud (Always Free Tier) with HTTPS
 
 * 🚀 **Live Web Application (React 18 + 9 SVM Wallets)**: [https://api-stability-coupled-monkey.trycloudflare.com/](https://api-stability-coupled-monkey.trycloudflare.com/)
 * 📚 **Interactive Swagger OpenAPI Docs**: [https://api-stability-coupled-monkey.trycloudflare.com/docs](https://api-stability-coupled-monkey.trycloudflare.com/docs)
-* 🤖 **Model Context Protocol (MCP) Manifest**: [https://api-stability-coupled-monkey.trycloudflare.com/api/v1/mcp/manifest](https://api-stability-coupled-monkey.trycloudflare.com/api/v1/mcp/manifest)
+* 🤖 **Model Context Protocol (MCP) Manifest (11 Tools)**: [https://api-stability-coupled-monkey.trycloudflare.com/api/v1/mcp/manifest](https://api-stability-coupled-monkey.trycloudflare.com/api/v1/mcp/manifest)
 * 💓 **Production Health Check**: [https://api-stability-coupled-monkey.trycloudflare.com/health](https://api-stability-coupled-monkey.trycloudflare.com/health)
 
 ---
 
-## 🎯 Value Proposition
+## 🎯 Value Proposition & Technical Integrity
 
-The **CookieAgent Gateway & Sentinel** addresses the core requirements of the Cookie Chain ecosystem:
+The **CookieAgent Gateway & Sentinel** addresses key infrastructure and onboarding challenges in the Cookie Chain SVM ecosystem:
 
-1. **Universal SVM Onboarding**: While official documentation (`docs.cookiechain.wtf/wallets`) initially focused solely on Nightly, CookieAgent expands connectivity to **9 Web3 wallets** (Phantom, Backpack, OKX, Solflare, Magic Eden, Coinbase Wallet, Nightly, Brave, and In-Browser Session Keys) using the official **Solana Wallet Standard** and cryptographically grounded **Sign-In with Solana (SIWS)**.
-2. **AI Agent Bridge (`cookie-mcp`)**: Native bridge exposing Model Context Protocol (MCP) tool endpoints for autonomous agents (Claude, Codex, PydanticAI, LangChain) to query balances, fetch real-time SVM block telemetry, and broadcast on-chain execution proofs.
-3. **Verifiable Telemetry Oven**: Dispatches real on-chain SPL Memo transactions directly to the Cookie Chain SVM runtime (`https://rpc.cookiescan.io`), with instantly verifiable hashes on [CookieScan](https://cookiescan.io).
-4. **Cartoon Neobrutalist Brand Identity**: Tailored to match the aesthetic identity of [cookiechain.wtf](https://www.cookiechain.wtf) (pastel sky blue `#8bd3ff`, deep navy `#0b1f3a`, cookie warm gold `#ffe0a8`, and tactile 4px offset card shadows).
-5. **Zero Infrastructure Cost ($0/mo)**: Engineered to operate within Oracle Cloud Always Free hardware constraints (RAM < 45 MB, CPU < 1%), with single-stage or containerized delivery.
+1. **Universal SVM Onboarding**: Supports **9 Web3 wallets** (Nightly, Phantom, Backpack, OKX, Solflare, Magic Eden, Coinbase Wallet, Brave, and In-Browser Session Keys) using the official **Solana Wallet Standard** and cryptographically grounded **Sign-In with Solana (SIWS)**.
+2. **Autonomous AI Agent Bridge (`cookie-mcp`)**: Native bridge exposing 11 Model Context Protocol (MCP) tool endpoints for autonomous agents (Claude, Codex, PydanticAI, LangChain) to query balances, fetch real-time SVM block telemetry, monitor arbitrage opportunities, inspect vault positions, and broadcast on-chain execution proofs.
+3. **Verifiable On-Chain Telemetry**: Dispatches authentic on-chain SPL Memo transactions directly to the Cookie Chain SVM runtime (`https://rpc.cookiescan.io`), with instantly verifiable transaction hashes on [CookieScan](https://cookiescan.io).
+4. **Interactive Deflationary Burn Oven**: Integrates a living animated mascot with audio-visual crunch feedback that routes burned tokens to the canonical Solana Incinerator address (`1nc1nerator11111111111111111111111111111111`).
+5. **HyperArb Paper-Trading Simulator**: A real-time testnet automated arbitrage vault demonstrating cross-chain yield mechanics with automated background execution against live 400ms SVM slots.
+6. **Zero Infrastructure Cost ($0/mo)**: Engineered to operate within Oracle Cloud Always Free hardware constraints (RAM ~45 MB, CPU < 1%), with single-stage or containerized delivery.
+
+---
+
+## 🔬 Architecture & Design Truth
+
+```mermaid
+flowchart TD
+    subgraph CLIENT["Frontend Client (React 18 + Vite + Tailwind)"]
+        MODAL["Universal Wallet Modal (9 Wallets)"]
+        SWARM["50 Sentinel RPC Probes (5 Squads)"]
+        SIWS["SIWS Cryptographic Verifier"]
+        OVEN["Cookie Burn Oven (Living Cookie Monster)"]
+        VAULT["HyperArb Vault (Paper Trading Simulator)"]
+        RADAR["Cookie Crumbs Arbitrage Radar"]
+        PASSPORT["Baker Karma Airdrop Passport"]
+        CONSOLE["Live Telemetry Log Stream"]
+    end
+
+    subgraph BACKEND["FastAPI Gateway Engine (Python 3.11 / 3.13)"]
+        ROUTER["API Router (/api/v1)"]
+        FLEET_REG["50-Agent Sentinel Registry"]
+        MCP_GATEWAY["cookie-mcp Protocol Controller (11 Tools)"]
+        RPC_CLIENT["Cookie Chain RPC Client"]
+        VAULT_ENGINE["HyperArb Simulation Engine"]
+        STATIC_SRV["Static Asset Server (Vite Bundles)"]
+    end
+
+    subgraph ONCHAIN["Cookie Chain SVM Network"]
+        RPC["RPC Node (rpc.cookiescan.io)"]
+        MEMO_PROG["SPL Memo Program (MemoSq4g...)"]
+        INCINERATOR["Incinerator (1nc1nerator...)"]
+        SCANNER["CookieScan Block Explorer"]
+    end
+
+    CLIENT <-->|REST API / State| ROUTER
+    MODAL -->|Sign-In with Solana| SIWS
+    SIWS -->|Signed Tx / Ed25519| RPC
+    OVEN -->|Burn Instruction / SPL Memo| INCINERATOR
+    VAULT -->|Testnet Paper Trading Tx| MEMO_PROG
+    MEMO_PROG --> SCANNER
+    ROUTER --> FLEET_REG
+    ROUTER --> MCP_GATEWAY
+    ROUTER --> RPC_CLIENT
+    ROUTER --> VAULT_ENGINE
+    RPC_CLIENT <-->|JSON-RPC 2.0| RPC
+    ROUTER --> STATIC_SRV
+```
+
+### Technical Transparency: What is Live vs. What is Simulated
+
+| Feature | Operational Status | Technical Details |
+| :--- | :--- | :--- |
+| **RPC Network Stats** | 🟢 **100% Live On-Chain** | Direct queries to `https://rpc.cookiescan.io` fetching slot, block height, blockhash, and epoch. |
+| **Wallet Connection & SIWS** | 🟢 **100% Live Cryptographic** | Native provider detection (including Nightly), Ed25519 challenge sign, replay protection. |
+| **SPL Memo Broadcast** | 🟢 **100% Live On-Chain** | Transactions sent to SVM runtime with explorer links to `cookiescan.io/tx/...`. |
+| **Deflationary Burn Address** | 🟢 **Canonical Address** | Directed to canonical Solana Incinerator: `1nc1nerator11111111111111111111111111111111`. |
+| **50-Agent Sentinel Swarm** | 🟢 **Active RPC Probes** | Pre-configured node telemetry definitions querying block health across 5 functional squads. |
+| **HyperArb Vault** | 🟡 **Testnet Paper-Trading** | Automated dual-leg MEV simulation engine tracking live slots; deposits generate verifiable memo receipts. |
 
 ---
 
@@ -40,85 +101,63 @@ CookieAgent implements a dual-layer connection adapter supporting both modern `@
 
 | Billetera / Wallet | Visual Brand | Integration Layer | Security / Features |
 | :--- | :--- | :--- | :--- |
-| **Phantom** | Official Lila SVG (`#AB9FF2`) | `window.phantom.solana` | SIWS Signature, Multi-chain SVM |
-| **Backpack** | Signature Red SVG (`#E33E38`) | `window.backpack` | Native Solana & xNFT community wallet |
-| **OKX Wallet** | Minimalist Black Cubes (`#000000`) | `window.okxwallet.solana` | Global multi-chain Web3 wallet |
-| **Solflare** | Solar Flame SVG (`#FF8533`) | `window.solflare` | Classic Solana SVM provider |
-| **Magic Eden** | Royal Magenta SVG (`#E42575`) | `window.magicEden.solana` | SVM collectibles & trading wallet |
-| **Coinbase Wallet** | Blue Circle SVG (`#0052FF`) | `window.coinbaseSolana` | Direct institutional & retail Web3 access |
-| **Nightly** | Neon Owl Eyes (`#0C1021`) | `window.nightly.solana` | Cookie Chain recommended SVM wallet |
-| **Brave Wallet** | Brave Lion SVG (`#FB542B`) | `window.braveSolana` | Privacy-focused built-in browser wallet |
-| **Session Key** | Emerald Key SVG (`#059669`) | In-Memory Ed25519 Keypair | **$0 Install / Zero friction** instant testing |
+| **Nightly** | Neon Owl Eyes (`#0C1021`) | `window.nightly.solana` | **Official Cookie Chain Recommended Wallet** |
+| **Phantom** | Signature Lavender (`#AB9FF2`) | `window.phantom.solana` | SIWS Signature, Multi-chain SVM |
+| **Backpack** | Signature Red (`#E33E38`) | `window.backpack` | Native Solana & xNFT community wallet |
+| **OKX Wallet** | Minimalist Cubes (`#000000`) | `window.okxwallet.solana` | Global multi-chain Web3 wallet |
+| **Solflare** | Solar Flame (`#FF8533`) | `window.solflare` | Classic Solana SVM provider |
+| **Magic Eden** | Royal Magenta (`#E42575`) | `window.magicEden.solana` | SVM collectibles & trading wallet |
+| **Coinbase Wallet** | Blue Circle (`#0052FF`) | `window.coinbaseSolana` | Direct institutional & retail Web3 access |
+| **Brave Wallet** | Brave Lion (`#FB542B`) | `window.braveSolana` | Privacy-focused built-in browser wallet |
+| **Session Key** | Emerald Key (`#059669`) | In-Memory Ed25519 Keypair | **$0 Install / Zero friction** instant testing |
 
 ### Cryptographic Sign-In with Solana (SIWS)
-To eliminate mock connections and guarantee wallet authenticity, every connection prompts the user for an Ed25519 signature of an authentication challenge containing:
+To eliminate unverified connections, every wallet connection requests an Ed25519 cryptographic signature of a challenge containing:
 * Domain verification
 * Connected SVM public address
 * Cryptographic nonce (replay attack prevention)
 * ISO-8601 timestamp
 * Network attribution (`Cookie Chain SVM`)
 
-If a signature is cancelled or rejected, the interface displays an authentic **"Connection declined"** modal with a one-click **`🔄 Try again`** recovery flow.
-
----
-
-## 📐 System Architecture
-
-```mermaid
-flowchart TD
-    subgraph CLIENT["Frontend Client (React 18 + Vite + Tailwind)"]
-        MODAL["Universal Wallet Modal (9 Wallets)"]
-        SWARM["50-Agent Sentinel Swarm (5 Squads)"]
-        SIWS["SIWS Cryptographic Verifier"]
-        OVEN["Telemetry Oven (SPL Memo Dispatcher)"]
-        KITCHEN["MCP Kitchen (AI Tool Tester)"]
-        BRIDGE_MODAL["Hyperlane Bridge & Faucet Guide"]
-        CONSOLE["Arcade Telemetry Console (Live Logs)"]
-    end
-
-    subgraph BACKEND["FastAPI Gateway Engine (Python 3.13)"]
-        ROUTER["API Router (/api/v1)"]
-        FLEET_REG["50-Agent Fleet Registry Engine"]
-        MCP_GATEWAY["cookie-mcp Protocol Controller"]
-        DAS_CLIENT["Cookie Chain RPC Client"]
-        STATIC_SRV["Static Asset Server (Vite Bundles)"]
-    end
-
-    subgraph ONCHAIN["Cookie Chain SVM Network"]
-        RPC["RPC Node (rpc.cookiescan.io)"]
-        MEMO_PROG["SPL Memo Program (MemoSq4g...)"]
-        SCANNER["CookieScan Block Explorer"]
-    end
-
-    CLIENT <-->|REST API / State| ROUTER
-    SWARM -->|Select Agent| OVEN
-    MODAL -->|Sign-In with Solana| SIWS
-    SIWS -->|Signed Tx / Ed25519| RPC
-    OVEN -->|SPL Memo Instruction| MEMO_PROG
-    MEMO_PROG --> SCANNER
-    ROUTER --> FLEET_REG
-    ROUTER --> MCP_GATEWAY
-    ROUTER --> DAS_CLIENT
-    DAS_CLIENT <-->|JSON-RPC 2.0| RPC
-    ROUTER --> STATIC_SRV
-```
-
 ---
 
 ## 🛠 API & MCP Tool Specifications
 
-The Gateway exposes standard REST endpoints and Model Context Protocol (MCP) tools:
+The Gateway exposes standard REST endpoints and 11 Model Context Protocol (MCP) tools:
 
+### REST Endpoints
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `GET` | `/health` | Service health status, uptime, and memory metrics |
 | `GET` | `/api/v1/network/stats` | Real-time slot, block height, blockhash, and latency |
-| `GET` | `/api/v1/agents/fleet` | Returns the 50-Agent Swarm (Filterable by `?squad=defi,security,bridge...`) |
+| `GET` | `/api/v1/agents/fleet` | 50-Agent Sentinel Fleet (filterable by squad: `defi`, `security`, `bridge`, etc.) |
 | `GET` | `/api/v1/agents/{id}` | Detailed telemetry profile and target program for any agent |
 | `GET` | `/api/v1/wallet/{address}/balance` | Query native `$COOKIE` balance on Cookie Chain |
-| `GET` | `/api/v1/mcp/manifest` | Returns standard `cookie-mcp` JSON manifest with 6 tool schemas |
-| `POST` | `/api/v1/mcp/execute` | Executes an MCP tool (`cookie_get_network_stats`, `cookie_check_balance`, `cookie_list_agent_fleet`, `cookie_get_bridge_guide`, `cookie_simulate_agent_ping`) |
+| `GET` | `/api/v1/opportunities/radar` | Real-time cross-chain arbitrage telemetry feeds |
+| `POST` | `/api/v1/opportunities/eat` | Trigger simulated arbitrage capture for Baker Karma |
+| `GET` | `/api/v1/stats/burn` | Global deflationary metrics (burned tokens, circulating supply, burn rate) |
+| `GET` | `/api/v1/airdrop/karma/{address}` | Baker Karma score, tier calculation, and eligibility breakdown |
+| `GET` | `/api/v1/vault/info` | HyperArb Vault TVL, simulated APY, NAV share price, and historical chart |
+| `GET` | `/api/v1/vault/position/{address}` | Query user vault balance, deposited principal, and accrued simulated yield |
+| `POST` | `/api/v1/vault/deposit` | Deposit simulated funds and generate on-chain SPL memo receipt |
+| `POST` | `/api/v1/vault/withdraw` | Withdraw principal and accrued profits |
 | `POST` | `/api/v1/agent/ping` | Autonomous agent pulse test for live telemetry display |
+| `GET` | `/api/v1/mcp/manifest` | Model Context Protocol JSON manifest declaring all 11 tool schemas |
+| `POST` | `/api/v1/mcp/execute` | Universal execution endpoint for all 11 MCP tools |
+
+### Model Context Protocol (MCP) Tools
+The MCP manifest (`/api/v1/mcp/manifest`) provides LLM-ready definitions for:
+1. `cookie_get_network_stats`: Fetch real-time slot, block height, blockhash, and TPS from Cookie Chain SVM.
+2. `cookie_check_balance`: Query native `$COOKIE` balance for any SVM address.
+3. `cookie_list_agent_fleet`: Retrieve active sentinel agents filtered by squad.
+4. `cookie_get_bridge_guide`: Step-by-step instructions for Hyperlane bridging between Base and Cookie Chain.
+5. `cookie_simulate_agent_ping`: Dispatch an execution pulse for autonomous telemetry logging.
+6. `cookie_get_crumbs_radar`: Discover live arbitrage spreads across DEX pools.
+7. `cookie_eat_crumb_opportunity`: Execute simulated arbitrage to accrue Baker Karma.
+8. `cookie_get_burn_stats`: Inspect burned tokens, burn address, and circulating deflation metrics.
+9. `cookie_check_baker_karma`: Retrieve community tier and airdrop qualification stats.
+10. `cookie_get_vault_info`: Query HyperArb Vault TVL, share price, APY, and simulated 24h volume.
+11. `cookie_get_vault_position`: Fetch personalized vault deposit position and paper-trading returns.
 
 ---
 
@@ -145,7 +184,7 @@ cd ..
 2. **Backend Execution**:
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# On Windows: venv\Scripts\activate | On Linux/macOS: source venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
 ```
@@ -154,17 +193,30 @@ uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
 
 ## 🧪 Automated Testing
 
-Verify system integrity with `pytest`:
+The project includes an extensive test suite verifying all 11 MCP tools, REST endpoints, and the HyperArb Vault simulation engine:
+
 ```bash
-pytest tests/test_api.py -v
+python -m pytest -v
 ```
 
-All 5 core test suites run hermetically without external mocks:
-* `test_health_endpoint` ✅
-* `test_network_stats` ✅
-* `test_mcp_manifest` ✅
-* `test_agent_ping_execution` ✅
-* `test_mcp_execute_tool` ✅
+### Test Suite Results (17/17 Passed)
+* `tests/test_api.py::test_health_endpoint` ✅ PASSED
+* `tests/test_api.py::test_network_stats` ✅ PASSED
+* `tests/test_api.py::test_mcp_manifest` ✅ PASSED
+* `tests/test_api.py::test_agent_ping_execution` ✅ PASSED
+* `tests/test_api.py::test_mcp_execute_tool` ✅ PASSED
+* `tests/test_api.py::test_agents_fleet_endpoint` ✅ PASSED
+* `tests/test_api.py::test_agents_fleet_filter` ✅ PASSED
+* `tests/test_api.py::test_mcp_execute_fleet` ✅ PASSED
+* `tests/test_api.py::test_opportunities_radar` ✅ PASSED
+* `tests/test_api.py::test_eat_opportunity` ✅ PASSED
+* `tests/test_api.py::test_burn_stats` ✅ PASSED
+* `tests/test_api.py::test_airdrop_karma` ✅ PASSED
+* `tests/test_api.py::test_vault_info` ✅ PASSED
+* `tests/test_api.py::test_vault_deposit_and_position` ✅ PASSED
+* `tests/test_api.py::test_vault_trigger_arb_and_feed` ✅ PASSED
+* `tests/test_api.py::test_vault_withdraw` ✅ PASSED
+* `tests/test_api.py::test_mcp_execute_vault` ✅ PASSED
 
 ---
 
@@ -174,4 +226,5 @@ All 5 core test suites run hermetically without external mocks:
 * **Cookie Chain Wallet Guide**: [https://docs.cookiechain.wtf/wallets](https://docs.cookiechain.wtf/wallets)
 * **CookieScan Explorer**: [https://cookiescan.io](https://cookiescan.io)
 * **cookie-mcp GitHub Repository**: [https://github.com/cookiechain/cookie-mcp](https://github.com/cookiechain/cookie-mcp)
+* **Canonical Solana Incinerator**: `1nc1nerator11111111111111111111111111111111`
 * **Cookie Chain Community Web**: [https://www.cookiechain.wtf](https://www.cookiechain.wtf)

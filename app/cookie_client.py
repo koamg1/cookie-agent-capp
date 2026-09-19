@@ -164,7 +164,7 @@ class CookieChainClient:
         Fetches deflationary metrics for $COOKIE token.
         Tracks total burned supply and 24h burn volume on Cookie Chain.
         """
-        burn_addr = "11111111111111111111111111111111"
+        burn_addr = "1nc1nerator11111111111111111111111111111111"
         res = await self.get_balance(burn_addr)
         cumulative_burn = 142580.45 + (res.get("balance_cookie", 0.0))
         return {
@@ -173,7 +173,7 @@ class CookieChainClient:
             "cumulative_burned": round(cumulative_burn, 2),
             "burn_rate_24h": 4210.50,
             "deflation_status": "active",
-            "canonical_burn_program": "Burn1111111111111111111111111111111111111111"
+            "canonical_burn_program": "1nc1nerator11111111111111111111111111111111"
         }
 
 

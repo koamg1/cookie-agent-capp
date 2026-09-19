@@ -355,23 +355,23 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
             <h2 className="text-lg sm:text-xl font-black text-[#0b1f3a] tracking-tight">
               Cookie HyperArb Vault
             </h2>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-[#86efac] border border-[#0b1f3a] text-[#0b1f3a]">
-              Dual-Leg Auto-MEV
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-[#fef08a] border border-[#0b1f3a] text-[#854d0e] shadow-[0_1px_0_#0b1f3a]">
+              ● Testnet Protocol Simulator
             </span>
           </div>
-          <p className="text-xs font-bold text-[#0b1f3a]/75 mt-0.5">
-            Deposit liquidity in two legs &bull; 24/7 Sentinel Runner captures DEX spreads &bull; Instant withdrawals
+          <p className="text-xs font-bold text-[#0b1f3a]/75 mt-1 leading-relaxed max-w-2xl">
+            Autonomous dual-leg MEV runner prototype benchmarked on Cookie Chain SVM (400ms slots). Yield compounding and arbitrage runs are simulated for Hackathon paper-trading demonstration. No real financial yields promised.
           </p>
         </div>
 
         {/* Live Runner Badge */}
         <div className="inline-flex items-center gap-2 bg-[#d8f1ff] border border-[#0b1f3a] px-3 py-1.5 rounded-full shadow-[0_2px_0_#0b1f3a] self-start sm:self-center">
           <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
           </span>
           <span className="text-[11px] font-black text-[#0b1f3a]">
-            24/7 SENTINEL BOT: RUNNING (400ms SVM)
+            SIMULATED SENTINEL: ACTIVE (400ms SVM)
           </span>
         </div>
       </div>
@@ -379,7 +379,7 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
       {/* Global Vault Metrics (4 Cards) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <div className="p-3.5 bg-white/90 rounded-xl border-2 border-[#0b1f3a] shadow-[0_2px_0_#0b1f3a]">
-          <span className="text-[10px] font-black uppercase text-[#0b1f3a]/60">Total Value Locked (TVL)</span>
+          <span className="text-[10px] font-black uppercase text-[#0b1f3a]/60">Simulated TVL</span>
           <div className="text-lg sm:text-xl font-black text-[#0b1f3a] mt-0.5">
             ${vaultInfo ? vaultInfo.tvl_usd.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '21,315.00'}
           </div>
@@ -389,18 +389,18 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
         </div>
 
         <div className="p-3.5 bg-[#fef08a]/90 rounded-xl border-2 border-[#0b1f3a] shadow-[0_2px_0_#0b1f3a]">
-          <span className="text-[10px] font-black uppercase text-[#0b1f3a]/60">Projected APY</span>
+          <span className="text-[10px] font-black uppercase text-[#0b1f3a]/60">Simulated APY Model</span>
           <div className="text-lg sm:text-xl font-black text-amber-900 mt-0.5 flex items-baseline gap-1">
             <span>{vaultInfo ? `${vaultInfo.projected_apy_pct}%` : '38.4%'}</span>
             <span className="text-[10px] font-extrabold text-amber-800">APY</span>
           </div>
           <span className="text-[10px] font-bold text-amber-800">
-            90% Real Yield Reinvested
+            Paper-Trading Simulation
           </span>
         </div>
 
         <div className="p-3.5 bg-[#bbf7d0]/90 rounded-xl border-2 border-[#0b1f3a] shadow-[0_2px_0_#0b1f3a]">
-          <span className="text-[10px] font-black uppercase text-[#0b1f3a]/60">Cumulative Net Yield</span>
+          <span className="text-[10px] font-black uppercase text-[#0b1f3a]/60">Simulated Net Profit</span>
           <div className="text-lg sm:text-xl font-black text-emerald-900 mt-0.5">
             +${vaultInfo ? vaultInfo.cumulative_arb_profit_usd.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '4,328.75'}
           </div>
@@ -410,7 +410,7 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
         </div>
 
         <div className="p-3.5 bg-[#e0e7ff]/90 rounded-xl border-2 border-[#0b1f3a] shadow-[0_2px_0_#0b1f3a]">
-          <span className="text-[10px] font-black uppercase text-[#0b1f3a]/60">Autonomous Cycles</span>
+          <span className="text-[10px] font-black uppercase text-[#0b1f3a]/60">Autonomous Runs</span>
           <div className="text-lg sm:text-xl font-black text-indigo-900 mt-0.5">
             {vaultInfo ? vaultInfo.total_arbitrage_runs.toLocaleString() : '284'} runs
           </div>
@@ -549,6 +549,11 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
                 <span className="font-black text-emerald-800">
                   Receive: ~{estShares.toFixed(2)} cCOOKIE-LP
                 </span>
+              </div>
+
+              {/* Hackathon Testnet Disclaimer */}
+              <div className="p-2.5 bg-[#fefce8] border border-[#ca8a04] rounded-lg text-[11px] font-bold text-[#854d0e] leading-snug">
+                ⚠️ <strong>Hackathon Prototype:</strong> Depositing funds mints testnet cCOOKIE-LP shares using on-chain SPL memo receipts. Yields and compounding are simulated paper-trading metrics for testnet evaluation.
               </div>
 
               <button

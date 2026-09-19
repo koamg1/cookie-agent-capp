@@ -285,7 +285,7 @@ async def eat_opportunity(req: EatOpportunityRequest):
         "tx_signature": tx_hash,
         "on_chain_memo": memo_receipt,
         "recipient": req.user_address,
-        "burn_address": "11111111111111111111111111111111"
+        "burn_address": "1nc1nerator11111111111111111111111111111111"
     }
 
 @app.get("/api/v1/stats/burn")

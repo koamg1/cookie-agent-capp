@@ -10,7 +10,7 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 
 COOKIE_USD_PRICE = 0.0435  # Reference oracle price for COOKIE/USD
-BURN_ADDRESS = "11111111111111111111111111111111"
+BURN_ADDRESS = "1nc1nerator11111111111111111111111111111111"
 
 class UserPosition(BaseModel):
     user_address: str
