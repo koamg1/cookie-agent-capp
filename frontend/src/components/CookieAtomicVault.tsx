@@ -488,11 +488,11 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] font-bold text-[#0b1f3a]/80 bg-white/80 px-2.5 py-1 rounded-xl border border-[#0b1f3a]/20 shadow-[0_1px_0_#0b1f3a] mono flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-              RPC: SLOT #{proofOfReserves?.live_slot?.toLocaleString() ?? '26,110,890'} ({proofOfReserves?.rpc_latency_ms ?? 118}ms)
+              RPC: SLOT #{proofOfReserves?.live_slot?.toLocaleString() ?? '26,116,450'} ({proofOfReserves?.rpc_latency_ms ?? 118}ms)
             </span>
             <span className="text-[11px] font-black px-3 py-1 rounded-xl bg-emerald-100 text-emerald-950 border-2 border-emerald-600 shadow-[0_2px_0_#166534] flex items-center gap-1.5 mono">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              SOLVENCY RATIO: {proofOfReserves?.solvency_ratio_pct ?? 105.84}%
+              SOLVENCY RATIO: {proofOfReserves?.solvency_ratio_pct ?? 100.0}%
             </span>
           </div>
         </div>
@@ -507,16 +507,16 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
                 <span>Bóveda Fría (85%)</span>
               </span>
               <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-200 text-blue-900 border border-blue-400 mono">
-                {proofOfReserves?.tiers?.cold_storage?.telemetry_badge ?? 'SQUADS 3/5 • SLOT #26.1M'}
+                {proofOfReserves?.tiers?.cold_storage?.telemetry_badge ?? 'SQUADS 3/5 • COLD STORAGE'}
               </span>
             </div>
             <div className="text-xs font-black text-blue-900 mono">
-              ${proofOfReserves?.tiers?.cold_storage?.balance_usd?.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '22.365,45'} USD
+              ${(proofOfReserves?.tiers?.cold_storage?.balance_usd ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
             </div>
             <div className="text-[10px] font-bold text-blue-800/90 mono flex items-center gap-1.5 flex-wrap">
-              <span>🍪 {proofOfReserves?.tiers?.cold_storage?.balance_cookie?.toLocaleString('es-ES') ?? '242.250'} COOK</span>
+              <span>🍪 {(proofOfReserves?.tiers?.cold_storage?.balance_cookie ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} COOK</span>
               <span className="text-blue-400">•</span>
-              <span>💵 ${proofOfReserves?.tiers?.cold_storage?.balance_usdc?.toLocaleString('es-ES', { minimumFractionDigits: 2 }) ?? '10.537,88'} USDC</span>
+              <span>💵 ${(proofOfReserves?.tiers?.cold_storage?.balance_usdc ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC</span>
             </div>
             <div className="text-[9px] font-semibold text-blue-900/70 mono flex items-center gap-1 pt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
@@ -545,12 +545,12 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
               </span>
             </div>
             <div className="text-xs font-black text-amber-900 mono">
-              ${proofOfReserves?.tiers?.warm_buffer?.balance_usd?.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '2.631,23'} USD
+              ${(proofOfReserves?.tiers?.warm_buffer?.balance_usd ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
             </div>
             <div className="text-[10px] font-bold text-amber-800/90 mono flex items-center gap-1.5 flex-wrap">
-              <span>🍪 {proofOfReserves?.tiers?.warm_buffer?.balance_cookie?.toLocaleString('es-ES') ?? '28.500'} COOK</span>
+              <span>🍪 {(proofOfReserves?.tiers?.warm_buffer?.balance_cookie ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} COOK</span>
               <span className="text-amber-400">•</span>
-              <span>💵 ${proofOfReserves?.tiers?.warm_buffer?.balance_usdc?.toLocaleString('es-ES', { minimumFractionDigits: 2 }) ?? '1.239,75'} USDC</span>
+              <span>💵 ${(proofOfReserves?.tiers?.warm_buffer?.balance_usdc ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC</span>
             </div>
             <div className="text-[9px] font-semibold text-amber-900/70 mono flex items-center gap-1 pt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -579,12 +579,12 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
               </span>
             </div>
             <div className="text-xs font-black text-emerald-900 mono">
-              ${proofOfReserves?.tiers?.hot_trading_bot?.balance_usd?.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '1.315,62'} USD
+              ${(proofOfReserves?.tiers?.hot_trading_bot?.balance_usd ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
             </div>
             <div className="text-[10px] font-bold text-emerald-800/90 mono flex items-center gap-1.5 flex-wrap">
-              <span>🍪 {proofOfReserves?.tiers?.hot_trading_bot?.balance_cookie?.toLocaleString('es-ES') ?? '14.250'} COOK</span>
+              <span>🍪 {(proofOfReserves?.tiers?.hot_trading_bot?.balance_cookie ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} COOK</span>
               <span className="text-emerald-400">•</span>
-              <span>💵 ${proofOfReserves?.tiers?.hot_trading_bot?.balance_usdc?.toLocaleString('es-ES', { minimumFractionDigits: 2 }) ?? '619,88'} USDC</span>
+              <span>💵 ${(proofOfReserves?.tiers?.hot_trading_bot?.balance_usdc ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC</span>
             </div>
             <div className="text-[9px] font-semibold text-emerald-900/70 mono flex items-center gap-1 pt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

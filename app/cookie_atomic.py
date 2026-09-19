@@ -32,7 +32,7 @@ CANONICAL_BURN_ADDRESS = "1nc1nerator11111111111111111111111111111111"
 COLD_VAULT_ADDRESS = "CookieColdVaultMultiSig111111111111111111111111"
 WARM_VAULT_ADDRESS = "CookieWarmBufferReserve111111111111111111111111"
 HOT_VAULT_ADDRESS = "CookieHotBotExecutor111111111111111111111111"
-PROTOCOL_RESERVE_BUFFER_USD = 1500.0  # Protocol insurance buffer
+PROTOCOL_RESERVE_BUFFER_USD = 0.0     # Starts at 0.0 until protocol reserve is deposited on-chain
 VIRTUAL_OFFSET = 1000.0                # OpenZeppelin virtual shares/assets offset (anti-inflation)
 COOLDOWN_LOCKUP_SECONDS = 86400.0      # 24 Hours Anti-MEV flash deposit cooldown
 
@@ -246,16 +246,16 @@ class CookieAtomicEngine:
     def __init__(self, db_path: str = DB_PATH):
         self.db_path = db_path
         
-        # Protocol Core Balance & Monotonic Accounting
-        self.total_cookie_deposited: float = 285000.0
-        self.total_usdc_deposited: float = 12397.50
-        self.total_shares: float = 21315.0  # cCOOKIE-LP
-        self.share_price_nav: float = 1.1632
+        # Protocol Core Balance & Monotonic Accounting (Mainnet Beta: Honest 0.00 Base)
+        self.total_cookie_deposited: float = 0.0
+        self.total_usdc_deposited: float = 0.0
+        self.total_shares: float = 0.0  # cCOOKIE-LP
+        self.share_price_nav: float = 1.0000
         
-        self.cumulative_arb_profit_usd: float = 8850.25
-        self.cumulative_burned_cookie: float = 10172.70
-        self.cumulative_cookie_jar_usd: float = 442.50
-        self.total_arbitrage_runs: int = 450
+        self.cumulative_arb_profit_usd: float = 0.0
+        self.cumulative_burned_cookie: float = 0.0
+        self.cumulative_cookie_jar_usd: float = 0.0
+        self.total_arbitrage_runs: int = 0
 
         self.user_positions: Dict[str, UserPosition] = {}
         self.recent_executions: List[AtomicExecutionRecord] = []
@@ -331,14 +331,14 @@ class CookieAtomicEngine:
             if not meta:
                 self._save_metadata()
             else:
-                self.total_arbitrage_runs = max(450, int(meta.get("total_arbitrage_runs", 450)))
-                self.cumulative_arb_profit_usd = max(8850.25, float(meta.get("cumulative_arb_profit_usd", 8850.25)))
-                self.cumulative_burned_cookie = max(10172.70, float(meta.get("cumulative_burned_cookie", 10172.70)))
-                self.cumulative_cookie_jar_usd = max(442.50, float(meta.get("cumulative_cookie_jar_usd", 442.50)))
-                self.total_shares = max(21315.0, float(meta.get("total_shares", 21315.0)))
-                self.total_cookie_deposited = max(285000.0, float(meta.get("total_cookie_deposited", 285000.0)))
-                self.total_usdc_deposited = max(12397.50, float(meta.get("total_usdc_deposited", 12397.50)))
-                self.share_price_nav = max(1.1632, float(meta.get("share_price_nav", 1.1632)))
+                self.total_arbitrage_runs = int(meta.get("total_arbitrage_runs", 0))
+                self.cumulative_arb_profit_usd = float(meta.get("cumulative_arb_profit_usd", 0.0))
+                self.cumulative_burned_cookie = float(meta.get("cumulative_burned_cookie", 0.0))
+                self.cumulative_cookie_jar_usd = float(meta.get("cumulative_cookie_jar_usd", 0.0))
+                self.total_shares = float(meta.get("total_shares", 0.0))
+                self.total_cookie_deposited = float(meta.get("total_cookie_deposited", 0.0))
+                self.total_usdc_deposited = float(meta.get("total_usdc_deposited", 0.0))
+                self.share_price_nav = float(meta.get("share_price_nav", 1.0000))
 
             # Load positions
             pos_rows = conn.execute("SELECT * FROM atomic_user_positions").fetchall()
@@ -680,7 +680,10 @@ class CookieAtomicEngine:
         total_core_assets_usd = (self.total_cookie_deposited * COOKIE_USD_REFERENCE_PRICE) + self.total_usdc_deposited
         total_on_chain_assets_usd = round(total_core_assets_usd + PROTOCOL_RESERVE_BUFFER_USD, 2)
         total_liabilities_usd = round(self.total_shares * self.share_price_nav, 2)
-        solvency_ratio_pct = round((total_on_chain_assets_usd / max(1.0, total_liabilities_usd)) * 100.0, 2)
+        if total_liabilities_usd <= 0.0:
+            solvency_ratio_pct = 100.0
+        else:
+            solvency_ratio_pct = round((total_on_chain_assets_usd / total_liabilities_usd) * 100.0, 2)
         
         cold_reserve_usd = round(total_on_chain_assets_usd * 0.85, 2)
         warm_reserve_usd = round(total_on_chain_assets_usd * 0.10, 2)
