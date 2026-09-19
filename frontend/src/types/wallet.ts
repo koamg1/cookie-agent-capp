@@ -25,4 +25,8 @@ export interface NetworkStats {
   block_height: number | null;
   latest_blockhash: string;
   latency_ms: number;
+  epoch?: number;
+  epoch_progress_pct?: number;
+  total_transactions?: number;
+  live_tps?: number;
 }

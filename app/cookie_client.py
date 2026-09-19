@@ -91,3 +91,17 @@ class CookieChainClient:
     async def get_latest_blockhash(self) -> Dict[str, Any]:
         """Obtiene el blockhash reciente para autorizar transacciones."""
         return await self.rpc_call("getLatestBlockhash", [{"commitment": "confirmed"}])
+
+    async def get_epoch_info(self) -> Dict[str, Any]:
+        """Obtiene información de la época actual, slots por época y conteo de transacciones históricas."""
+        return await self.rpc_call("getEpochInfo", [{"commitment": "confirmed"}])
+
+    async def get_performance_samples(self, limit: int = 4) -> Dict[str, Any]:
+        """Obtiene muestras de rendimiento de los validadores para calcular TPS y velocidad de bloque."""
+        return await self.rpc_call("getRecentPerformanceSamples", [limit])
+
+    async def get_recent_memos(self, limit: int = 10) -> Dict[str, Any]:
+        """Consulta los últimos memorandos SPL confirmados en el programa canónico de Cookie Chain."""
+        memo_program = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
+        return await self.rpc_call("getSignaturesForAddress", [memo_program, {"limit": limit}])
+
