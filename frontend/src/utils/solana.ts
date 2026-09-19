@@ -5,6 +5,8 @@ import {
   TOKEN_2022_PROGRAM_ID
 } from '@solana/spl-token';
 import { WalletType } from '../types/wallet';
+import { apiUrl } from '../config/api';
+
 
 declare global {
   interface Window {
@@ -368,6 +370,17 @@ export async function sendWalletTransaction(
 export const COOKIE_MAINNET_MINT = '36ZrtQoab5MhhySaP1YSTwUahSk6GRVUTtZ6cuVfm9e1';
 export const CANONICAL_BURN_ADDRESS = '1nc1nerator11111111111111111111111111111111';
 
+export function getSolanaMainnetRpcUrl(): string {
+  const endpoint = apiUrl('/api/v1/solana/rpc');
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint;
+  }
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return `${window.location.origin}${endpoint}`;
+  }
+  return `http://127.0.0.1:8080${endpoint}`;
+}
+
 export async function executeSolanaMainnetBurn(
   type: WalletType,
   provider: any,
@@ -375,7 +388,11 @@ export async function executeSolanaMainnetBurn(
   amount: number,
   onLog?: (tag: string, msg: string, color?: string) => void
 ): Promise<string> {
-  const connection = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com", "confirmed");
+  const rpcUrl = getSolanaMainnetRpcUrl();
+  const connection = new solanaWeb3.Connection(rpcUrl, {
+    commitment: "confirmed",
+    wsEndpoint: ""
+  });
   const owner = new solanaWeb3.PublicKey(ownerAddress);
   const mint = new solanaWeb3.PublicKey(COOKIE_MAINNET_MINT);
   const ata = getAssociatedTokenAddressSync(mint, owner, false, TOKEN_2022_PROGRAM_ID);

@@ -180,6 +180,34 @@ async def wallet_balance(address: str):
     res = await cookie_client.get_balance(address)
     return res
 
+@app.post("/api/v1/solana/rpc")
+async def solana_mainnet_rpc_proxy(req: Request):
+    """
+    Transparent proxy for Solana Mainnet RPC.
+    Bypasses Solana Foundation's 403 Forbidden restriction on direct browser Origin headers.
+    """
+    try:
+        body = await req.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                "https://api.mainnet-beta.solana.com",
+                json=body,
+                headers={
+                    "Content-Type": "application/json",
+                    "User-Agent": "CookieAgent-Gateway/1.0"
+                }
+            )
+            return JSONResponse(content=resp.json(), status_code=resp.status_code)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Solana Mainnet RPC Gateway Error: {str(e)}")
+
+
+
 @app.get("/api/v1/mcp/manifest")
 async def mcp_manifest():
     """Returns Model Context Protocol (MCP) manifest with available tools for AI agents."""

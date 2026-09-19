@@ -229,6 +229,23 @@ async def test_wallet_details_endpoint():
     assert "baker_karma" in data
     assert "vault_shares" in data
 
+@pytest.mark.asyncio
+async def test_solana_rpc_proxy():
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getLatestBlockhash",
+        "params": [{"commitment": "confirmed"}]
+    }
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.post("/api/v1/solana/rpc", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "result" in data
+    assert "value" in data["result"]
+    assert "blockhash" in data["result"]["value"]
+
+
 
 
 
