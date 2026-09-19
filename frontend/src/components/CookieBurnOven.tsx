@@ -6,7 +6,8 @@ import {
   executeSolanaMainnetBurn,
   executeCookieChainBurn,
   COOKIE_MAINNET_MINT,
-  CANONICAL_BURN_ADDRESS
+  CANONICAL_BURN_ADDRESS,
+  getWalletProvider
 } from '../utils/solana';
 
 interface CookieBurnOvenProps {
@@ -52,6 +53,7 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
 
   const [microBurnAmount, setMicroBurnAmount] = useState<number>(1.0);
   const [isBurning, setIsBurning] = useState<boolean>(false);
+  const [burnStage, setBurnStage] = useState<'idle' | 'preparing' | 'signing' | 'confirming' | 'eating'>('idle');
   const [isHoveringBurn, setIsHoveringBurn] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [burnSuccessMsg, setBurnSuccessMsg] = useState<string | null>(null);
@@ -123,7 +125,9 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
   };
 
   const handleVoluntaryBurn = async () => {
-    if (!connectedAddress || !activeProvider || !activeWalletType) {
+    const provider = activeProvider || (activeWalletType ? getWalletProvider(activeWalletType) : null);
+
+    if (!connectedAddress || !provider || !activeWalletType) {
       onOpenWalletModal();
       return;
     }
@@ -133,6 +137,7 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
     setBurnExplorerUrl(null);
     setBurnSuccessMsg(null);
     setIsBurning(true);
+    setBurnStage('preparing');
 
     try {
       let txSig = '';
@@ -154,10 +159,11 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
 
         txSig = await executeSolanaMainnetBurn(
           activeWalletType,
-          activeProvider,
+          provider,
           connectedAddress,
           microBurnAmount,
-          onAddLog
+          onAddLog,
+          setBurnStage
         );
 
         explorerUrl = `https://solscan.io/tx/${txSig}`;
@@ -179,16 +185,18 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
 
         txSig = await executeCookieChainBurn(
           activeWalletType,
-          activeProvider,
+          provider,
           connectedAddress,
           microBurnAmount,
-          onAddLog
+          onAddLog,
+          setBurnStage
         );
 
         explorerUrl = `https://cookiescan.io/tx/${txSig}`;
         onAddLog('BURN_CONFIRMED', `Burn confirmed on Cookie Chain SVM! Tx: ${txSig}`, 'text-emerald-400');
       }
 
+      setBurnStage('eating');
       // Play bite audio and trigger chomping animations
       playCrunchSound();
       setBurnTxSignature(txSig);
@@ -202,6 +210,14 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
 
       const newTotal = burnStats.cumulative_burned + microBurnAmount;
       setBurnStats((prev) => ({ ...prev, cumulative_burned: newTotal }));
+
+      // Immediately optimistically decrement local balance so it reflects on screen
+      if (selectedNetwork === 'solana_mainnet' && mainnetData) {
+        setMainnetData({
+          ...mainnetData,
+          amount_ui: Math.max(0, mainnetData.amount_ui - microBurnAmount)
+        });
+      }
 
       if (onRefreshBalance) onRefreshBalance();
       refreshMainnetTokens();
@@ -221,6 +237,7 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
       }
     } finally {
       setIsBurning(false);
+      setBurnStage('idle');
     }
   };
 
@@ -433,7 +450,15 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
                   {isBurning ? (
                     <span className="flex items-center gap-2">
                       <span className="text-base animate-spin">🍪</span>
-                      <span>NOM NOM NOM! MUNCHING ON-CHAIN...</span>
+                      <span>
+                        {burnStage === 'signing'
+                          ? `CHECK ${activeWalletType?.toUpperCase() || 'WALLET'} TO APPROVE...`
+                          : burnStage === 'confirming'
+                          ? 'CONFIRMING ON SOLANA (~5s)...'
+                          : burnStage === 'eating'
+                          ? 'NOM NOM NOM! MUNCHING...'
+                          : 'PREPARING ON-CHAIN TX...'}
+                      </span>
                     </span>
                   ) : (
                     <span className="flex items-center gap-1.5">
@@ -445,6 +470,22 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
                   )}
                 </button>
               </div>
+
+              {/* Live Burning Progress Stage Banner */}
+              {isBurning && (
+                <div className="p-3 rounded-xl border-2 border-amber-500 bg-amber-50 text-[11px] font-bold text-amber-900 flex items-center gap-2.5 shadow-[0_2px_0_#d97706] animate-pulse">
+                  <span className="text-base">
+                    {burnStage === 'signing' ? '👛' : burnStage === 'confirming' ? '📡' : '⚡'}
+                  </span>
+                  <span>
+                    {burnStage === 'signing'
+                      ? `Please check your ${activeWalletType || 'wallet'} extension window to sign the burn instruction.`
+                      : burnStage === 'confirming'
+                      ? 'Transaction signed and broadcasted! Confirming block finality on Solana Mainnet (~5-10s)...'
+                      : 'Connecting to Solana RPC and fetching latest blockhash...'}
+                  </span>
+                </div>
+              )}
 
               {/* Reward feedback pill */}
               <div className="flex items-center justify-between px-2 text-[10px] font-bold text-[#0b1f3a]/70">

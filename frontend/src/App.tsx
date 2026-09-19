@@ -40,8 +40,21 @@ export const App: React.FC = () => {
   const [activeWalletType, setActiveWalletType] = useState<WalletType | null>(() => {
     return (sessionStorage.getItem('cookie_connected_wallet') as WalletType) || null;
   });
-  const [activeProvider, setActiveProvider] = useState<any>(null);
+  const [activeProvider, setActiveProvider] = useState<any>(() => {
+    const savedType = sessionStorage.getItem('cookie_connected_wallet') as WalletType | null;
+    return savedType ? getWalletProvider(savedType) : null;
+  });
+
+  // Ensure activeProvider is always restored on mount / reload
+  useEffect(() => {
+    if (activeWalletType && !activeProvider) {
+      const p = getWalletProvider(activeWalletType);
+      if (p) setActiveProvider(p);
+    }
+  }, [activeWalletType, activeProvider]);
+
   const [isSiwsVerified, setIsSiwsVerified] = useState<boolean>(() => {
+
     return !!sessionStorage.getItem('cookie_auth_signature');
   });
   const [siwsLoading, setSiwsLoading] = useState<boolean>(false);

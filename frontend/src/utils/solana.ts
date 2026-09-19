@@ -386,8 +386,10 @@ export async function executeSolanaMainnetBurn(
   provider: any,
   ownerAddress: string,
   amount: number,
-  onLog?: (tag: string, msg: string, color?: string) => void
+  onLog?: (tag: string, msg: string, color?: string) => void,
+  onStageChange?: (stage: 'preparing' | 'signing' | 'confirming') => void
 ): Promise<string> {
+  if (onStageChange) onStageChange('preparing');
   const rpcUrl = getSolanaMainnetRpcUrl();
   const connection = new solanaWeb3.Connection(rpcUrl, {
     commitment: "confirmed",
@@ -414,9 +416,13 @@ export async function executeSolanaMainnetBurn(
   transaction.recentBlockhash = blockhash;
   transaction.feePayer = owner;
 
+  if (onStageChange) onStageChange('signing');
   if (onLog) onLog('BURN_TX', `Prompting ${type} to sign real Token-2022 burn of ${amount} COOKIE on Solana Mainnet...`, 'text-purple-400');
 
   const txSignature = await sendWalletTransaction(type, provider, transaction, connection, ownerAddress);
+
+  if (onStageChange) onStageChange('confirming');
+  if (onLog) onLog('CONFIRMING', `Transaction broadcast: ${txSignature}. Confirming block on Solana Mainnet...`, 'text-amber-400');
 
   try {
     await connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight }, 'confirmed');
@@ -432,8 +438,10 @@ export async function executeCookieChainBurn(
   provider: any,
   ownerAddress: string,
   amount: number,
-  onLog?: (tag: string, msg: string, color?: string) => void
+  onLog?: (tag: string, msg: string, color?: string) => void,
+  onStageChange?: (stage: 'preparing' | 'signing' | 'confirming') => void
 ): Promise<string> {
+  if (onStageChange) onStageChange('preparing');
   const connection = new solanaWeb3.Connection("https://rpc.cookiescan.io", "confirmed");
   const owner = new solanaWeb3.PublicKey(ownerAddress);
   const incinerator = new solanaWeb3.PublicKey(CANONICAL_BURN_ADDRESS);
@@ -459,9 +467,13 @@ export async function executeCookieChainBurn(
   transaction.recentBlockhash = blockhash;
   transaction.feePayer = owner;
 
+  if (onStageChange) onStageChange('signing');
   if (onLog) onLog('BURN_TX', `Prompting ${type} to sign burn transfer of ${amount} COOKIE to 1nc1nerator on Cookie Chain...`, 'text-purple-400');
 
   const txSignature = await sendWalletTransaction(type, provider, transaction, connection, ownerAddress);
+
+  if (onStageChange) onStageChange('confirming');
+  if (onLog) onLog('CONFIRMING', `Transaction broadcast: ${txSignature}. Confirming on Cookie Chain SVM...`, 'text-amber-400');
 
   try {
     await connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight }, 'confirmed');
