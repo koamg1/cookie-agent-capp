@@ -1,23 +1,24 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CookieAgent Gateway & Sentinel cApp | Cookie Chain</title>
+  <title>CookieAgent Gateway & Sentinel cApp | Cookie Chain SVM</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            brand: {
-              50: '#fffbeb',
-              400: '#fbbf24',
-              500: '#f59e0b',
-              600: '#d97706',
-              900: '#78350f'
+            cookie: {
+              sky: '#8bd3ff',
+              pill: '#d8f1ff',
+              navy: '#0b1f3a',
+              gold: '#ffe0a8',
+              goldDark: '#f59e0b',
+              baked: '#d97706',
+              surface: '#ffffff'
             }
           }
         }
@@ -25,161 +26,329 @@
     }
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Inter:wght@400;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-    .mono { font-family: 'JetBrains Mono', monospace; }
-    .glass {
-      background: rgba(17, 24, 39, 0.85);
-      backdrop-filter: blur(14px);
-      border: 1px solid rgba(251, 191, 36, 0.18);
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #8bd3ff;
+      color: #0b1f3a;
+      background-image: radial-gradient(rgba(11, 31, 58, 0.14) 1.5px, transparent 1.5px);
+      background-size: 26px 26px;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Cartoon Neobrutalist Design System */
+    .neo-card {
+      background-color: #ffffff;
+      border: 2.5px solid #0b1f3a;
+      box-shadow: 0 5px 0 #0b1f3a;
+      border-radius: 1.5rem;
+    }
+
+    .neo-card-sm {
+      background-color: #ffffff;
+      border: 2px solid #0b1f3a;
+      box-shadow: 0 4px 0 #0b1f3a;
+      border-radius: 1.25rem;
+    }
+
+    .neo-pill {
+      background-color: #d8f1ff;
+      border: 2.5px solid #0b1f3a;
+      box-shadow: 0 4px 0 #0b1f3a;
+      border-radius: 9999px;
+    }
+
+    .neo-btn {
+      border: 2px solid #0b1f3a;
+      box-shadow: 0 4px 0 #0b1f3a;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+      cursor: pointer;
+    }
+
+    .neo-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 #0b1f3a;
+    }
+
+    .neo-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #0b1f3a;
+    }
+
+    .neo-input {
+      border: 2px solid #0b1f3a;
+      box-shadow: inset 0 2px 0 rgba(11, 31, 58, 0.08);
+      border-radius: 0.85rem;
+      background-color: #f8fafc;
+      color: #0b1f3a;
+      font-family: 'JetBrains Mono', monospace;
+      outline: none;
+    }
+
+    .neo-input:focus {
+      border-color: #0b1f3a;
+      background-color: #ffffff;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35);
+    }
+
+    /* Floating cookies animation */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-8px) rotate(5deg); }
+    }
+
+    @keyframes floatReverse {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(8px) rotate(-6deg); }
+    }
+
+    .animate-float-1 {
+      animation: floatSlow 4.5s ease-in-out infinite;
+    }
+
+    .animate-float-2 {
+      animation: floatReverse 5.2s ease-in-out infinite 0.5s;
     }
   </style>
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col selection:bg-[#ffe0a8] selection:text-[#0b1f3a]">
 
-  <!-- Header -->
-  <header class="border-b border-gray-800 glass sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+  <!-- Floating Navigation Pill (Exact Cookie Chain Style) -->
+  <header class="w-full px-4 sm:px-6 pt-4 sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto neo-pill px-5 py-3 backdrop-blur-md bg-[#d8f1ff]/95 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
       <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-xl shadow-lg shadow-amber-500/20">
+        <div class="w-10 h-10 rounded-full bg-[#ffe0a8] border-2 border-[#0b1f3a] flex items-center justify-center text-xl shadow-[0_2px_0_#0b1f3a] animate-float-1 select-none">
           🍪
         </div>
         <div>
-          <span class="text-lg font-bold text-white tracking-wide">CookieAgent <span class="text-amber-400 text-xs px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">cApp</span></span>
-          <p class="text-xs text-gray-400">Autonomous SVM Gateway on Cookie Chain</p>
+          <div class="flex items-center gap-2">
+            <span class="text-base sm:text-lg font-extrabold text-[#0b1f3a] tracking-tight">CookieAgent</span>
+            <span class="text-[11px] font-black px-2 py-0.5 rounded-full bg-[#ffe0a8] border border-[#0b1f3a] text-[#0b1f3a] uppercase">cApp</span>
+          </div>
+          <p class="text-[11px] font-bold text-[#0b1f3a]/75 hidden sm:block">Autonomous SVM Gateway &bull; Cookie Chain</p>
         </div>
       </div>
-      <div class="flex items-center space-x-4">
-        <a href="/docs" target="_blank" class="text-xs text-gray-400 hover:text-amber-400 mono transition flex items-center gap-1">
-          <span>[OpenAPI Docs]</span>
+
+      <!-- Links & Action Button -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <a href="https://cookiescan.io" target="_blank" class="hidden md:inline-flex items-center gap-1 text-xs font-bold text-[#0b1f3a] hover:text-[#d97706] transition px-2.5 py-1 rounded-full hover:bg-white/60">
+          <span>🔍 Explorer</span>
         </a>
-        <button id="connectWalletBtn" onclick="openWalletModal()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-bold text-xs rounded-lg transition duration-200 shadow-md shadow-amber-500/20 flex items-center gap-2">
+        <a href="https://docs.cookiechain.wtf" target="_blank" class="hidden lg:inline-flex items-center gap-1 text-xs font-bold text-[#0b1f3a] hover:text-[#d97706] transition px-2.5 py-1 rounded-full hover:bg-white/60">
+          <span>📖 Docs</span>
+        </a>
+        <a href="/docs" target="_blank" class="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-[#0b1f3a] hover:text-[#d97706] transition px-2.5 py-1 rounded-full hover:bg-white/60 mono">
+          <span>[API]</span>
+        </a>
+
+        <!-- Connect Wallet Button -->
+        <button id="connectWalletBtn" onclick="openWalletModal()" class="px-4 sm:px-5 py-2 sm:py-2.5 bg-[#ffe0a8] hover:bg-[#fed388] text-[#0b1f3a] font-extrabold text-xs sm:text-sm rounded-full neo-btn flex items-center gap-2">
           <span>⚡ Connect Wallet</span>
         </button>
       </div>
+
     </div>
   </header>
 
-  <!-- Main Content -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+  <!-- Main Container -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-    <!-- Top Status Row -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="glass p-4 rounded-xl">
-        <span class="text-xs text-gray-400 uppercase tracking-wider block">Network Target</span>
-        <div class="flex items-center gap-2 mt-1">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span class="text-sm font-semibold text-white">Cookie Chain (SVM)</span>
+    <!-- Hero Announcement Banner (Cookie Chain Vibe) -->
+    <div class="neo-card p-6 sm:p-8 bg-white relative overflow-hidden">
+      <!-- Decorative floating cookie background accents -->
+      <div class="absolute -right-6 -bottom-6 text-7xl opacity-20 pointer-events-none select-none animate-float-2">🍪</div>
+      <div class="absolute right-32 -top-4 text-5xl opacity-15 pointer-events-none select-none animate-float-1">🍪</div>
+
+      <div class="relative z-10 space-y-3">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#d8f1ff] border-2 border-[#0b1f3a] text-xs font-extrabold text-[#0b1f3a] shadow-[0_2px_0_#0b1f3a]">
+          <span>✨</span> WE BAKE AI ON COOKIE CHAIN SVM <span>🧑‍🍳</span>
         </div>
-        <span class="text-xs text-gray-500 mono mt-1 block">rpc.cookiescan.io</span>
-      </div>
+        
+        <h1 class="text-2xl sm:text-4xl font-black text-[#0b1f3a] tracking-tight leading-tight">
+          Let Him Cook! Autonomous Agent Gateway & Sentinel
+        </h1>
 
-      <div class="glass p-4 rounded-xl">
-        <span class="text-xs text-gray-400 uppercase tracking-wider block">Current Slot</span>
-        <span id="statSlot" class="text-xl font-extrabold text-amber-400 mono block mt-1">Fetching...</span>
-        <span class="text-xs text-gray-500 mt-1 block">Sub-second finality</span>
-      </div>
+        <p class="text-xs sm:text-sm font-semibold text-[#0b1f3a]/80 max-w-3xl leading-relaxed">
+          Broadcast cryptographic AI telemetry directly to Cookie Chain SVM, benchmark real-time node RPC latency, and equip autonomous agents with standard Model Context Protocol (MCP) tools. 100% authentic Web3, zero mockups.
+        </p>
 
-      <div class="glass p-4 rounded-xl">
-        <span class="text-xs text-gray-400 uppercase tracking-wider block">RPC Latency</span>
-        <span id="statLatency" class="text-xl font-extrabold text-emerald-400 mono block mt-1">-- ms</span>
-        <span class="text-xs text-gray-500 mt-1 block">Live RPC benchmark</span>
-      </div>
-
-      <div class="glass p-4 rounded-xl">
-        <div class="flex justify-between items-center">
-          <span class="text-xs text-gray-400 uppercase tracking-wider block">Connected Account</span>
-          <span id="walletProviderBadge" class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 mono">None</span>
+        <div class="pt-2 flex flex-wrap items-center gap-2 text-[11px] font-bold">
+          <span class="px-2.5 py-1 rounded-lg bg-[#ffe0a8] border border-[#0b1f3a]">SVM Finality &lt; 400ms</span>
+          <span class="px-2.5 py-1 rounded-lg bg-[#d8f1ff] border border-[#0b1f3a]">Nightly &bull; Phantom &bull; Solflare</span>
+          <span class="px-2.5 py-1 rounded-lg bg-[#bbf7d0] border border-[#0b1f3a] text-[#065f46]">SPL Memo Protocol</span>
+          <span class="px-2.5 py-1 rounded-lg bg-[#fed7aa] border border-[#0b1f3a] text-[#7c2d12]">MCP Standard 2025</span>
         </div>
-        <span id="statWallet" class="text-xs font-semibold text-gray-300 mono block mt-1 truncate">Not Connected</span>
-        <div class="flex items-center justify-between mt-1">
-          <span id="statBalance" class="text-xs text-amber-400 mono block">0.0000 COOKIE</span>
-          <a id="explorerLink" href="#" target="_blank" class="hidden text-[10px] text-amber-400 hover:underline mono">Explorer &rarr;</a>
-        </div>
-        <button id="signSiwsBtn" onclick="promptSiwsSignature()" class="hidden mt-2 w-full py-1.5 px-2 text-[10px] rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 font-mono flex items-center justify-center gap-1 transition cursor-pointer">
-          ✍️ Solicitar Firma de Verificación (SIWS)
-        </button>
       </div>
     </div>
 
-    <!-- Dual Action Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-      <!-- On-Chain Agent Trigger -->
-      <div class="glass p-6 rounded-2xl space-y-4">
-        <div class="flex items-center justify-between border-b border-gray-800 pb-3">
-          <h2 class="text-base font-bold text-white flex items-center gap-2">
-            <span>🤖</span> On-Chain Agent Telemetry Ping
-          </h2>
-          <span class="text-xs bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 mono">SPL Memo SVM</span>
+    <!-- Live Network Metrics (4 Cartoon Cards) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- Card 1: Network Target -->
+      <div class="neo-card-sm p-4 flex flex-col justify-between">
+        <div>
+          <span class="text-[11px] font-black uppercase text-[#0b1f3a]/60 tracking-wider block">Network Target</span>
+          <div class="flex items-center gap-2 mt-1.5">
+            <span class="w-3 h-3 rounded-full bg-emerald-500 border border-[#0b1f3a] animate-pulse"></span>
+            <span class="text-base font-extrabold text-[#0b1f3a]">Cookie Chain</span>
+          </div>
         </div>
-        <p class="text-xs text-gray-400 leading-relaxed">
-          Broadcasts cryptographic AI Agent telemetry directly onto Cookie Chain SVM. Requires an authentic Web3 signature (Nightly, Phantom, Solflare) or an in-browser cryptographic session key.
-        </p>
-
-        <div class="space-y-3">
-          <div>
-            <label class="text-xs text-gray-300 block mb-1">Agent Identifier</label>
-            <input id="agentIdInput" type="text" value="CookieSentinel-Oracle Santiago" class="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-gray-200 mono focus:border-amber-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="text-xs text-gray-300 block mb-1">Telemetry Payload / State Proof</label>
-            <input id="agentMemoInput" type="text" value="heartbeat:healthy | latency:12ms | tps:840" class="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-gray-200 mono focus:border-amber-500 focus:outline-none">
-          </div>
-          <button id="broadcastBtn" onclick="triggerAgentPing()" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-bold text-xs rounded-lg transition duration-200 shadow-md shadow-amber-500/20">
-            ⚡ Connect Wallet to Broadcast On-Chain
-          </button>
-        </div>
-
-        <div id="pingResultBox" class="hidden p-3 bg-gray-900/90 rounded-lg border border-gray-800 text-xs mono space-y-1">
-          <div id="pingStatusHeader" class="text-emerald-400 font-bold flex items-center gap-1">
-            <span>✓</span> Confirmed on Cookie Chain SVM
-          </div>
-          <div id="pingResultDetails" class="text-gray-400 break-all text-[11px]"></div>
+        <div class="mt-3 pt-2 border-t border-[#0b1f3a]/15 flex items-center justify-between">
+          <span class="text-[10px] font-bold text-[#0b1f3a]/60 mono">rpc.cookiescan.io</span>
+          <span class="text-[10px] font-black px-1.5 py-0.5 rounded bg-[#d8f1ff] border border-[#0b1f3a]">SVM</span>
         </div>
       </div>
 
-      <!-- Model Context Protocol (MCP) Live Inspector -->
-      <div class="glass p-6 rounded-2xl space-y-4">
-        <div class="flex items-center justify-between border-b border-gray-800 pb-3">
-          <h2 class="text-base font-bold text-white flex items-center gap-2">
-            <span>🔌</span> Model Context Protocol (MCP) Bridge
-          </h2>
-          <span class="text-xs bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded border border-purple-500/20 mono">cookie-mcp Standard</span>
+      <!-- Card 2: Current Slot -->
+      <div class="neo-card-sm p-4 flex flex-col justify-between">
+        <div>
+          <span class="text-[11px] font-black uppercase text-[#0b1f3a]/60 tracking-wider block">Current Slot</span>
+          <span id="statSlot" class="text-xl sm:text-2xl font-black text-[#0b1f3a] mono block mt-1">Fetching...</span>
         </div>
-        <p class="text-xs text-gray-400 leading-relaxed">
-          Native tools available for autonomous AI agents connecting via Claude Code, Codex or Custom Agents to Cookie Chain.
+        <div class="mt-3 pt-2 border-t border-[#0b1f3a]/15 flex items-center justify-between">
+          <span class="text-[10px] font-bold text-[#0b1f3a]/75">Sub-second finality</span>
+          <span class="text-[10px] font-black px-1.5 py-0.5 rounded bg-[#ffe0a8] border border-[#0b1f3a]">LIVE</span>
+        </div>
+      </div>
+
+      <!-- Card 3: RPC Latency -->
+      <div class="neo-card-sm p-4 flex flex-col justify-between">
+        <div>
+          <span class="text-[11px] font-black uppercase text-[#0b1f3a]/60 tracking-wider block">RPC Latency</span>
+          <span id="statLatency" class="text-xl sm:text-2xl font-black text-[#059669] mono block mt-1">-- ms</span>
+        </div>
+        <div class="mt-3 pt-2 border-t border-[#0b1f3a]/15 flex items-center justify-between">
+          <span class="text-[10px] font-bold text-[#0b1f3a]/75">Direct node benchmark</span>
+          <span class="text-[10px] font-black px-1.5 py-0.5 rounded bg-[#bbf7d0] border border-[#0b1f3a] text-[#065f46]">HEALTHY</span>
+        </div>
+      </div>
+
+      <!-- Card 4: Connected Account -->
+      <div class="neo-card-sm p-4 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center">
+            <span class="text-[11px] font-black uppercase text-[#0b1f3a]/60 tracking-wider block">Account</span>
+            <span id="walletProviderBadge" class="text-[10px] font-black px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 border border-[#0b1f3a] mono">None</span>
+          </div>
+          <span id="statWallet" class="text-xs font-bold text-[#0b1f3a] mono block mt-1.5 truncate">Not Connected</span>
+        </div>
+        <div class="mt-2 pt-2 border-t border-[#0b1f3a]/15">
+          <div class="flex items-center justify-between">
+            <span id="statBalance" class="text-xs font-black text-[#d97706] mono">0.0000 COOKIE</span>
+            <a id="explorerLink" href="#" target="_blank" class="hidden text-[11px] font-bold text-[#0b1f3a] hover:underline mono">Explorer &rarr;</a>
+          </div>
+          <button id="signSiwsBtn" onclick="promptSiwsSignature()" class="hidden mt-2 w-full py-1.5 px-2 text-[11px] rounded-xl bg-[#fef08a] hover:bg-[#fde047] text-[#0b1f3a] border-2 border-[#0b1f3a] font-bold flex items-center justify-center gap-1 transition-all shadow-[0_2px_0_#0b1f3a] active:translate-y-0.5 cursor-pointer">
+            ✍️ Solicitar Firma SIWS
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Dual Action Operations Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Column 1: The SVM Oven (SPL Memo On-Chain Telemetry) -->
+      <div class="neo-card p-6 space-y-4">
+        <div class="flex items-center justify-between border-b-2 border-[#0b1f3a]/15 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🔥</span>
+            <div>
+              <h2 class="text-lg font-black text-[#0b1f3a]">The SVM Oven</h2>
+              <p class="text-[11px] font-bold text-[#0b1f3a]/65">On-Chain Agent Telemetry Broadcaster</p>
+            </div>
+          </div>
+          <span class="text-xs font-black px-2.5 py-1 rounded-full bg-[#ffe0a8] border-2 border-[#0b1f3a] text-[#0b1f3a] shadow-[0_2px_0_#0b1f3a]">
+            SPL MEMO
+          </span>
+        </div>
+
+        <p class="text-xs font-medium text-[#0b1f3a]/80 leading-relaxed">
+          Bake verifiable AI Agent telemetry directly into Cookie Chain SVM blocks. Requires a genuine Web3 signature (Nightly, Phantom, Solflare) or an instant in-browser Session Key.
         </p>
 
-        <div class="space-y-2">
-          <div class="p-3 bg-gray-900/60 rounded-lg border border-gray-800">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-amber-300 mono">cookie_get_network_stats</span>
-              <span class="text-[10px] text-gray-500 mono">READ</span>
-            </div>
-            <p class="text-[11px] text-gray-400 mt-1">Queries current slot, block height and RPC health in parallel.</p>
+        <div class="space-y-3 pt-1">
+          <div>
+            <label class="text-xs font-bold text-[#0b1f3a] block mb-1">Agent Identifier</label>
+            <input id="agentIdInput" type="text" value="CookieSentinel-Oracle Santiago" class="w-full neo-input px-3.5 py-2.5 text-xs text-[#0b1f3a]">
           </div>
-          <div class="p-3 bg-gray-900/60 rounded-lg border border-gray-800">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-amber-300 mono">cookie_check_balance</span>
-              <span class="text-[10px] text-gray-500 mono">READ</span>
-            </div>
-            <p class="text-[11px] text-gray-400 mt-1">Inspects real token and COOKIE balances for any SVM public key.</p>
+
+          <div>
+            <label class="text-xs font-bold text-[#0b1f3a] block mb-1">Telemetry Payload / State Proof</label>
+            <input id="agentMemoInput" type="text" value="heartbeat:healthy | latency:12ms | tps:840" class="w-full neo-input px-3.5 py-2.5 text-xs text-[#0b1f3a]">
           </div>
-          <div class="p-3 bg-gray-900/60 rounded-lg border border-gray-800">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-amber-300 mono">cookie_simulate_agent_ping</span>
-              <span class="text-[10px] text-emerald-400 mono">WRITE / MEMO</span>
+
+          <button id="broadcastBtn" onclick="triggerAgentPing()" class="w-full py-3 bg-[#ffe0a8] hover:bg-[#fed388] text-[#0b1f3a] font-extrabold text-sm rounded-2xl neo-btn flex items-center justify-center gap-2 mt-2">
+            <span>⚡ Connect Wallet to Broadcast On-Chain</span>
+          </button>
+        </div>
+
+        <!-- Result Box -->
+        <div id="pingResultBox" class="hidden p-4 rounded-2xl bg-[#f8fafc] border-2 border-[#0b1f3a] shadow-[0_3px_0_#0b1f3a] text-xs mono space-y-1.5 mt-3">
+          <div id="pingStatusHeader" class="text-[#059669] font-black flex items-center gap-1.5 text-sm">
+            <span>✓</span> Confirmed on Cookie Chain SVM
+          </div>
+          <div id="pingResultDetails" class="text-[#0b1f3a]/85 break-all text-[11px] leading-relaxed pt-1"></div>
+        </div>
+      </div>
+
+      <!-- Column 2: MCP Bridge Kitchen -->
+      <div class="neo-card p-6 space-y-4">
+        <div class="flex items-center justify-between border-b-2 border-[#0b1f3a]/15 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🔌</span>
+            <div>
+              <h2 class="text-lg font-black text-[#0b1f3a]">Model Context Protocol</h2>
+              <p class="text-[11px] font-bold text-[#0b1f3a]/65">cookie-mcp Standard Bridge</p>
             </div>
-            <p class="text-[11px] text-gray-400 mt-1">Dispatches verifiable proof of work to Cookie Chain.</p>
+          </div>
+          <span class="text-xs font-black px-2.5 py-1 rounded-full bg-[#d8f1ff] border-2 border-[#0b1f3a] text-[#0b1f3a] shadow-[0_2px_0_#0b1f3a]">
+            MCP v1.0
+          </span>
+        </div>
+
+        <p class="text-xs font-medium text-[#0b1f3a]/80 leading-relaxed">
+          Standardized tool interfaces ready for autonomous AI agents connecting via Claude Code, Codex, Antigravity, or custom agent frameworks.
+        </p>
+
+        <!-- Tool Cards -->
+        <div class="space-y-2.5 pt-1">
+          <div class="p-3 bg-[#f8fafc] hover:bg-[#d8f1ff]/40 rounded-xl border-2 border-[#0b1f3a] transition shadow-[0_2px_0_#0b1f3a]">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-black text-[#0b1f3a] mono">cookie_get_network_stats</span>
+              <span class="text-[10px] font-black px-2 py-0.5 rounded bg-blue-100 text-blue-800 border border-[#0b1f3a] mono">READ</span>
+            </div>
+            <p class="text-[11px] font-medium text-[#0b1f3a]/75 mt-1">Queries current slot, block height and parallel RPC health status.</p>
+          </div>
+
+          <div class="p-3 bg-[#f8fafc] hover:bg-[#d8f1ff]/40 rounded-xl border-2 border-[#0b1f3a] transition shadow-[0_2px_0_#0b1f3a]">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-black text-[#0b1f3a] mono">cookie_check_balance</span>
+              <span class="text-[10px] font-black px-2 py-0.5 rounded bg-blue-100 text-blue-800 border border-[#0b1f3a] mono">READ</span>
+            </div>
+            <p class="text-[11px] font-medium text-[#0b1f3a]/75 mt-1">Inspects real token and COOKIE balances for any SVM public key.</p>
+          </div>
+
+          <div class="p-3 bg-[#f8fafc] hover:bg-[#d8f1ff]/40 rounded-xl border-2 border-[#0b1f3a] transition shadow-[0_2px_0_#0b1f3a]">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-black text-[#0b1f3a] mono">cookie_simulate_agent_ping</span>
+              <span class="text-[10px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-[#0b1f3a] mono">WRITE / MEMO</span>
+            </div>
+            <p class="text-[11px] font-medium text-[#0b1f3a]/75 mt-1">Dispatches verifiable proof-of-work telemetry to Cookie Chain SVM.</p>
           </div>
         </div>
 
         <div class="pt-2 flex justify-between items-center text-xs">
-          <a href="/api/v1/mcp/manifest" target="_blank" class="text-amber-400 hover:underline mono text-[11px]">
-            View Raw MCP Manifest JSON &rarr;
+          <a href="/api/v1/mcp/manifest" target="_blank" class="font-black text-[#0b1f3a] hover:text-[#d97706] underline mono text-[11px]">
+            📄 Raw Manifest JSON &rarr;
           </a>
-          <button onclick="toggleRpcGuide()" class="text-gray-400 hover:text-amber-300 mono text-[11px] underline">
+          <button onclick="toggleRpcGuide()" class="font-black text-[#0b1f3a] hover:text-[#d97706] mono text-[11px] underline cursor-pointer">
             📋 Network Parameters
           </button>
         </div>
@@ -188,30 +357,54 @@
     </div>
 
     <!-- RPC Parameters Guide (Collapsible) -->
-    <div id="rpcGuidePanel" class="hidden glass p-4 rounded-xl border border-amber-500/20 text-xs space-y-2">
-      <div class="flex justify-between items-center pb-2 border-b border-gray-800">
-        <span class="font-bold text-amber-400">Cookie Chain Network Parameters (For Nightly & Phantom)</span>
-        <button onclick="toggleRpcGuide()" class="text-gray-400 hover:text-white">&times;</button>
+    <div id="rpcGuidePanel" class="hidden neo-card p-5 border-2 border-[#0b1f3a] text-xs space-y-3">
+      <div class="flex justify-between items-center pb-2 border-b-2 border-[#0b1f3a]/15">
+        <span class="font-extrabold text-sm text-[#0b1f3a]">Cookie Chain Network Configuration (For Nightly & Phantom)</span>
+        <button onclick="toggleRpcGuide()" class="text-lg font-black text-[#0b1f3a] hover:opacity-75 cursor-pointer">&times;</button>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] mono">
-        <div><span class="text-gray-500">Network Name:</span> <span class="text-gray-200">Cookie Chain</span></div>
-        <div><span class="text-gray-500">RPC URL:</span> <span class="text-amber-300 select-all">https://rpc.cookiescan.io</span></div>
-        <div><span class="text-gray-500">Currency Symbol:</span> <span class="text-gray-200">COOKIE</span></div>
-        <div><span class="text-gray-500">Block Explorer:</span> <span class="text-amber-300 select-all">https://cookiescan.io</span></div>
-        <div><span class="text-gray-500">Canonical SPL Memo:</span> <span class="text-gray-300 select-all">MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr</span></div>
-        <div><span class="text-gray-500">Official Bridge:</span> <a href="https://www.cookiechain.wtf" target="_blank" class="text-amber-400 underline">https://www.cookiechain.wtf</a></div>
+        <div class="p-2.5 rounded-xl bg-[#f8fafc] border border-[#0b1f3a]">
+          <span class="font-bold text-[#0b1f3a]/60 block">Network Name:</span>
+          <span class="font-extrabold text-[#0b1f3a]">Cookie Chain</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-[#f8fafc] border border-[#0b1f3a]">
+          <span class="font-bold text-[#0b1f3a]/60 block">RPC URL:</span>
+          <span class="font-extrabold text-[#0b1f3a] select-all">https://rpc.cookiescan.io</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-[#f8fafc] border border-[#0b1f3a]">
+          <span class="font-bold text-[#0b1f3a]/60 block">Currency Symbol:</span>
+          <span class="font-extrabold text-[#d97706]">COOKIE</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-[#f8fafc] border border-[#0b1f3a]">
+          <span class="font-bold text-[#0b1f3a]/60 block">Block Explorer:</span>
+          <a href="https://cookiescan.io" target="_blank" class="font-extrabold text-[#0b1f3a] underline">https://cookiescan.io</a>
+        </div>
+        <div class="p-2.5 rounded-xl bg-[#f8fafc] border border-[#0b1f3a] md:col-span-2">
+          <span class="font-bold text-[#0b1f3a]/60 block">Canonical SPL Memo Program:</span>
+          <span class="font-bold text-[#0b1f3a] select-all">MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr</span>
+        </div>
       </div>
     </div>
 
-    <!-- Live Explorer & Transaction Log -->
-    <div class="glass p-6 rounded-2xl space-y-3">
-      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-          <span>📡</span> Live Gateway Telemetry Log
-        </h3>
-        <span class="text-[11px] text-gray-500 mono">Auto-refreshing every 5s</span>
+    <!-- Retro Terminal: Telemetry Log -->
+    <div class="neo-card p-5 space-y-3">
+      <div class="flex items-center justify-between border-b-2 border-[#0b1f3a]/15 pb-2.5">
+        <div class="flex items-center gap-2">
+          <!-- Window Dots -->
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-red-400 border border-[#0b1f3a]"></span>
+            <span class="w-3 h-3 rounded-full bg-yellow-400 border border-[#0b1f3a]"></span>
+            <span class="w-3 h-3 rounded-full bg-green-400 border border-[#0b1f3a]"></span>
+          </div>
+          <h3 class="text-xs sm:text-sm font-black text-[#0b1f3a] ml-2">
+            📡 Live Gateway Telemetry Console
+          </h3>
+        </div>
+        <span class="text-[10px] font-bold text-[#0b1f3a]/60 mono">Polling every 5s</span>
       </div>
-      <div id="logTerminal" class="h-36 bg-gray-900 rounded-lg p-3 overflow-y-auto mono text-[11px] space-y-1 text-gray-300 border border-gray-800">
+
+      <!-- Console Window -->
+      <div id="logTerminal" class="h-40 bg-[#071322] rounded-2xl p-3.5 overflow-y-auto mono text-[11px] space-y-1.5 text-gray-200 border-2 border-[#0b1f3a] shadow-inner">
         <div><span class="text-gray-500">[INIT]</span> Initializing CookieAgent cApp on Cookie Chain SVM...</div>
         <div><span class="text-emerald-400">[RPC]</span> Connected to https://rpc.cookiescan.io (Healthy)</div>
       </div>
@@ -219,125 +412,144 @@
 
   </main>
 
-  <!-- Real Web3 Wallet Connection Modal -->
-  <div id="walletModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-    <div class="glass max-w-md w-full rounded-2xl p-6 border border-amber-500/30 space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-gray-800 pb-3">
-        <div>
-          <h3 class="text-base font-bold text-white">Connect SVM Wallet</h3>
-          <p class="text-xs text-gray-400">Select an authentic Web3 provider on Cookie Chain</p>
+  <!-- Real Web3 Wallet Connection Modal (Cartoon Neobrutalist) -->
+  <div id="walletModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-[#0b1f3a]/60 backdrop-blur-sm p-4">
+    <div class="neo-card max-w-md w-full p-6 space-y-4 shadow-[0_8px_0_#0b1f3a]">
+      
+      <div class="flex justify-between items-center border-b-2 border-[#0b1f3a]/15 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">👛</span>
+          <div>
+            <h3 class="text-base font-black text-[#0b1f3a]">Connect SVM Wallet</h3>
+            <p class="text-[11px] font-bold text-[#0b1f3a]/65">Select an authentic Web3 provider on Cookie Chain</p>
+          </div>
         </div>
-        <button onclick="closeWalletModal()" class="text-gray-400 hover:text-white text-lg">&times;</button>
+        <button onclick="closeWalletModal()" class="text-2xl font-black text-[#0b1f3a] hover:opacity-70 cursor-pointer">&times;</button>
       </div>
 
-      <!-- Installation / Helper Notice (Shown dynamically if wallet extension is missing) -->
-      <div id="walletInstallNotice" class="hidden p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 space-y-2">
+      <!-- Installation / Missing Wallet Notice -->
+      <div id="walletInstallNotice" class="hidden p-3.5 rounded-2xl bg-[#fef08a] border-2 border-[#0b1f3a] text-xs text-[#0b1f3a] space-y-2 shadow-[0_2px_0_#0b1f3a]">
         <div class="flex items-center justify-between">
-          <span class="font-bold flex items-center gap-1.5" id="walletNoticeTitle">⚠️ Nightly Wallet no detectada</span>
-          <button onclick="document.getElementById('walletInstallNotice').classList.add('hidden')" class="text-gray-400 hover:text-white">&times;</button>
+          <span class="font-extrabold flex items-center gap-1.5" id="walletNoticeTitle">⚠️ Billetera no detectada</span>
+          <button onclick="document.getElementById('walletInstallNotice').classList.add('hidden')" class="text-[#0b1f3a] font-black cursor-pointer">&times;</button>
         </div>
-        <p id="walletNoticeDesc" class="text-gray-300 text-[11px]">Abrimos la tienda oficial de Chrome Web Store. Si prefieres no instalar extensiones, puedes conectar de inmediato con la Session Key integrada:</p>
-        <button onclick="connectWallet('session_key')" class="w-full py-2 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-emerald-500/20">
+        <p id="walletNoticeDesc" class="text-[11px] font-medium leading-relaxed">
+          Abrimos la tienda oficial. Si prefieres no instalar extensiones, conéctate de inmediato con la Session Key integrada:
+        </p>
+        <button onclick="connectWallet('session_key')" class="w-full py-2 px-3 rounded-xl bg-[#86efac] hover:bg-[#4ade80] text-[#0b1f3a] font-extrabold text-xs neo-btn flex items-center justify-center gap-1.5">
           <span>🔑 Conectar con Session Key al instante</span>
         </button>
       </div>
 
-      <!-- Connecting in Progress Banner -->
-      <div id="walletSigningStatus" class="hidden p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-xs text-purple-200 flex items-center gap-3">
-        <div class="animate-spin rounded-full h-5 w-5 border-2 border-purple-400 border-t-transparent flex-shrink-0"></div>
+      <!-- Connecting Status Spinner -->
+      <div id="walletSigningStatus" class="hidden p-3.5 rounded-2xl bg-[#d8f1ff] border-2 border-[#0b1f3a] text-xs text-[#0b1f3a] flex items-center gap-3 shadow-[0_2px_0_#0b1f3a]">
+        <div class="animate-spin rounded-full h-5 w-5 border-3 border-[#0b1f3a] border-t-transparent flex-shrink-0"></div>
         <div>
-          <div class="font-bold text-white flex items-center gap-1.5" id="signingWalletTitle">⏳ Conectando con tu billetera...</div>
-          <div class="text-[11px] text-gray-300">Si tu extensión solicita permisos, haz clic en <strong class="text-purple-300">Conectar / Aprobar</strong>.</div>
+          <div class="font-black text-sm" id="signingWalletTitle">⏳ Conectando con tu billetera...</div>
+          <div class="text-[11px] font-medium text-[#0b1f3a]/75">Si tu extensión solicita permisos, haz clic en <strong>Conectar / Aprobar</strong>.</div>
         </div>
       </div>
 
       <!-- Error / Rejected Notice -->
-      <div id="walletErrorNotice" class="hidden p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-200 flex items-center justify-between">
-        <span id="walletErrorMsg" class="font-medium text-[11px]">⚠️ Firma cancelada o rechazada. La cuenta no fue conectada.</span>
-        <button onclick="document.getElementById('walletErrorNotice').classList.add('hidden')" class="text-red-400 hover:text-white text-sm ml-2">&times;</button>
+      <div id="walletErrorNotice" class="hidden p-3 rounded-xl bg-red-100 border-2 border-[#0b1f3a] text-xs text-red-900 flex items-center justify-between">
+        <span id="walletErrorMsg" class="font-bold text-[11px]">⚠️ Solicitud cancelada o rechazada.</span>
+        <button onclick="document.getElementById('walletErrorNotice').classList.add('hidden')" class="text-red-900 font-bold ml-2 cursor-pointer">&times;</button>
       </div>
 
+      <!-- Wallet Options List -->
       <div class="space-y-2.5">
+        
         <!-- Nightly Wallet -->
-        <div id="walletRowNightly" class="p-3 bg-gray-900/80 hover:bg-gray-800/90 rounded-xl border border-gray-800 flex items-center justify-between transition cursor-pointer" onclick="connectWallet('nightly')">
+        <div id="walletRowNightly" class="p-3 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5" onclick="connectWallet('nightly')">
           <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-lg">🦉</div>
+            <div class="w-10 h-10 rounded-xl bg-[#ffe0a8] border-2 border-[#0b1f3a] flex items-center justify-center text-xl">🦉</div>
             <div>
               <div class="flex items-center gap-1.5">
-                <span class="text-xs font-bold text-white">Nightly Wallet</span>
-                <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">Recommended</span>
+                <span class="text-xs font-black text-[#0b1f3a]">Nightly Wallet</span>
+                <span class="text-[9px] px-2 py-0.5 rounded-full bg-[#d8f1ff] text-[#0b1f3a] border border-[#0b1f3a] font-bold">Recommended</span>
               </div>
-              <p class="text-[10px] text-gray-400">Official SVM wallet for Cookie Chain bounties</p>
+              <p class="text-[10px] font-medium text-[#0b1f3a]/65">Official SVM wallet for Cookie Chain bounties</p>
             </div>
           </div>
-          <span id="badgeNightly" class="text-[10px] mono px-2 py-0.5 rounded bg-gray-800 text-gray-400">Checking...</span>
+          <span id="badgeNightly" class="text-[10px] mono px-2.5 py-0.5 rounded-full bg-gray-200 text-gray-700 border border-[#0b1f3a] font-bold">Checking...</span>
         </div>
 
         <!-- Phantom Wallet -->
-        <div id="walletRowPhantom" class="p-3 bg-gray-900/80 hover:bg-gray-800/90 rounded-xl border border-gray-800 flex items-center justify-between transition cursor-pointer" onclick="connectWallet('phantom')">
+        <div id="walletRowPhantom" class="p-3 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5" onclick="connectWallet('phantom')">
           <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-lg">👻</div>
+            <div class="w-10 h-10 rounded-xl bg-[#e9d5ff] border-2 border-[#0b1f3a] flex items-center justify-center text-xl">👻</div>
             <div>
-              <span class="text-xs font-bold text-white">Phantom</span>
-              <p class="text-[10px] text-gray-400">Standard Solana / SVM Web3 provider</p>
+              <span class="text-xs font-black text-[#0b1f3a]">Phantom</span>
+              <p class="text-[10px] font-medium text-[#0b1f3a]/65">Standard Solana / SVM Web3 provider</p>
             </div>
           </div>
-          <span id="badgePhantom" class="text-[10px] mono px-2 py-0.5 rounded bg-gray-800 text-gray-400">Checking...</span>
+          <span id="badgePhantom" class="text-[10px] mono px-2.5 py-0.5 rounded-full bg-gray-200 text-gray-700 border border-[#0b1f3a] font-bold">Checking...</span>
         </div>
 
         <!-- Solflare Wallet -->
-        <div id="walletRowSolflare" class="p-3 bg-gray-900/80 hover:bg-gray-800/90 rounded-xl border border-gray-800 flex items-center justify-between transition cursor-pointer" onclick="connectWallet('solflare')">
+        <div id="walletRowSolflare" class="p-3 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5" onclick="connectWallet('solflare')">
           <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-lg">☀️</div>
+            <div class="w-10 h-10 rounded-xl bg-[#fed7aa] border-2 border-[#0b1f3a] flex items-center justify-center text-xl">☀️</div>
             <div>
-              <span class="text-xs font-bold text-white">Solflare</span>
-              <p class="text-[10px] text-gray-400">Solana SVM Web3 wallet</p>
+              <span class="text-xs font-black text-[#0b1f3a]">Solflare</span>
+              <p class="text-[10px] font-medium text-[#0b1f3a]/65">Solana SVM Web3 wallet</p>
             </div>
           </div>
-          <span id="badgeSolflare" class="text-[10px] mono px-2 py-0.5 rounded bg-gray-800 text-gray-400">Checking...</span>
+          <span id="badgeSolflare" class="text-[10px] mono px-2.5 py-0.5 rounded-full bg-gray-200 text-gray-700 border border-[#0b1f3a] font-bold">Checking...</span>
         </div>
 
         <!-- In-Browser Session Key -->
-        <div class="pt-2 border-t border-gray-800">
-          <div class="p-3 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-xl border border-emerald-500/20 flex items-center justify-between transition cursor-pointer" onclick="connectWallet('session_key')">
+        <div class="pt-2 border-t-2 border-[#0b1f3a]/15">
+          <div class="p-3 bg-[#dcfce7] hover:bg-[#bbf7d0] rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5" onclick="connectWallet('session_key')">
             <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-lg">🔑</div>
+              <div class="w-10 h-10 rounded-xl bg-[#86efac] border-2 border-[#0b1f3a] flex items-center justify-center text-xl">🔑</div>
               <div>
                 <div class="flex items-center gap-1.5">
-                  <span class="text-xs font-bold text-emerald-400">In-Browser Session Key</span>
-                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">Instant Web3</span>
+                  <span class="text-xs font-black text-[#065f46]">In-Browser Session Key</span>
+                  <span class="text-[9px] px-2 py-0.5 rounded-full bg-white text-[#065f46] border border-[#0b1f3a] font-bold">Zero-Install</span>
                 </div>
-                <p class="text-[10px] text-gray-400">Generates real Ed25519 SVM keypair in browser</p>
+                <p class="text-[10px] font-medium text-[#065f46]/80">Generates real Ed25519 SVM keypair locally in browser</p>
               </div>
             </div>
-            <span class="text-[10px] mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Ready</span>
+            <span class="text-[10px] mono px-2.5 py-0.5 rounded-full bg-[#86efac] text-[#065f46] border border-[#0b1f3a] font-bold">Ready</span>
           </div>
         </div>
+
       </div>
 
-      <div class="p-2.5 rounded-lg bg-gray-900/60 border border-gray-800 text-[11px] text-gray-400 space-y-1">
-        <div class="text-amber-400 font-semibold flex items-center gap-1">
+      <!-- Standard Explanation -->
+      <div class="p-3 rounded-2xl bg-[#d8f1ff] border-2 border-[#0b1f3a] text-[11px] text-[#0b1f3a] space-y-1">
+        <div class="font-extrabold flex items-center gap-1">
           <span>💡</span> Estándar Web3 en Solana (igual que Jupiter y Raydium):
         </div>
-        <p class="leading-relaxed">
-          Al conectar, la extensión solo autoriza la lectura de tu dirección pública. La ventana emergente para <strong>firmar y aprobar transacciones</strong> se abrirá al realizar una acción on-chain (<em>🚀 Sign & Broadcast</em>) o al solicitar verificación SIWS.
+        <p class="font-medium text-[#0b1f3a]/80 leading-relaxed">
+          Al conectar, solo se comparte la dirección pública para lectura. Las firmas de transacciones únicamente se solicitan cuando tú presionas una acción on-chain.
         </p>
       </div>
 
-      <div class="text-[11px] text-gray-500 text-center">
-        No mock keys or fake strings. All addresses and balances are cryptographically grounded.
-      </div>
     </div>
   </div>
 
-  <!-- Footer -->
-  <footer class="border-t border-gray-900 py-6 text-center text-xs text-gray-500 glass">
-    <p>CookieAgent Gateway & Sentinel &bull; Deployed on Oracle Cloud Santiago (Free Tier) &bull; Built for Superteam Earn</p>
-    <p class="mt-1 text-[11px]">
-      <a href="https://cookiescan.io" target="_blank" class="hover:text-amber-400">CookieScan Explorer</a> &bull;
-      <a href="https://docs.cookiechain.wtf" target="_blank" class="hover:text-amber-400">Cookie Chain Docs</a> &bull;
-      <a href="https://github.com/cookiechain/cookie-mcp" target="_blank" class="hover:text-amber-400">cookie-mcp</a>
-    </p>
+  <!-- Footer (Cookie Chain Branding) -->
+  <footer class="mt-8 border-t-2 border-[#0b1f3a] bg-[#d8f1ff] py-6 text-center text-xs font-bold text-[#0b1f3a]">
+    <div class="max-w-6xl mx-auto px-4 space-y-2">
+      <div class="flex items-center justify-center gap-2">
+        <span class="text-lg">🍪</span>
+        <span class="font-black">CookieAgent cApp &bull; Cookie Chain SVM Gateway & Sentinel</span>
+      </div>
+      <p class="text-[11px] text-[#0b1f3a]/75">
+        Deployed on Oracle Cloud Santiago (Always Free Tier) &bull; Built for Superteam Earn &bull; Powered by FastAPI & MCP
+      </p>
+      <div class="flex items-center justify-center gap-4 text-[11px] pt-1">
+        <a href="https://cookiescan.io" target="_blank" class="hover:underline">CookieScan Explorer</a>
+        <span>&bull;</span>
+        <a href="https://docs.cookiechain.wtf" target="_blank" class="hover:underline">Cookie Chain Docs</a>
+        <span>&bull;</span>
+        <a href="https://github.com/cookiechain/cookie-mcp" target="_blank" class="hover:underline">cookie-mcp</a>
+        <span>&bull;</span>
+        <a href="https://www.cookiechain.wtf" target="_blank" class="hover:underline">cookiechain.wtf</a>
+      </div>
+    </div>
   </footer>
 
   <script src="/static/app.js"></script>

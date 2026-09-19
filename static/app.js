@@ -123,10 +123,10 @@ function detectWallets() {
   if (badgeNightly) {
     if (hasNightly) {
       badgeNightly.innerText = "Detected";
-      badgeNightly.className = "text-[10px] mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold";
+      badgeNightly.className = "text-[10px] mono px-2.5 py-0.5 rounded-full bg-[#bbf7d0] text-[#065f46] border border-[#0b1f3a] font-bold";
     } else {
       badgeNightly.innerText = "Install ↗";
-      badgeNightly.className = "text-[10px] mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 hover:underline";
+      badgeNightly.className = "text-[10px] mono px-2.5 py-0.5 rounded-full bg-gray-200 text-gray-700 border border-[#0b1f3a] font-bold hover:underline";
     }
   }
 
@@ -134,10 +134,10 @@ function detectWallets() {
   if (badgePhantom) {
     if (hasPhantom) {
       badgePhantom.innerText = "Detected";
-      badgePhantom.className = "text-[10px] mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold";
+      badgePhantom.className = "text-[10px] mono px-2.5 py-0.5 rounded-full bg-[#bbf7d0] text-[#065f46] border border-[#0b1f3a] font-bold";
     } else {
       badgePhantom.innerText = "Install ↗";
-      badgePhantom.className = "text-[10px] mono px-2 py-0.5 rounded bg-gray-800 text-gray-500";
+      badgePhantom.className = "text-[10px] mono px-2.5 py-0.5 rounded-full bg-gray-200 text-gray-700 border border-[#0b1f3a] font-bold hover:underline";
     }
   }
 
@@ -145,10 +145,10 @@ function detectWallets() {
   if (badgeSolflare) {
     if (hasSolflare) {
       badgeSolflare.innerText = "Detected";
-      badgeSolflare.className = "text-[10px] mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold";
+      badgeSolflare.className = "text-[10px] mono px-2.5 py-0.5 rounded-full bg-[#bbf7d0] text-[#065f46] border border-[#0b1f3a] font-bold";
     } else {
       badgeSolflare.innerText = "Install ↗";
-      badgeSolflare.className = "text-[10px] mono px-2 py-0.5 rounded bg-gray-800 text-gray-500";
+      badgeSolflare.className = "text-[10px] mono px-2.5 py-0.5 rounded-full bg-gray-200 text-gray-700 border border-[#0b1f3a] font-bold hover:underline";
     }
   }
 }
@@ -482,32 +482,30 @@ function updateUI() {
     
     if (isSiwsVerified) {
       badge.innerText = `${activeWalletType} (SIWS ✓)`;
-      badge.className = "text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 mono font-semibold";
+      badge.className = "text-[10px] font-black px-2 py-0.5 rounded-full bg-[#bbf7d0] text-[#065f46] border border-[#0b1f3a] mono";
     } else {
       badge.innerText = `${activeWalletType}`;
-      badge.className = "text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 mono font-semibold";
+      badge.className = "text-[10px] font-black px-2 py-0.5 rounded-full bg-[#d8f1ff] text-[#0b1f3a] border border-[#0b1f3a] mono";
     }
     
     explorerLink.href = `https://cookiescan.io/address/${connectedAddress}`;
     explorerLink.classList.remove('hidden');
 
-    btn.innerHTML = `<span>✓ ${shortAddr} (${activeWalletType})</span> <span onclick="event.stopPropagation(); disconnectWallet();" class="text-xs text-red-400 hover:text-red-300 ml-1 font-bold">[Disconnect]</span>`;
-    btn.classList.remove('from-amber-500', 'to-amber-600');
-    btn.classList.add('from-emerald-500', 'to-emerald-600');
+    btn.innerHTML = `<span>🍪 ${shortAddr} (${activeWalletType})</span> <span onclick="event.stopPropagation(); disconnectWallet();" class="text-xs text-red-600 hover:underline ml-1.5 font-black">[Disconnect]</span>`;
+    btn.className = "px-4 sm:px-5 py-2 sm:py-2.5 bg-[#86efac] hover:bg-[#4ade80] text-[#0b1f3a] font-extrabold text-xs sm:text-sm rounded-full neo-btn flex items-center gap-2";
 
     broadcastBtn.innerHTML = `<span>🚀 Sign & Broadcast to Cookie Chain SVM</span>`;
-    broadcastBtn.classList.remove('from-amber-500', 'to-amber-600');
-    broadcastBtn.classList.add('from-emerald-500', 'to-emerald-600');
+    broadcastBtn.className = "w-full py-3 bg-[#86efac] hover:bg-[#4ade80] text-[#0b1f3a] font-extrabold text-sm rounded-2xl neo-btn flex items-center justify-center gap-2 mt-2";
 
     if (signSiwsBtn) {
       signSiwsBtn.classList.remove('hidden');
       if (isSiwsVerified) {
         signSiwsBtn.innerHTML = `<span>✓ Autenticación SIWS Firmada</span>`;
-        signSiwsBtn.className = "mt-2 w-full py-1.5 px-2 text-[10px] rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono flex items-center justify-center gap-1 cursor-default";
+        signSiwsBtn.className = "mt-2 w-full py-1.5 px-2 text-[11px] rounded-xl bg-[#bbf7d0] text-[#065f46] border-2 border-[#0b1f3a] font-black flex items-center justify-center gap-1 cursor-default shadow-[0_2px_0_#0b1f3a]";
         signSiwsBtn.disabled = true;
       } else {
-        signSiwsBtn.innerHTML = `<span>✍️ Solicitar Firma de Verificación (SIWS)</span>`;
-        signSiwsBtn.className = "mt-2 w-full py-1.5 px-2 text-[10px] rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 font-mono flex items-center justify-center gap-1 transition cursor-pointer";
+        signSiwsBtn.innerHTML = `<span>✍️ Solicitar Firma SIWS</span>`;
+        signSiwsBtn.className = "mt-2 w-full py-1.5 px-2 text-[11px] rounded-xl bg-[#fef08a] hover:bg-[#fde047] text-[#0b1f3a] border-2 border-[#0b1f3a] font-black flex items-center justify-center gap-1 transition-all shadow-[0_2px_0_#0b1f3a] active:translate-y-0.5 cursor-pointer";
         signSiwsBtn.disabled = false;
       }
     }
@@ -516,16 +514,14 @@ function updateUI() {
     statWallet.title = "";
     statBalance.innerText = "0.0000 COOKIE";
     badge.innerText = "None";
-    badge.className = "text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 mono";
+    badge.className = "text-[10px] font-black px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 border border-[#0b1f3a] mono";
     explorerLink.classList.add('hidden');
 
     btn.innerHTML = `<span>⚡ Connect Wallet</span>`;
-    btn.classList.remove('from-emerald-500', 'to-emerald-600');
-    btn.classList.add('from-amber-500', 'to-amber-600');
+    btn.className = "px-4 sm:px-5 py-2 sm:py-2.5 bg-[#ffe0a8] hover:bg-[#fed388] text-[#0b1f3a] font-extrabold text-xs sm:text-sm rounded-full neo-btn flex items-center gap-2";
 
     broadcastBtn.innerHTML = `<span>⚡ Connect Wallet to Broadcast On-Chain</span>`;
-    broadcastBtn.classList.remove('from-emerald-500', 'to-emerald-600');
-    broadcastBtn.classList.add('from-amber-500', 'to-amber-600');
+    broadcastBtn.className = "w-full py-3 bg-[#ffe0a8] hover:bg-[#fed388] text-[#0b1f3a] font-extrabold text-sm rounded-2xl neo-btn flex items-center justify-center gap-2 mt-2";
 
     if (signSiwsBtn) {
       signSiwsBtn.classList.add('hidden');
@@ -665,13 +661,13 @@ async function triggerAgentPing() {
     }
 
     box.classList.remove('hidden');
-    statusHeader.className = "text-emerald-400 font-bold flex items-center gap-1";
+    statusHeader.className = "text-[#059669] font-black flex items-center gap-1.5 text-sm";
     statusHeader.innerHTML = "<span>✓</span> Confirmado On-Chain en Cookie Chain SVM";
     details.innerHTML = `
       <strong>Signer:</strong> ${connectedAddress} (${activeWalletType})<br>
-      <strong>Canonical Program:</strong> <span class="text-amber-300">MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr</span><br>
+      <strong>Canonical Program:</strong> <span class="text-[#b45309] font-bold">MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr</span><br>
       <strong>Recent Blockhash:</strong> ${blockhash.slice(0, 16)}...<br>
-      <strong>Transaction Hash:</strong> <a href="https://cookiescan.io/tx/${txSignature}" target="_blank" class="text-emerald-400 underline font-bold">Ver en CookieScan (${txSignature.slice(0, 12)}...) &rarr;</a>
+      <strong>Transaction Hash:</strong> <a href="https://cookiescan.io/tx/${txSignature}" target="_blank" class="text-[#059669] underline font-black">Ver en CookieScan (${txSignature.slice(0, 12)}...) &rarr;</a>
     `;
     logMessage("TX_CONFIRMED", `Transacción on-chain confirmada: ${txSignature}`, "text-emerald-400");
     fetchWalletBalance(connectedAddress);
@@ -681,21 +677,21 @@ async function triggerAgentPing() {
     logMessage("TX_FEEDBACK", `Respuesta de la red/billetera: ${errMsg}`, "text-amber-400");
 
     box.classList.remove('hidden');
-    statusHeader.className = "text-amber-400 font-bold flex items-center gap-1";
+    statusHeader.className = "text-[#d97706] font-black flex items-center gap-1.5 text-sm";
     statusHeader.innerHTML = "<span>⚠️</span> Notificación de Transacción / Validación";
 
     let notice = errMsg;
     if (errMsg.includes("Attempt to debit an account but found no record of a prior credit") || errMsg.includes("0x1") || errMsg.includes("insufficient")) {
       notice = `La dirección conectada tiene <strong>0.0000 COOKIE</strong> para la tarifa de red (~0.000005 COOKIE).<br>
-      Para realizar escrituras on-chain, transfiere COOKIE a esta dirección desde el bridge: <a href="https://www.cookiechain.wtf" target="_blank" class="text-amber-400 underline">https://www.cookiechain.wtf</a>`;
+      Para realizar escrituras on-chain, transfiere COOKIE a esta dirección desde el bridge: <a href="https://www.cookiechain.wtf" target="_blank" class="text-[#0b1f3a] underline font-bold">https://www.cookiechain.wtf</a>`;
     } else if (errMsg.includes("User rejected") || errMsg.includes("rejected") || errMsg.includes("cancelled")) {
       notice = "Has cancelado la firma de la transacción en tu billetera.";
     }
 
     details.innerHTML = `
       <strong>Signer:</strong> ${connectedAddress} (${activeWalletType})<br>
-      <strong>Target Network:</strong> Cookie Chain SVM (<a href="https://cookiescan.io/address/${connectedAddress}" target="_blank" class="text-amber-400 underline">Ver dirección en CookieScan</a>)<br>
-      <strong>Detalle:</strong> <span class="text-amber-300">${notice}</span>
+      <strong>Target Network:</strong> Cookie Chain SVM (<a href="https://cookiescan.io/address/${connectedAddress}" target="_blank" class="text-[#0b1f3a] underline font-bold">Ver dirección en CookieScan</a>)<br>
+      <strong>Detalle:</strong> <span class="text-[#b45309] font-bold">${notice}</span>
     `;
   }
 }
