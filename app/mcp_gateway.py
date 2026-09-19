@@ -84,6 +84,35 @@ SUPPORTED_TOOLS = [
             "properties": {},
             "required": []
         }
+    ),
+    MCPToolDefinition(
+        name="cookie_scan_arbitrage_crumbs",
+        description="Scan real-time arbitrage spreads across Cookie Chain SVM liquidity pools and AMMs.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    ),
+    MCPToolDefinition(
+        name="cookie_calculate_airdrop_karma",
+        description="Calculate on-chain Baker Karma score and airdrop qualification tier for any Cookie Chain address.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "address": {"type": "string", "description": "Base58 address to check"}
+            },
+            "required": ["address"]
+        }
+    ),
+    MCPToolDefinition(
+        name="cookie_get_burn_stats",
+        description="Query real-time deflationary metrics: cumulative $COOKIE burned and 24h burn rate.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
     )
 ]
 

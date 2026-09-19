@@ -92,3 +92,48 @@ async def test_mcp_execute_fleet():
     data = response.json()
     assert data["total_agents"] == 10
 
+@pytest.mark.asyncio
+async def test_opportunities_radar():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get("/api/v1/opportunities/radar")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "active"
+    assert data["total_crumbs"] >= 3
+
+@pytest.mark.asyncio
+async def test_eat_opportunity():
+    payload = {
+        "opportunity_id": "opp_cookie_usdc_01",
+        "user_address": "HSPEiMn8BYVgPZdHMXw3XkwfdAZksemaR7X5KS6eFmFV"
+    }
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.post("/api/v1/opportunities/eat", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "confirmed"
+    assert data["incentive_split"]["user_share_pct"] == "80%"
+    assert data["incentive_split"]["burn_share_pct"] == "10%"
+
+@pytest.mark.asyncio
+async def test_burn_stats():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get("/api/v1/stats/burn")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["token"] == "$COOKIE"
+    assert data["cumulative_burned"] > 0
+
+@pytest.mark.asyncio
+async def test_airdrop_karma():
+    addr = "HSPEiMn8BYVgPZdHMXw3XkwfdAZksemaR7X5KS6eFmFV"
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get(f"/api/v1/airdrop/karma/{addr}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["address"] == addr
+    assert "baker_karma_score" in data
+    assert "airdrop_tier" in data
+    assert data["dao_grant_eligibility"] == "VERIFIED_ELIGIBLE"
+
+

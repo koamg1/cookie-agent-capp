@@ -8,6 +8,9 @@ import { TelemetryOven } from './components/TelemetryOven';
 import { McpKitchen } from './components/McpKitchen';
 import { AgentFleet, AgentInfo } from './components/AgentFleet';
 import { BridgeGuideModal } from './components/BridgeGuideModal';
+import { CookieCrumbsRadar } from './components/CookieCrumbsRadar';
+import { CookieBurnOven } from './components/CookieBurnOven';
+import { AirdropPassportModal } from './components/AirdropPassportModal';
 import { TelemetryConsole, LogEntry } from './components/TelemetryConsole';
 import { WalletModal } from './components/WalletModal';
 import {
@@ -55,6 +58,7 @@ export const App: React.FC = () => {
   // Fleet & Bridge State
   const [selectedAgent, setSelectedAgent] = useState<AgentInfo | null>(null);
   const [isBridgeModalOpen, setIsBridgeModalOpen] = useState<boolean>(false);
+  const [isAirdropModalOpen, setIsAirdropModalOpen] = useState<boolean>(false);
 
   // Telemetry Broadcast State
   const [isBroadcasting, setIsBroadcasting] = useState<boolean>(false);
@@ -416,6 +420,7 @@ export const App: React.FC = () => {
         }}
         onDisconnect={disconnectWallet}
         onOpenBridgeModal={() => setIsBridgeModalOpen(true)}
+        onOpenAirdropModal={() => setIsAirdropModalOpen(true)}
       />
 
       {/* Main Content */}
@@ -458,6 +463,29 @@ export const App: React.FC = () => {
           <McpKitchen />
         </div>
 
+        {/* Cookie Crumbs Arbitrage Radar & Deflationary Burn Oven Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CookieCrumbsRadar
+            connectedAddress={connectedAddress}
+            onOpenWalletModal={() => {
+              setModalStatus('idle');
+              setIsModalOpen(true);
+            }}
+            onRefreshBalance={() => {
+              if (connectedAddress) fetchBalance(connectedAddress);
+            }}
+            onAddLog={addLog}
+          />
+          <CookieBurnOven
+            connectedAddress={connectedAddress}
+            onOpenWalletModal={() => {
+              setModalStatus('idle');
+              setIsModalOpen(true);
+            }}
+            onAddLog={addLog}
+          />
+        </div>
+
         {/* Arcade Telemetry Console */}
         <TelemetryConsole logs={logs} />
 
@@ -483,6 +511,15 @@ export const App: React.FC = () => {
         isOpen={isBridgeModalOpen}
         onClose={() => setIsBridgeModalOpen(false)}
         connectedAddress={connectedAddress}
+      />
+
+      {/* Baker Karma & Airdrop Passport Modal */}
+      <AirdropPassportModal
+        isOpen={isAirdropModalOpen}
+        onClose={() => setIsAirdropModalOpen(false)}
+        connectedAddress={connectedAddress}
+        activeWalletType={activeWalletType}
+        onAddLog={addLog}
       />
 
       {/* Footer */}

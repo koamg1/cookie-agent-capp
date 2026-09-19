@@ -7,6 +7,7 @@ interface NavbarProps {
   onOpenWalletModal: () => void;
   onDisconnect: () => void;
   onOpenBridgeModal?: () => void;
+  onOpenAirdropModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -14,7 +15,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeWalletType,
   onOpenWalletModal,
   onDisconnect,
-  onOpenBridgeModal
+  onOpenBridgeModal,
+  onOpenAirdropModal
 }) => {
   const shortAddr = connectedAddress
     ? `${connectedAddress.slice(0, 4)}...${connectedAddress.slice(-4)}`
@@ -46,6 +48,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="hidden sm:inline-flex items-center gap-1.5 text-xs font-black text-[#0b1f3a] bg-[#ffe0a8] hover:bg-[#fed388] border border-[#0b1f3a] px-2.5 py-1.5 rounded-full shadow-[0_1px_0_#0b1f3a] cursor-pointer"
             >
               <span>🚰 Faucet & Bridge</span>
+            </button>
+          )}
+          {onOpenAirdropModal && (
+            <button
+              onClick={onOpenAirdropModal}
+              className="inline-flex items-center gap-1.5 text-xs font-black text-[#0b1f3a] bg-[#d8b4fe] hover:bg-[#c084fc] border border-[#0b1f3a] px-2.5 py-1.5 rounded-full shadow-[0_1px_0_#0b1f3a] cursor-pointer animate-pulse"
+            >
+              <span>🎁 Airdrop Passport</span>
             </button>
           )}
           <a
