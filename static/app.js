@@ -7,6 +7,7 @@ let activeWalletProvider = null;
 function logMessage(tag, message, color = "text-gray-300") {
   const terminal = document.getElementById("logTerminal");
   if (!terminal) return;
+  while (terminal.children.length > 40) { terminal.removeChild(terminal.firstChild); }
   const timeStr = new Date().toISOString().substring(11, 19);
   const line = document.createElement("div");
   line.innerHTML = `<span class="text-gray-500">[${timeStr}]</span> <span class="${color}">[${tag}]</span> ${message}`;
