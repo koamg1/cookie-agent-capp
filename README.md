@@ -9,10 +9,10 @@
 
 ---
 
-## 🌐 Live Interactive Demo
-* **Live Application URL**: [http://146.181.24.180:8080](http://146.181.24.180:8080)
-* **Interactive Swagger OpenAPI**: [http://146.181.24.180:8080/docs](http://146.181.24.180:8080/docs)
-* **Raw MCP Manifest**: [http://146.181.24.180:8080/api/v1/mcp/manifest](http://146.181.24.180:8080/api/v1/mcp/manifest)
+## 🌐 Live Interactive Demo & Endpoints
+* **Live Application URL**: Submitted privately in Superteam Earn Form (`:8081`)
+* **Interactive Swagger OpenAPI Docs**: `http://<DEPLOYED_HOST>:8081/docs`
+* **Raw Model Context Protocol (MCP) Manifest**: `http://<DEPLOYED_HOST>:8081/api/v1/mcp/manifest`
 
 ---
 
@@ -63,14 +63,14 @@ flowchart TD
 ```bash
 docker compose up -d
 ```
-Visit `http://localhost:8080` or explore the API at `http://localhost:8080/docs`.
+Visit `http://localhost:8081` or explore the API at `http://localhost:8081/docs`.
 
 ### Option B: Local Python Development
 ```bash
 python -m venv venv
 source venv/bin/activate  # Or venv\Scripts\activate on Windows
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
 ```
 
 ---

@@ -3,6 +3,7 @@ CookieAgent Gateway & Sentinel cApp
 Main FastAPI Application for Cookie Chain Bounty ($1,000 USDC)
 """
 
+import asyncio
 import time
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
@@ -26,7 +27,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -61,17 +62,25 @@ async def health_check():
 
 @app.get("/api/v1/network/stats")
 async def network_stats():
-    """Fetches real-time slot and block height from Cookie Chain SVM."""
-    slot_res = await cookie_client.get_slot()
-    height_res = await cookie_client.get_block_height()
-    blockhash_res = await cookie_client.get_latest_blockhash()
+    """Fetches real-time slot and block height from Cookie Chain SVM in parallel."""
+    slot_res, height_res, blockhash_res = await asyncio.gather(
+        cookie_client.get_slot(),
+        cookie_client.get_block_height(),
+        cookie_client.get_latest_blockhash()
+    )
+
+    bh_val = "unavailable"
+    if isinstance(blockhash_res, dict) and "result" in blockhash_res:
+        bh_res = blockhash_res["result"]
+        if isinstance(bh_res, dict):
+            bh_val = bh_res.get("value", {}).get("blockhash", "unavailable")
 
     return {
         "network": "Cookie Chain (SVM)",
         "rpc_endpoint": cookie_client.rpc_url,
         "slot": slot_res.get("result"),
         "block_height": height_res.get("result"),
-        "latest_blockhash": blockhash_res.get("result", {}).get("value", {}).get("blockhash") if "result" in blockhash_res else "unavailable",
+        "latest_blockhash": bh_val,
         "latency_ms": slot_res.get("latency_ms", 0)
     }
 
@@ -93,21 +102,33 @@ class AgentPingRequest(BaseModel):
 @app.post("/api/v1/agent/ping")
 async def agent_ping(req: AgentPingRequest):
     """
-    Simulates / prepares an autonomous on-chain telemetry ping for an agent.
+    Prepares an autonomous on-chain telemetry ping for an agent.
     Provides verifiable proof payload ready for Cookie Chain SVM submission.
     """
-    blockhash_res = await cookie_client.get_latest_blockhash()
-    current_slot = await cookie_client.get_slot()
+    blockhash_res, current_slot = await asyncio.gather(
+        cookie_client.get_latest_blockhash(),
+        cookie_client.get_slot()
+    )
+
+    bh_val = "unavailable"
+    if isinstance(blockhash_res, dict) and "result" in blockhash_res:
+        bh_res = blockhash_res["result"]
+        if isinstance(bh_res, dict):
+            bh_val = bh_res.get("value", {}).get("blockhash", "unavailable")
+
+    proof_nonce = f"PROOF-{int(time.time())}-{abs(hash(req.agent_id)) % 100000:05d}"
 
     return {
         "status": "recorded",
         "agent_id": req.agent_id,
         "memo": req.memo,
-        "target_network": "Cookie Chain",
+        "target_network": "Cookie Chain (SVM)",
         "slot": current_slot.get("result"),
-        "blockhash": blockhash_res.get("result", {}).get("value", {}).get("blockhash") if "result" in blockhash_res else "N/A",
+        "blockhash": bh_val,
+        "canonical_memo_program": "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
         "instruction_type": "SPL_MEMO_V2",
-        "explorer_instruction_url": f"https://cookiescan.io/tx/demo-memo-{int(time.time())}"
+        "proof_nonce": proof_nonce,
+        "is_simulation": True
     }
 
 @app.post("/api/v1/mcp/execute")

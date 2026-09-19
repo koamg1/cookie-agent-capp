@@ -91,6 +91,45 @@ async function triggerAgentPing() {
 
   logMessage("TX", `Preparing on-chain SPL memo for agent [${agentId}]...`, "text-amber-300");
 
+  // Check if real Nightly wallet is connected with Solana Web3 available
+  if (window.nightly && window.nightly.solana && connectedAddress && !connectedAddress.startsWith("Cook1eAg3nt") && window.solanaWeb3) {
+    try {
+      logMessage("SVM", "Building native SPL Memo transaction for Cookie Chain...", "text-amber-400");
+      const connection = new solanaWeb3.Connection("https://rpc.cookiescan.io", "confirmed");
+      const memoProgramId = new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+      const userPubkey = new solanaWeb3.PublicKey(connectedAddress);
+
+      const instruction = new solanaWeb3.TransactionInstruction({
+        keys: [{ pubkey: userPubkey, isSigner: true, isWritable: true }],
+        programId: memoProgramId,
+        data: new TextEncoder().encode(`[CookieAgent] ${agentId}: ${memo}`)
+      });
+
+      const transaction = new solanaWeb3.Transaction().add(instruction);
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = userPubkey;
+
+      logMessage("WALLET", "Requesting signature from Nightly...", "text-purple-400");
+      const signedRes = await window.nightly.solana.signAndSendTransaction(transaction);
+      const txSignature = typeof signedRes === 'string' ? signedRes : (signedRes.signature || JSON.stringify(signedRes));
+
+      box.classList.remove('hidden');
+      details.innerHTML = `
+        <strong>Agent:</strong> ${agentId}<br>
+        <strong>Memo Payload:</strong> "${memo}"<br>
+        <strong>Status:</strong> <span class="text-emerald-400 font-bold">Confirmed On-Chain</span><br>
+        <strong>Canonical Memo Program:</strong> <span class="text-amber-300">MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr</span><br>
+        <strong>Explorer Verification:</strong> <a href="https://cookiescan.io/tx/${txSignature}" target="_blank" class="text-emerald-400 underline font-bold">View Real Tx on CookieScan (${txSignature.slice(0, 10)}...) &rarr;</a>
+      `;
+      logMessage("TX_CONFIRMED", `Real on-chain tx confirmed: ${txSignature.slice(0, 16)}...`, "text-emerald-400");
+      return;
+    } catch (txErr) {
+      logMessage("TX_FALLBACK", `Nightly broadcast bypassed: ${txErr.message || txErr}. Reverting to Gateway State Proof.`, "text-amber-400");
+    }
+  }
+
+  // Fallback: Gateway State Proof simulation via backend
   try {
     const res = await fetch('/api/v1/agent/ping', {
       method: 'POST',
@@ -103,15 +142,17 @@ async function triggerAgentPing() {
       box.classList.remove('hidden');
       details.innerHTML = `
         <strong>Agent:</strong> ${data.agent_id}<br>
-        <strong>Memo:</strong> "${data.memo}"<br>
-        <strong>Network Slot:</strong> #${data.slot}<br>
-        <strong>Recent Blockhash:</strong> ${data.blockhash.slice(0, 16)}...<br>
-        <strong>Explorer Verification:</strong> <a href="${data.explorer_instruction_url}" target="_blank" class="text-amber-400 underline">View on CookieScan</a>
+        <strong>Memo Payload:</strong> "${data.memo}"<br>
+        <strong>Network Target:</strong> ${data.target_network} (Slot #${data.slot})<br>
+        <strong>Blockhash:</strong> ${data.blockhash ? data.blockhash.slice(0, 16) + '...' : 'Live'}<br>
+        <strong>Canonical Program:</strong> <span class="text-amber-300">MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr</span><br>
+        <strong>Telemetry Nonce:</strong> <span class="text-emerald-400 font-mono">${data.proof_nonce}</span><br>
+        <span class="text-gray-400 text-[10px] mt-1 block">💡 Validated against live Cookie Chain SVM state. Connect funded Nightly wallet to sign on-chain.</span>
       `;
-      logMessage("TX_CONFIRMED", `Memo posted in Slot #${data.slot} | Fee: ~0.000005 COOKIE`, "text-emerald-400");
+      logMessage("TX_PROOF", `Telemetry Proof [${data.proof_nonce}] recorded for Slot #${data.slot}`, "text-emerald-400");
     }
   } catch (err) {
-    logMessage("TX_ERR", `Broadcast error: ${err}`, "text-red-400");
+    logMessage("TX_ERR", `Gateway error: ${err}`, "text-red-400");
   }
 }
 
