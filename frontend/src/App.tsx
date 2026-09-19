@@ -161,24 +161,24 @@ export const App: React.FC = () => {
       };
       if (storeUrls[type]) window.open(storeUrls[type], '_blank');
       setModalStatus('install_notice');
-      addLog('WALLET', `${type} no detectada. Abriendo enlace oficial...`, 'text-amber-400');
+      addLog('WALLET', `${type} extension not detected. Opening official download link...`, 'text-amber-400');
       return;
     }
 
     setModalStatus('connecting');
-    addLog('WALLET', `Conectando con ${type}...`, 'text-amber-400');
+    addLog('WALLET', `Connecting to ${type}...`, 'text-amber-400');
 
     try {
       const address = await getWalletAddress(type, provider);
 
       // Immediately prompt for SIWS cryptographic signature so Phantom / wallet pops up to sign!
-      addLog('PROMPT', `Abriendo ventana de ${type} para firmar verificación SIWS...`, 'text-purple-400');
+      addLog('PROMPT', `Opening ${type} approval window for SIWS verification...`, 'text-purple-400');
       const challenge = buildAuthChallenge(address);
       const signatureHex = await requestWalletSignature(type, provider, address, challenge);
       
       setIsSiwsVerified(true);
       sessionStorage.setItem('cookie_auth_signature', signatureHex);
-      addLog('AUTH_OK', `Firma SIWS verificada: ${signatureHex.slice(0, 16)}...`, 'text-emerald-400');
+      addLog('AUTH_OK', `SIWS signature verified: ${signatureHex.slice(0, 16)}...`, 'text-emerald-400');
 
       setActiveProvider(provider);
       setActiveWalletType(type);
@@ -197,7 +197,7 @@ export const App: React.FC = () => {
               if (isValidUserAddress(newAddr) && newAddr !== address) {
                 setConnectedAddress(newAddr);
                 sessionStorage.setItem('cookie_connected_address', newAddr);
-                addLog('WALLET', `Cuenta cambiada en extensión a: ${newAddr}`, 'text-cyan-300');
+                addLog('WALLET', `Account switched in extension to: ${newAddr}`, 'text-cyan-300');
                 fetchBalance(newAddr);
               }
             } else {
@@ -213,7 +213,7 @@ export const App: React.FC = () => {
         }
       }
 
-      addLog('WALLET_OK', `${type} conectada y autenticada: ${address}`, 'text-emerald-400');
+      addLog('WALLET_OK', `${type} connected and authenticated: ${address}`, 'text-emerald-400');
       setIsModalOpen(false);
       setModalStatus('idle');
       fetchBalance(address);
@@ -229,7 +229,7 @@ export const App: React.FC = () => {
           : msg
       );
       setModalStatus('declined');
-      addLog('WALLET_DECLINED', `Conexión rechazada o cancelada por ${type}: ${msg}`, 'text-red-400');
+      addLog('WALLET_DECLINED', `Connection declined or cancelled by ${type}: ${msg}`, 'text-red-400');
     }
   };
 
@@ -250,7 +250,7 @@ export const App: React.FC = () => {
     sessionStorage.removeItem('cookie_connected_address');
     sessionStorage.removeItem('cookie_connected_wallet');
     sessionStorage.removeItem('cookie_auth_signature');
-    addLog('WALLET', 'Billetera desconectada. Sesión local reiniciada.', 'text-gray-400');
+    addLog('WALLET', 'Wallet disconnected. Local session cleared.', 'text-gray-400');
   };
 
   // SIWS Signature
@@ -261,7 +261,7 @@ export const App: React.FC = () => {
     }
 
     setSiwsLoading(true);
-    addLog('PROMPT', `Solicitando firma criptográfica de autenticación (SIWS) a ${activeWalletType}...`, 'text-purple-400');
+    addLog('PROMPT', `Requesting cryptographic SIWS signature from ${activeWalletType}...`, 'text-purple-400');
 
     try {
       const challenge = buildAuthChallenge(connectedAddress);
@@ -273,13 +273,13 @@ export const App: React.FC = () => {
       );
       setIsSiwsVerified(true);
       sessionStorage.setItem('cookie_auth_signature', signatureHex);
-      addLog('AUTH_OK', `Firma SIWS verificada: ${signatureHex.slice(0, 16)}...`, 'text-emerald-400');
+      addLog('AUTH_OK', `SIWS signature verified: ${signatureHex.slice(0, 16)}...`, 'text-emerald-400');
     } catch (err: any) {
       const msg = err?.message || String(err);
-      addLog('AUTH_WARN', `Firma no completada: ${msg}`, 'text-amber-400');
+      addLog('AUTH_WARN', `Signature not completed: ${msg}`, 'text-amber-400');
       // Show declined modal if user requested it
       setSelectedWallet(activeWalletType);
-      setModalError('La solicitud de firma SIWS fue cancelada o rechazada en la billetera.');
+      setModalError('The SIWS verification signature was cancelled or rejected in your wallet.');
       setModalStatus('declined');
       setIsModalOpen(true);
     } finally {
@@ -296,7 +296,7 @@ export const App: React.FC = () => {
 
     setIsBroadcasting(true);
     setBroadcastResult({ status: 'idle' });
-    addLog('TX', `Preparando instrucción verificable SPL Memo para [${agentId}]...`, 'text-amber-300');
+    addLog('TX', `Preparing verifiable SPL Memo instruction for [${agentId}]...`, 'text-amber-300');
 
     try {
       const connection = new solanaWeb3.Connection("https://rpc.cookiescan.io", "confirmed");
@@ -315,7 +315,7 @@ export const App: React.FC = () => {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = senderPubkey;
 
-      addLog('PROMPT', `Abriendo ventana emergente de ${activeWalletType} para autorizar y firmar la transacción...`, 'text-purple-400');
+      addLog('PROMPT', `Opening ${activeWalletType} window to authorize and sign transaction...`, 'text-purple-400');
 
       const txSignature = await sendWalletTransaction(
         activeWalletType,
@@ -325,7 +325,7 @@ export const App: React.FC = () => {
         connectedAddress
       );
 
-      addLog('CONFIRMING', `Transacción enviada: ${txSignature}. Confirmando en Cookie Chain SVM...`, 'text-amber-300');
+      addLog('CONFIRMING', `Transaction broadcast: ${txSignature}. Confirming on Cookie Chain SVM...`, 'text-amber-300');
 
       try {
         await connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight }, 'confirmed');
@@ -338,21 +338,21 @@ export const App: React.FC = () => {
         txSignature
       });
 
-      addLog('TX_CONFIRMED', `Transacción on-chain confirmada: ${txSignature}`, 'text-emerald-400');
+      addLog('TX_CONFIRMED', `On-chain transaction confirmed: ${txSignature}`, 'text-emerald-400');
       fetchBalance(connectedAddress);
 
     } catch (err: any) {
       const errMsg = err?.message || String(err);
-      addLog('TX_FEEDBACK', `Respuesta de la red/billetera: ${errMsg}`, 'text-amber-400');
+      addLog('TX_FEEDBACK', `Network/Wallet response: ${errMsg}`, 'text-amber-400');
 
       let notice = errMsg;
       if (errMsg.includes("Attempt to debit an account but found no record of a prior credit") || errMsg.includes("0x1") || errMsg.includes("insufficient")) {
-        notice = "La dirección conectada tiene 0.0000 COOKIE para la tarifa de red (~0.000005 COOKIE). Transfiere fondos desde https://www.cookiechain.wtf";
+        notice = "Connected address has 0.0000 COOKIE for network fee (~0.000005 COOKIE). Fund via https://www.cookiechain.wtf";
       } else if (errMsg.includes("User rejected") || errMsg.includes("rejected") || errMsg.includes("cancelled")) {
-        notice = "Has cancelado la firma de la transacción en tu billetera.";
+        notice = "Transaction signature was cancelled in your wallet.";
         // Show the user's favorite "Connection / Signature declined" modal
         setSelectedWallet(activeWalletType);
-        setModalError('La solicitud de firma fue cancelada o rechazada en tu billetera.');
+        setModalError('The transaction signature was cancelled or rejected in your wallet.');
         setModalStatus('declined');
         setIsModalOpen(true);
       }
