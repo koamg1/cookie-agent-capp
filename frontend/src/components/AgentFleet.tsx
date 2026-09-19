@@ -74,13 +74,13 @@ export const AgentFleet: React.FC<AgentFleetProps> = ({ onSelectAgent, selectedA
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-[#0b1f3a]">50-Agent Sentinel Swarm</h2>
+              <h2 className="text-lg font-black text-[#0b1f3a]">Telemetry Agent Sentinel Swarm</h2>
               <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#86efac] border-2 border-[#0b1f3a] text-[#0b1f3a]">
-                ● 50 LIVE
+                ● 50 SENTINELS LIVE
               </span>
             </div>
             <p className="text-[11px] font-bold text-[#0b1f3a]/65">
-              Autonomous Multi-Agent Mesh on Cookie Chain (SVM) &bull; 5 Strategic Squads
+              Autonomous Telemetry Agent Mesh on Cookie Chain (SVM) &bull; 5 Strategic Squads
             </p>
           </div>
         </div>
@@ -171,7 +171,7 @@ export const AgentFleet: React.FC<AgentFleetProps> = ({ onSelectAgent, selectedA
                           }`}
                         />
                         <h4 className="font-black text-xs text-[#0b1f3a] leading-tight">
-                          {agent.name}
+                          <span className="text-[#d97706]">Telemetry Sentinel:</span> {agent.name}
                         </h4>
                       </div>
                       <span className="text-[10px] mono text-[#0b1f3a]/50">{agent.id}</span>
@@ -205,7 +205,7 @@ export const AgentFleet: React.FC<AgentFleetProps> = ({ onSelectAgent, selectedA
                     {agent.target_program.slice(0, 6)}...{agent.target_program.slice(-4)}
                   </span>
                   <button
-                    onClick={() => onSelectAgent(agent)}
+                    onClick={() => onSelectAgent({ ...agent, name: `Telemetry Sentinel: ${agent.name}` })}
                     className="px-2.5 py-1 rounded-xl text-[10px] font-black neo-btn bg-[#d8f1ff] hover:bg-[#86efac] text-[#0b1f3a] border border-[#0b1f3a] shadow-[0_1px_0_#0b1f3a] cursor-pointer"
                   >
                     ⚡ Bake Telemetry

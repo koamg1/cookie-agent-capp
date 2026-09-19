@@ -288,21 +288,68 @@ export async function sendWalletTransaction(
     return await connection.sendRawTransaction(rawTx, { skipPreflight: false });
   }
 
-  if (typeof provider.signAndSendTransaction === 'function') {
-    const res = await provider.signAndSendTransaction(transaction);
-    if (typeof res === 'string') return res;
-    if (res && res.signature) {
-      if (typeof res.signature === 'string') return res.signature;
-      return new solanaWeb3.PublicKey(res.signature).toBase58();
+  // Priority 1: Direct provider.signTransaction (Nightly, Phantom, Solflare, Backpack)
+  // This opens the wallet extension popup directly and returns the signed Transaction object
+  if (typeof provider.signTransaction === 'function') {
+    try {
+      const signedTx = await provider.signTransaction(transaction);
+      const raw = signedTx.serialize();
+      return await connection.sendRawTransaction(raw, { skipPreflight: false });
+    } catch (err: any) {
+      console.warn(`signTransaction warning on ${type}:`, err);
+      const msg = String(err);
+      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
+        throw err;
+      }
     }
-    return typeof res === 'object' ? (res.txid || JSON.stringify(res)) : String(res);
+  }
+
+  // Priority 2: Direct provider.signAndSendTransaction
+  if (typeof provider.signAndSendTransaction === 'function') {
+    try {
+      const res = await provider.signAndSendTransaction(transaction);
+      if (typeof res === 'string') return res;
+      if (res && res.signature) {
+        if (typeof res.signature === 'string') return res.signature;
+        return new solanaWeb3.PublicKey(res.signature).toBase58();
+      }
+      return typeof res === 'object' ? (res.txid || JSON.stringify(res)) : String(res);
+    } catch (err: any) {
+      console.warn(`signAndSendTransaction warning on ${type}:`, err);
+      const msg = String(err);
+      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
+        throw err;
+      }
+    }
+  }
+
+  // Priority 3: Solana Wallet Standard features (must pass requireAllSignatures: false for unsigned tx!)
+  if (provider.features && provider.features['solana:signTransaction']) {
+    try {
+      const account = (provider.accounts || []).find((a: any) => a.address === connectedAddress) || provider.accounts?.[0];
+      const serializedUnsigned = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
+      const [res] = await provider.features['solana:signTransaction'].signTransaction({
+        account: account,
+        transaction: serializedUnsigned
+      });
+      if (res && res.signedTransaction) {
+        return await connection.sendRawTransaction(res.signedTransaction, { skipPreflight: false });
+      }
+    } catch (stdErr: any) {
+      console.warn(`standard:signTransaction warning on ${type}:`, stdErr);
+      const msg = String(stdErr);
+      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
+        throw stdErr;
+      }
+    }
   }
 
   if (provider.features && provider.features['solana:signAndSendTransaction']) {
     const account = (provider.accounts || []).find((a: any) => a.address === connectedAddress) || provider.accounts?.[0];
+    const serializedUnsigned = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
     const [res] = await provider.features['solana:signAndSendTransaction'].signAndSendTransaction({
       account: account,
-      transaction: transaction.serialize(),
+      transaction: serializedUnsigned,
       chain: 'solana:mainnet'
     });
     if (res && res.signature) {
@@ -310,22 +357,5 @@ export async function sendWalletTransaction(
     }
   }
 
-  if (typeof provider.signTransaction === 'function') {
-    const signedTx = await provider.signTransaction(transaction);
-    const raw = signedTx.serialize();
-    return await connection.sendRawTransaction(raw, { skipPreflight: false });
-  }
-
-  if (provider.features && provider.features['solana:signTransaction']) {
-    const account = (provider.accounts || []).find((a: any) => a.address === connectedAddress) || provider.accounts?.[0];
-    const [res] = await provider.features['solana:signTransaction'].signTransaction({
-      account: account,
-      transaction: transaction.serialize()
-    });
-    if (res && res.signedTransaction) {
-      return await connection.sendRawTransaction(res.signedTransaction, { skipPreflight: false });
-    }
-  }
-
-  throw new Error("El proveedor de la billetera no soporta firma de transacciones.");
+  throw new Error(`The ${type} wallet provider does not support transaction signing.`);
 }
