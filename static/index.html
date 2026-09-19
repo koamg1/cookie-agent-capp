@@ -239,6 +239,21 @@
         </button>
       </div>
 
+      <!-- Signing in Progress Banner -->
+      <div id="walletSigningStatus" class="hidden p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-xs text-purple-200 flex items-center gap-3">
+        <div class="animate-spin rounded-full h-5 w-5 border-2 border-purple-400 border-t-transparent flex-shrink-0"></div>
+        <div>
+          <div class="font-bold text-white flex items-center gap-1.5" id="signingWalletTitle">⏳ Solicitud de firma enviada a tu billetera...</div>
+          <div class="text-[11px] text-gray-300">Revisa la ventana emergente de tu billetera y haz clic en <strong class="text-purple-300">Firmar / Aprobar</strong> para autenticarte.</div>
+        </div>
+      </div>
+
+      <!-- Error / Rejected Notice -->
+      <div id="walletErrorNotice" class="hidden p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-200 flex items-center justify-between">
+        <span id="walletErrorMsg" class="font-medium text-[11px]">⚠️ Firma cancelada o rechazada. La cuenta no fue conectada.</span>
+        <button onclick="document.getElementById('walletErrorNotice').classList.add('hidden')" class="text-red-400 hover:text-white text-sm ml-2">&times;</button>
+      </div>
+
       <div class="space-y-2.5">
         <!-- Nightly Wallet -->
         <div id="walletRowNightly" class="p-3 bg-gray-900/80 hover:bg-gray-800/90 rounded-xl border border-gray-800 flex items-center justify-between transition cursor-pointer" onclick="connectWallet('nightly')">

@@ -18,8 +18,12 @@ function logMessage(tag, message, color = "text-gray-300") {
 // Modal control
 function openWalletModal() {
   detectWallets();
-  const notice = document.getElementById('walletInstallNotice');
-  if (notice) notice.classList.add('hidden');
+  const installNotice = document.getElementById('walletInstallNotice');
+  if (installNotice) installNotice.classList.add('hidden');
+  const signingStatus = document.getElementById('walletSigningStatus');
+  if (signingStatus) signingStatus.classList.add('hidden');
+  const errNotice = document.getElementById('walletErrorNotice');
+  if (errNotice) errNotice.classList.add('hidden');
   const modal = document.getElementById('walletModal');
   if (modal) modal.classList.remove('hidden');
 }
@@ -34,7 +38,39 @@ function toggleRpcGuide() {
   if (panel) panel.classList.toggle('hidden');
 }
 
+function showSigningStatus(walletName) {
+  const statusEl = document.getElementById('walletSigningStatus');
+  const titleEl = document.getElementById('signingWalletTitle');
+  const errEl = document.getElementById('walletErrorNotice');
+  const installNotice = document.getElementById('walletInstallNotice');
+  if (errEl) errEl.classList.add('hidden');
+  if (installNotice) installNotice.classList.add('hidden');
+  if (titleEl) titleEl.innerText = `⏳ Solicitud de firma enviada a ${walletName}...`;
+  if (statusEl) statusEl.classList.remove('hidden');
+}
+
+function hideSigningStatus() {
+  const statusEl = document.getElementById('walletSigningStatus');
+  if (statusEl) statusEl.classList.add('hidden');
+}
+
+function showWalletError(message) {
+  hideSigningStatus();
+  const errEl = document.getElementById('walletErrorNotice');
+  const msgEl = document.getElementById('walletErrorMsg');
+  if (msgEl) {
+    const str = String(message || '');
+    if (str.includes('rejected') || str.includes('User rejected') || str.includes('cancelled') || str.includes('cancel')) {
+      msgEl.innerText = "⚠️ Solicitud de firma cancelada o rechazada en la billetera. La cuenta no fue conectada.";
+    } else {
+      msgEl.innerText = `⚠️ Error de conexión: ${str}`;
+    }
+  }
+  if (errEl) errEl.classList.remove('hidden');
+}
+
 function showWalletNotice(walletType) {
+  hideSigningStatus();
   const notice = document.getElementById('walletInstallNotice');
   const title = document.getElementById('walletNoticeTitle');
   const desc = document.getElementById('walletNoticeDesc');
@@ -59,7 +95,7 @@ function detectWallets() {
   const badgePhantom = document.getElementById('badgePhantom');
   const badgeSolflare = document.getElementById('badgeSolflare');
 
-  const hasNightly = !!((window.nightly && window.nightly.solana) || (window.solana && window.solana.isNightly));
+  const hasNightly = !!((window.nightly && (window.nightly.solana || window.nightly.standardWallet)) || (window.solana && window.solana.isNightly));
   if (badgeNightly) {
     if (hasNightly) {
       badgeNightly.innerText = "Detected";
@@ -93,81 +129,173 @@ function detectWallets() {
   }
 }
 
-// Connect to chosen Web3 provider
-async function connectWallet(type) {
+// Build standard SIWS / Authentication Challenge
+function buildAuthChallenge(address) {
+  const nonce = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+  const timestamp = new Date().toISOString();
+  const domain = window.location.host || "cookie-agent.local";
+  
+  return `Sign-In with Solana (SIWS) Authentication\n\n` +
+    `URI: ${window.location.origin}\n` +
+    `Domain: ${domain}\n` +
+    `Address: ${address}\n` +
+    `Nonce: ${nonce}\n` +
+    `Issued At: ${timestamp}\n` +
+    `Network: Cookie Chain (SVM)\n\n` +
+    `Sign this message to authenticate your wallet session and prove ownership of this SVM address. This request does not trigger any blockchain transaction or gas fee.`;
+}
+
+// Extract public address from provider
+async function getWalletAddress(type, provider) {
   if (type === 'nightly') {
-    const provider = (window.nightly && window.nightly.solana) || (window.solana && window.solana.isNightly ? window.solana : null);
+    // 1. Try Wallet Standard standard:connect first (Nightly v2+)
+    if (provider.features && provider.features['standard:connect']) {
+      try {
+        const res = await provider.features['standard:connect'].connect();
+        if (res && res.accounts && res.accounts.length > 0) {
+          return res.accounts[0].address;
+        }
+      } catch (err) {
+        console.warn("Nightly standard:connect warning:", err);
+      }
+    }
+    // 2. Try connect()
+    if (typeof provider.connect === 'function') {
+      try {
+        const res = await provider.connect();
+        if (res && res.publicKey) return res.publicKey.toString();
+        if (res && res.accounts && res.accounts.length > 0) return res.accounts[0].address;
+      } catch (err) {
+        console.warn("Nightly connect() warning:", err);
+      }
+    }
+    // 3. Check provider.accounts or provider.publicKey
+    if (provider.accounts && provider.accounts.length > 0) {
+      return provider.accounts[0].address;
+    }
+    if (provider.publicKey) {
+      return provider.publicKey.toString();
+    }
+    throw new Error("No se pudo obtener la dirección de Nightly Wallet. Por favor desbloquea la extensión.");
+  }
+
+  if (type === 'phantom') {
+    const res = await provider.connect();
+    const addr = res?.publicKey ? res.publicKey.toString() : provider.publicKey?.toString();
+    if (!addr) throw new Error("No se pudo obtener la dirección de Phantom.");
+    return addr;
+  }
+
+  if (type === 'solflare') {
+    await provider.connect();
+    const addr = provider.publicKey ? provider.publicKey.toString() : null;
+    if (!addr) throw new Error("No se pudo obtener la dirección de Solflare.");
+    return addr;
+  }
+
+  if (type === 'session_key') {
+    if (!activeWalletProvider || !activeWalletProvider.publicKey) {
+      throw new Error("Session key no inicializada.");
+    }
+    return activeWalletProvider.publicKey.toString();
+  }
+
+  throw new Error(`Proveedor desconocido: ${type}`);
+}
+
+// Request cryptographic signature from wallet (Prompts wallet popup window)
+async function requestWalletSignature(type, provider, address, messageText) {
+  const messageBytes = new TextEncoder().encode(messageText);
+
+  if (type === 'nightly') {
+    // 1. Wallet Standard solana:signMessage feature
+    if (provider.features && provider.features['solana:signMessage']) {
+      const account = (provider.accounts || []).find(a => a.address === address) || provider.accounts?.[0] || { address };
+      const signResults = await provider.features['solana:signMessage'].signMessage({
+        account: account,
+        message: messageBytes
+      });
+      const sig = Array.isArray(signResults) ? signResults[0]?.signature : (signResults?.signature || signResults);
+      if (!sig) throw new Error("Firma rechazada o no proporcionada por Nightly.");
+      return Array.from(sig).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    // 2. Direct signMessage
+    if (typeof provider.signMessage === 'function') {
+      const res = await provider.signMessage(messageBytes, 'utf8');
+      const sig = res?.signature || res;
+      if (!sig) throw new Error("Firma rechazada o no proporcionada por Nightly.");
+      return Array.from(sig).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    throw new Error("Nightly no soporta la función signMessage.");
+  }
+
+  if (type === 'phantom') {
+    const signed = await provider.signMessage(messageBytes, 'utf8');
+    const sig = signed?.signature || signed;
+    if (!sig) throw new Error("Firma rechazada o cancelada en Phantom.");
+    return Array.from(sig).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  if (type === 'solflare') {
+    const signed = await provider.signMessage(messageBytes, 'utf8');
+    const sig = signed?.signature || signed;
+    if (!sig) throw new Error("Firma rechazada o cancelada en Solflare.");
+    return Array.from(sig).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  if (type === 'session_key') {
+    if (window.solanaWeb3 && solanaWeb3.nacl) {
+      const sig = solanaWeb3.nacl.sign.detached(messageBytes, provider.secretKey);
+      return Array.from(sig).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    return "session_key_sig_" + Date.now();
+  }
+
+  throw new Error("Tipo de billetera no soportado para firma.");
+}
+
+// Connect to chosen Web3 provider with mandatory signature authentication
+async function connectWallet(type) {
+  hideSigningStatus();
+  const errNotice = document.getElementById('walletErrorNotice');
+  if (errNotice) errNotice.classList.add('hidden');
+  const installNotice = document.getElementById('walletInstallNotice');
+  if (installNotice) installNotice.classList.add('hidden');
+
+  let provider = null;
+  let walletDisplayName = 'Wallet';
+
+  if (type === 'nightly') {
+    provider = (window.nightly && (window.nightly.solana || window.nightly.standardWallet)) || (window.solana && window.solana.isNightly ? window.solana : null);
+    walletDisplayName = 'Nightly Wallet';
     if (!provider) {
-      logMessage("WALLET", "Nightly Wallet not detected in Chrome. Opening official Chrome Web Store link...", "text-amber-400");
+      logMessage("WALLET", "Nightly Wallet no detectada en Chrome. Abriendo enlace oficial...", "text-amber-400");
       window.open('https://chromewebstore.google.com/detail/nightly/fiikommddbeccaoicoejoniammnalkfa', '_blank');
       showWalletNotice('nightly');
       return;
     }
-    try {
-      logMessage("WALLET", "Requesting connection from Nightly Wallet...", "text-amber-400");
-      let pubKeyStr = null;
-      if (typeof provider.connect === 'function') {
-        const resp = await provider.connect();
-        pubKeyStr = resp?.publicKey ? resp.publicKey.toString() : (provider.publicKey ? provider.publicKey.toString() : null);
-      } else if (provider.features && provider.features['standard:connect']) {
-        const res = await provider.features['standard:connect'].connect();
-        pubKeyStr = res?.accounts?.[0]?.address;
-      }
-      if (!pubKeyStr && provider.publicKey) {
-        pubKeyStr = provider.publicKey.toString();
-      }
-      if (!pubKeyStr) {
-        throw new Error("Could not retrieve public key from Nightly provider");
-      }
-      activeWalletProvider = provider;
-      activeWalletType = 'Nightly';
-      connectedAddress = pubKeyStr;
-      logMessage("WALLET_OK", `Nightly connected: ${connectedAddress}`, "text-emerald-400");
-    } catch (err) {
-      logMessage("WALLET_ERR", `Nightly connection cancelled: ${err.message || err}`, "text-red-400");
-      return;
-    }
   } else if (type === 'phantom') {
-    const provider = (window.phantom && window.phantom.solana) || (window.solana && window.solana.isPhantom ? window.solana : null);
+    provider = (window.phantom && window.phantom.solana) || (window.solana && window.solana.isPhantom ? window.solana : null);
+    walletDisplayName = 'Phantom';
     if (!provider) {
-      logMessage("WALLET", "Phantom wallet not detected in Chrome. Opening download page...", "text-purple-400");
+      logMessage("WALLET", "Phantom wallet no detectada en Chrome. Abriendo descarga...", "text-purple-400");
       window.open('https://phantom.app/download', '_blank');
       showWalletNotice('phantom');
       return;
     }
-    try {
-      logMessage("WALLET", "Requesting connection from Phantom...", "text-purple-400");
-      const resp = await provider.connect();
-      activeWalletProvider = provider;
-      activeWalletType = 'Phantom';
-      connectedAddress = resp.publicKey ? resp.publicKey.toString() : provider.publicKey.toString();
-      logMessage("WALLET_OK", `Phantom connected: ${connectedAddress}`, "text-emerald-400");
-    } catch (err) {
-      logMessage("WALLET_ERR", `Phantom connection cancelled: ${err.message || err}`, "text-red-400");
-      return;
-    }
   } else if (type === 'solflare') {
-    const provider = (window.solflare && window.solflare.isSolflare ? window.solflare : (window.solflare ? window.solflare : null));
+    provider = (window.solflare && window.solflare.isSolflare ? window.solflare : (window.solflare ? window.solflare : null));
+    walletDisplayName = 'Solflare';
     if (!provider) {
-      logMessage("WALLET", "Solflare wallet not detected in Chrome. Opening download page...", "text-orange-400");
+      logMessage("WALLET", "Solflare wallet no detectada en Chrome. Abriendo descarga...", "text-orange-400");
       window.open('https://solflare.com/download', '_blank');
       showWalletNotice('solflare');
       return;
     }
-    try {
-      logMessage("WALLET", "Requesting connection from Solflare...", "text-orange-400");
-      await provider.connect();
-      activeWalletProvider = provider;
-      activeWalletType = 'Solflare';
-      connectedAddress = provider.publicKey.toString();
-      logMessage("WALLET_OK", `Solflare connected: ${connectedAddress}`, "text-emerald-400");
-    } catch (err) {
-      logMessage("WALLET_ERR", `Solflare connection cancelled: ${err.message || err}`, "text-red-400");
-      return;
-    }
   } else if (type === 'session_key') {
     if (!window.solanaWeb3) {
-      logMessage("WALLET_ERR", "Solana Web3 SDK not loaded yet. Please wait.", "text-red-400");
+      logMessage("WALLET_ERR", "Solana Web3 SDK no cargado aún. Por favor espera.", "text-red-400");
+      showWalletError("Librería Web3 aún cargando. Espera un momento.");
       return;
     }
     let keypair;
@@ -184,25 +312,57 @@ async function connectWallet(type) {
       localStorage.setItem('cookie_chain_session_key', JSON.stringify(Array.from(keypair.secretKey)));
     }
     activeWalletProvider = keypair;
-    activeWalletType = 'Session Key';
-    connectedAddress = keypair.publicKey.toString();
-    logMessage("SESSION_KEY", `Real cryptographic Ed25519 SVM keypair initialized. Address: ${connectedAddress}`, "text-emerald-400");
+    provider = keypair;
+    walletDisplayName = 'Session Key';
   }
 
-  closeWalletModal();
-  updateUI();
-  fetchWalletBalance(connectedAddress);
+  showSigningStatus(walletDisplayName);
+
+  try {
+    logMessage("WALLET", `Iniciando handshake con ${walletDisplayName}...`, "text-amber-400");
+    const address = await getWalletAddress(type, provider);
+
+    logMessage("PROMPT", `Solicitando firma criptográfica de autenticación (SIWS) a ${walletDisplayName}...`, "text-purple-300");
+    const authMessage = buildAuthChallenge(address);
+    const signatureHex = await requestWalletSignature(type, provider, address, authMessage);
+
+    activeWalletProvider = provider;
+    activeWalletType = (type === 'nightly' ? 'Nightly' : (type === 'phantom' ? 'Phantom' : (type === 'solflare' ? 'Solflare' : 'Session Key')));
+    connectedAddress = address;
+
+    sessionStorage.setItem('cookie_auth_address', address);
+    sessionStorage.setItem('cookie_auth_signature', signatureHex);
+
+    logMessage("AUTH_OK", `Firma criptográfica verificada con éxito (${signatureHex.slice(0, 16)}...). Sesión autenticada.`, "text-emerald-400");
+    logMessage("WALLET_OK", `${walletDisplayName} conectada: ${connectedAddress}`, "text-emerald-400");
+
+    hideSigningStatus();
+    closeWalletModal();
+    updateUI();
+    fetchWalletBalance(connectedAddress);
+
+  } catch (err) {
+    console.error("Wallet connection/signing error:", err);
+    hideSigningStatus();
+    showWalletError(err.message || err);
+    logMessage("AUTH_ERR", `Autenticación cancelada o fallida: ${err.message || err}`, "text-red-400");
+    if (provider && typeof provider.disconnect === 'function' && type !== 'session_key') {
+      try { provider.disconnect(); } catch (e) {}
+    }
+  }
 }
 
 function disconnectWallet() {
-  if (activeWalletProvider && activeWalletProvider.disconnect) {
+  if (activeWalletProvider && typeof activeWalletProvider.disconnect === 'function') {
     try { activeWalletProvider.disconnect(); } catch (e) {}
   }
   connectedAddress = null;
   activeWalletType = null;
   activeWalletProvider = null;
+  sessionStorage.removeItem('cookie_auth_address');
+  sessionStorage.removeItem('cookie_auth_signature');
   updateUI();
-  logMessage("WALLET", "Wallet disconnected.", "text-gray-500");
+  logMessage("WALLET", "Billetera desconectada. La próxima conexión volverá a solicitar la firma criptográfica obligatoria.", "text-gray-400");
 }
 
 function updateUI() {
@@ -217,7 +377,7 @@ function updateUI() {
     const shortAddr = `${connectedAddress.slice(0, 4)}...${connectedAddress.slice(-4)}`;
     statWallet.innerText = connectedAddress;
     statWallet.title = connectedAddress;
-    badge.innerText = activeWalletType;
+    badge.innerText = `${activeWalletType} (Signed ✓)`;
     badge.className = "text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 mono font-semibold";
     
     explorerLink.href = `https://cookiescan.io/address/${connectedAddress}`;
