@@ -18,6 +18,8 @@ function logMessage(tag, message, color = "text-gray-300") {
 // Modal control
 function openWalletModal() {
   detectWallets();
+  const notice = document.getElementById('walletInstallNotice');
+  if (notice) notice.classList.add('hidden');
   const modal = document.getElementById('walletModal');
   if (modal) modal.classList.remove('hidden');
 }
@@ -32,52 +34,94 @@ function toggleRpcGuide() {
   if (panel) panel.classList.toggle('hidden');
 }
 
+function showWalletNotice(walletType) {
+  const notice = document.getElementById('walletInstallNotice');
+  const title = document.getElementById('walletNoticeTitle');
+  const desc = document.getElementById('walletNoticeDesc');
+  if (!notice) return;
+
+  if (walletType === 'nightly') {
+    if (title) title.innerHTML = `🦉 Nightly Wallet no detectada en Chrome`;
+    if (desc) desc.innerHTML = `Hemos abierto la página oficial en <strong>Chrome Web Store</strong> para instalar Nightly. Una vez instalada, recarga esta página o conéctate al instante sin extensiones usando la <strong>Session Key</strong>:`;
+  } else if (walletType === 'phantom') {
+    if (title) title.innerHTML = `👻 Phantom no detectado en Chrome`;
+    if (desc) desc.innerHTML = `Hemos abierto la página oficial de <strong>Phantom</strong>. Si prefieres no instalar extensiones, conéctate al instante usando la <strong>Session Key</strong>:`;
+  } else if (walletType === 'solflare') {
+    if (title) title.innerHTML = `☀️ Solflare no detectado en Chrome`;
+    if (desc) desc.innerHTML = `Hemos abierto la página oficial de <strong>Solflare</strong>. Si prefieres no instalar extensiones, conéctate al instante usando la <strong>Session Key</strong>:`;
+  }
+  notice.classList.remove('hidden');
+}
+
 // Real detection of installed browser extensions
 function detectWallets() {
   const badgeNightly = document.getElementById('badgeNightly');
   const badgePhantom = document.getElementById('badgePhantom');
   const badgeSolflare = document.getElementById('badgeSolflare');
 
-  if (window.nightly && window.nightly.solana) {
-    badgeNightly.innerText = "Detected";
-    badgeNightly.className = "text-[10px] mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold";
-  } else {
-    badgeNightly.innerText = "Install ↗";
-    badgeNightly.className = "text-[10px] mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 hover:underline";
+  const hasNightly = !!((window.nightly && window.nightly.solana) || (window.solana && window.solana.isNightly));
+  if (badgeNightly) {
+    if (hasNightly) {
+      badgeNightly.innerText = "Detected";
+      badgeNightly.className = "text-[10px] mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold";
+    } else {
+      badgeNightly.innerText = "Install ↗";
+      badgeNightly.className = "text-[10px] mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 hover:underline";
+    }
   }
 
-  const hasPhantom = !!(window.phantom && window.phantom.solana) || !!(window.solana && window.solana.isPhantom);
-  if (hasPhantom) {
-    badgePhantom.innerText = "Detected";
-    badgePhantom.className = "text-[10px] mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold";
-  } else {
-    badgePhantom.innerText = "Install ↗";
-    badgePhantom.className = "text-[10px] mono px-2 py-0.5 rounded bg-gray-800 text-gray-500";
+  const hasPhantom = !!((window.phantom && window.phantom.solana) || (window.solana && window.solana.isPhantom));
+  if (badgePhantom) {
+    if (hasPhantom) {
+      badgePhantom.innerText = "Detected";
+      badgePhantom.className = "text-[10px] mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold";
+    } else {
+      badgePhantom.innerText = "Install ↗";
+      badgePhantom.className = "text-[10px] mono px-2 py-0.5 rounded bg-gray-800 text-gray-500";
+    }
   }
 
-  const hasSolflare = !!(window.solflare && window.solflare.isSolflare);
-  if (hasSolflare) {
-    badgeSolflare.innerText = "Detected";
-    badgeSolflare.className = "text-[10px] mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold";
-  } else {
-    badgeSolflare.innerText = "Install ↗";
-    badgeSolflare.className = "text-[10px] mono px-2 py-0.5 rounded bg-gray-800 text-gray-500";
+  const hasSolflare = !!((window.solflare && window.solflare.isSolflare) || window.solflare);
+  if (badgeSolflare) {
+    if (hasSolflare) {
+      badgeSolflare.innerText = "Detected";
+      badgeSolflare.className = "text-[10px] mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold";
+    } else {
+      badgeSolflare.innerText = "Install ↗";
+      badgeSolflare.className = "text-[10px] mono px-2 py-0.5 rounded bg-gray-800 text-gray-500";
+    }
   }
 }
 
 // Connect to chosen Web3 provider
 async function connectWallet(type) {
   if (type === 'nightly') {
-    if (!window.nightly || !window.nightly.solana) {
-      window.open('https://chromewebstore.google.com/detail/nightly/fiikommddbeccemicoidomjjhaagjhii', '_blank');
+    const provider = (window.nightly && window.nightly.solana) || (window.solana && window.solana.isNightly ? window.solana : null);
+    if (!provider) {
+      logMessage("WALLET", "Nightly Wallet not detected in Chrome. Opening official Chrome Web Store link...", "text-amber-400");
+      window.open('https://chromewebstore.google.com/detail/nightly/fiikommddbeccaoicoejoniammnalkfa', '_blank');
+      showWalletNotice('nightly');
       return;
     }
     try {
       logMessage("WALLET", "Requesting connection from Nightly Wallet...", "text-amber-400");
-      const resp = await window.nightly.solana.connect();
-      activeWalletProvider = window.nightly.solana;
+      let pubKeyStr = null;
+      if (typeof provider.connect === 'function') {
+        const resp = await provider.connect();
+        pubKeyStr = resp?.publicKey ? resp.publicKey.toString() : (provider.publicKey ? provider.publicKey.toString() : null);
+      } else if (provider.features && provider.features['standard:connect']) {
+        const res = await provider.features['standard:connect'].connect();
+        pubKeyStr = res?.accounts?.[0]?.address;
+      }
+      if (!pubKeyStr && provider.publicKey) {
+        pubKeyStr = provider.publicKey.toString();
+      }
+      if (!pubKeyStr) {
+        throw new Error("Could not retrieve public key from Nightly provider");
+      }
+      activeWalletProvider = provider;
       activeWalletType = 'Nightly';
-      connectedAddress = resp.publicKey ? resp.publicKey.toString() : window.nightly.solana.publicKey.toString();
+      connectedAddress = pubKeyStr;
       logMessage("WALLET_OK", `Nightly connected: ${connectedAddress}`, "text-emerald-400");
     } catch (err) {
       logMessage("WALLET_ERR", `Nightly connection cancelled: ${err.message || err}`, "text-red-400");
@@ -86,7 +130,9 @@ async function connectWallet(type) {
   } else if (type === 'phantom') {
     const provider = (window.phantom && window.phantom.solana) || (window.solana && window.solana.isPhantom ? window.solana : null);
     if (!provider) {
-      window.open('https://phantom.app/', '_blank');
+      logMessage("WALLET", "Phantom wallet not detected in Chrome. Opening download page...", "text-purple-400");
+      window.open('https://phantom.app/download', '_blank');
+      showWalletNotice('phantom');
       return;
     }
     try {
@@ -101,16 +147,19 @@ async function connectWallet(type) {
       return;
     }
   } else if (type === 'solflare') {
-    if (!window.solflare) {
-      window.open('https://solflare.com/', '_blank');
+    const provider = (window.solflare && window.solflare.isSolflare ? window.solflare : (window.solflare ? window.solflare : null));
+    if (!provider) {
+      logMessage("WALLET", "Solflare wallet not detected in Chrome. Opening download page...", "text-orange-400");
+      window.open('https://solflare.com/download', '_blank');
+      showWalletNotice('solflare');
       return;
     }
     try {
       logMessage("WALLET", "Requesting connection from Solflare...", "text-orange-400");
-      await window.solflare.connect();
-      activeWalletProvider = window.solflare;
+      await provider.connect();
+      activeWalletProvider = provider;
       activeWalletType = 'Solflare';
-      connectedAddress = window.solflare.publicKey.toString();
+      connectedAddress = provider.publicKey.toString();
       logMessage("WALLET_OK", `Solflare connected: ${connectedAddress}`, "text-emerald-400");
     } catch (err) {
       logMessage("WALLET_ERR", `Solflare connection cancelled: ${err.message || err}`, "text-red-400");

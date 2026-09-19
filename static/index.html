@@ -227,6 +227,18 @@
         <button onclick="closeWalletModal()" class="text-gray-400 hover:text-white text-lg">&times;</button>
       </div>
 
+      <!-- Installation / Helper Notice (Shown dynamically if wallet extension is missing) -->
+      <div id="walletInstallNotice" class="hidden p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="font-bold flex items-center gap-1.5" id="walletNoticeTitle">⚠️ Nightly Wallet no detectada</span>
+          <button onclick="document.getElementById('walletInstallNotice').classList.add('hidden')" class="text-gray-400 hover:text-white">&times;</button>
+        </div>
+        <p id="walletNoticeDesc" class="text-gray-300 text-[11px]">Abrimos la tienda oficial de Chrome Web Store. Si prefieres no instalar extensiones, puedes conectar de inmediato con la Session Key integrada:</p>
+        <button onclick="connectWallet('session_key')" class="w-full py-2 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-emerald-500/20">
+          <span>🔑 Conectar con Session Key al instante</span>
+        </button>
+      </div>
+
       <div class="space-y-2.5">
         <!-- Nightly Wallet -->
         <div id="walletRowNightly" class="p-3 bg-gray-900/80 hover:bg-gray-800/90 rounded-xl border border-gray-800 flex items-center justify-between transition cursor-pointer" onclick="connectWallet('nightly')">
