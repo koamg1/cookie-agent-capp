@@ -8,6 +8,7 @@ import { TelemetryOven } from './components/TelemetryOven';
 import { McpKitchen } from './components/McpKitchen';
 import { AgentFleet, AgentInfo } from './components/AgentFleet';
 import { BridgeGuideModal } from './components/BridgeGuideModal';
+import { HyperArbVault } from './components/HyperArbVault';
 import { CookieCrumbsRadar } from './components/CookieCrumbsRadar';
 import { CookieBurnOven } from './components/CookieBurnOven';
 import { AirdropPassportModal } from './components/AirdropPassportModal';
@@ -463,8 +464,30 @@ export const App: React.FC = () => {
           <McpKitchen />
         </div>
 
-        {/* Cookie Crumbs Arbitrage Radar & Deflationary Burn Oven Grid */}
+        {/* HyperArb Automated Dual-Leg Vault (Autonomous 24/7 MEV Engine) */}
+        <HyperArbVault
+          connectedAddress={connectedAddress}
+          balanceCookie={balanceCookie}
+          onOpenWalletModal={() => {
+            setModalStatus('idle');
+            setIsModalOpen(true);
+          }}
+          onRefreshBalance={() => {
+            if (connectedAddress) fetchBalance(connectedAddress);
+          }}
+          onAddLog={addLog}
+        />
+
+        {/* Deflationary Burn Oven & Secondary Scanner */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CookieBurnOven
+            connectedAddress={connectedAddress}
+            onOpenWalletModal={() => {
+              setModalStatus('idle');
+              setIsModalOpen(true);
+            }}
+            onAddLog={addLog}
+          />
           <CookieCrumbsRadar
             connectedAddress={connectedAddress}
             onOpenWalletModal={() => {
@@ -473,14 +496,6 @@ export const App: React.FC = () => {
             }}
             onRefreshBalance={() => {
               if (connectedAddress) fetchBalance(connectedAddress);
-            }}
-            onAddLog={addLog}
-          />
-          <CookieBurnOven
-            connectedAddress={connectedAddress}
-            onOpenWalletModal={() => {
-              setModalStatus('idle');
-              setIsModalOpen(true);
             }}
             onAddLog={addLog}
           />

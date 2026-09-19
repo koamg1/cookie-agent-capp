@@ -136,4 +136,86 @@ async def test_airdrop_karma():
     assert "airdrop_tier" in data
     assert data["dao_grant_eligibility"] == "VERIFIED_ELIGIBLE"
 
+@pytest.mark.asyncio
+async def test_vault_info():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get("/api/v1/vault/info")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["protocol"] == "Cookie HyperArb Automated Vault"
+    assert data["tvl_usd"] > 0
+    assert data["projected_apy_pct"] > 0
+    assert data["runner_status"] == "ACTIVE_24_7"
+
+@pytest.mark.asyncio
+async def test_vault_deposit_and_position():
+    user = "HSPEiMn8BYVgPZdHMXw3XkwfdAZksemaR7X5KS6eFmFV"
+    payload = {
+        "user_address": user,
+        "amount_cookie": 100.0,
+        "amount_usdc": 10.0
+    }
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        dep_res = await ac.post("/api/v1/vault/deposit", json=payload)
+    assert dep_res.status_code == 200
+    dep_data = dep_res.json()
+    assert dep_data["status"] == "confirmed"
+    assert dep_data["shares_minted"] > 0
+    assert dep_data["share_token"] == "cCOOKIE-LP"
+
+    # Verify user position
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        pos_res = await ac.get(f"/api/v1/vault/position/{user}")
+    assert pos_res.status_code == 200
+    pos_data = pos_res.json()
+    assert pos_data["has_position"] is True
+    assert pos_data["shares"] > 0
+    assert pos_data["current_value_usd"] > 0
+
+@pytest.mark.asyncio
+async def test_vault_trigger_arb_and_feed():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        arb_res = await ac.post("/api/v1/vault/trigger-arb")
+    assert arb_res.status_code == 200
+    arb_data = arb_res.json()
+    assert arb_data["status"] == "CONFIRMED_ON_CHAIN"
+    assert arb_data["profit_to_vault_usd"] > 0
+
+    # Check feed
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        feed_res = await ac.get("/api/v1/vault/feed?limit=5")
+    assert feed_res.status_code == 200
+    feed_data = feed_res.json()
+    assert len(feed_data) > 0
+    assert "spread_pct" in feed_data[0]
+
+@pytest.mark.asyncio
+async def test_vault_withdraw():
+    user = "HSPEiMn8BYVgPZdHMXw3XkwfdAZksemaR7X5KS6eFmFV"
+    payload = {
+        "user_address": user,
+        "shares": None  # withdraw all
+    }
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        wdr_res = await ac.post("/api/v1/vault/withdraw", json=payload)
+    assert wdr_res.status_code == 200
+    wdr_data = wdr_res.json()
+    assert wdr_data["status"] == "confirmed"
+    assert wdr_data["cookie_payout"] > 0
+    assert wdr_data["usdc_payout"] > 0
+    assert wdr_data["remaining_shares"] == 0.0
+
+@pytest.mark.asyncio
+async def test_mcp_execute_vault():
+    payload = {
+        "tool_name": "cookie_vault_get_status",
+        "parameters": {}
+    }
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.post("/api/v1/mcp/execute", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["protocol"] == "Cookie HyperArb Automated Vault"
+
+
 

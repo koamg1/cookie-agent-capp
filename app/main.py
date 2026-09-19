@@ -5,6 +5,7 @@ Main FastAPI Application for Cookie Chain Bounty ($1,000 USDC)
 
 import asyncio
 import time
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -14,15 +15,44 @@ import os
 
 from typing import Optional
 from app.cookie_client import CookieChainClient
+from app.hyper_arb_vault import hyper_arb_vault
 from app.mcp_gateway import get_mcp_manifest, MCPExecuteRequest, SUPPORTED_TOOLS
 from app.fleet_registry import get_agents_fleet, get_agent_by_id
+
+cookie_client = CookieChainClient()
+
+async def hyper_arb_background_worker():
+    """Autonomous 24/7 Sentinel background runner for HyperArb Vault."""
+    while True:
+        try:
+            await asyncio.sleep(12)  # Runs every 12 seconds
+            epoch_info = await cookie_client.get_epoch_info()
+            slot = epoch_info.get("absolute_slot", 26058000)
+            blockhash_data = await cookie_client.get_latest_blockhash()
+            bh = blockhash_data.get("blockhash", "7PG5P5KzG56zUqD5TJhSyEDPTHEe6QW1bLFUyDhYCoSz")
+            hyper_arb_vault.execute_arbitrage_cycle(slot=slot, blockhash=bh)
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            await asyncio.sleep(5)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    worker_task = asyncio.create_task(hyper_arb_background_worker())
+    yield
+    worker_task.cancel()
+    try:
+        await worker_task
+    except asyncio.CancelledError:
+        pass
 
 app = FastAPI(
     title="CookieAgent Gateway & Sentinel cApp",
     description="Autonomous Agent Gateway & Real-Time Telemetry Dashboard for Cookie Chain (SVM). Built for Superteam Earn $1,000 USDC Bounty.",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # Enable CORS for dApp connectivity
@@ -33,8 +63,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-cookie_client = CookieChainClient()
 
 # Mount Static Files (Frontend UI)
 static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
@@ -300,6 +328,81 @@ async def airdrop_karma(address: str):
         "attestation_program": "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
     }
 
+# --- HyperArb Automated Dual-Leg Vault Endpoints ---
+
+class VaultDepositRequest(BaseModel):
+    user_address: str
+    amount_cookie: float = 0.0
+    amount_usdc: float = 0.0
+
+class VaultWithdrawRequest(BaseModel):
+    user_address: str
+    shares: Optional[float] = None
+
+@app.get("/api/v1/vault/info")
+async def vault_info():
+    """Retrieve real-time metrics of the HyperArb Automated Vault."""
+    return hyper_arb_vault.get_vault_info()
+
+@app.get("/api/v1/vault/position/{address}")
+async def vault_user_position(address: str):
+    """Retrieve user's deposited capital, shares (cCOOKIE-LP) and accrued yield."""
+    return hyper_arb_vault.get_user_position(address)
+
+@app.post("/api/v1/vault/deposit")
+async def vault_deposit(req: VaultDepositRequest):
+    """Deposit dual-leg capital ($COOKIE + $USDC) into the 24/7 HyperArb Vault."""
+    epoch_info = await cookie_client.get_epoch_info()
+    slot = epoch_info.get("absolute_slot", 26058000)
+    blockhash_data = await cookie_client.get_latest_blockhash()
+    bh = blockhash_data.get("blockhash", "7PG5P5KzG56zUqD5TJhSyEDPTHEe6QW1bLFUyDhYCoSz")
+    
+    try:
+        res = hyper_arb_vault.deposit(
+            user_address=req.user_address,
+            amount_cookie=req.amount_cookie,
+            amount_usdc=req.amount_usdc,
+            slot=slot,
+            blockhash=bh
+        )
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/v1/vault/withdraw")
+async def vault_withdraw(req: VaultWithdrawRequest):
+    """Instant withdraw: burn cCOOKIE-LP shares and claim principal + yield."""
+    epoch_info = await cookie_client.get_epoch_info()
+    slot = epoch_info.get("absolute_slot", 26058000)
+    blockhash_data = await cookie_client.get_latest_blockhash()
+    bh = blockhash_data.get("blockhash", "7PG5P5KzG56zUqD5TJhSyEDPTHEe6QW1bLFUyDhYCoSz")
+
+    try:
+        res = hyper_arb_vault.withdraw(
+            user_address=req.user_address,
+            shares_to_withdraw=req.shares,
+            slot=slot,
+            blockhash=bh
+        )
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/v1/vault/feed")
+async def vault_feed(limit: int = 15):
+    """Real-time trade telemetry of the 24/7 Sentinel Runner."""
+    return hyper_arb_vault.get_feed(limit=limit)
+
+@app.post("/api/v1/vault/trigger-arb")
+async def vault_trigger_arb():
+    """Manual trigger for an immediate SVM arbitrage cycle."""
+    epoch_info = await cookie_client.get_epoch_info()
+    slot = epoch_info.get("absolute_slot", 26058000)
+    blockhash_data = await cookie_client.get_latest_blockhash()
+    bh = blockhash_data.get("blockhash", "7PG5P5KzG56zUqD5TJhSyEDPTHEe6QW1bLFUyDhYCoSz")
+    rec = hyper_arb_vault.execute_arbitrage_cycle(slot=slot, blockhash=bh)
+    return rec.model_dump()
+
 @app.post("/api/v1/mcp/execute")
 async def mcp_execute(req: MCPExecuteRequest):
     """Executes an MCP tool call directly through the gateway."""
@@ -346,5 +449,12 @@ async def mcp_execute(req: MCPExecuteRequest):
         return await airdrop_karma(addr)
     elif t_name == "cookie_get_burn_stats":
         return await burn_stats()
+    elif t_name == "cookie_vault_get_status":
+        return await vault_info()
+    elif t_name == "cookie_vault_get_user_position":
+        addr = params.get("address", "")
+        if not addr:
+            raise HTTPException(status_code=400, detail="Address is required")
+        return await vault_user_position(addr)
     else:
         raise HTTPException(status_code=404, detail=f"Tool '{t_name}' not recognized")

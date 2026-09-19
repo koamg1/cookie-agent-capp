@@ -113,6 +113,26 @@ SUPPORTED_TOOLS = [
             "properties": {},
             "required": []
         }
+    ),
+    MCPToolDefinition(
+        name="cookie_vault_get_status",
+        description="Query real-time metrics of the HyperArb Dual-Leg Arbitrage Vault: TVL, projected APY, NAV share price, and 24/7 bot status.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    ),
+    MCPToolDefinition(
+        name="cookie_vault_get_user_position",
+        description="Query a user's deposited position, shares (cCOOKIE-LP), accrued yield, and pool percentage in the HyperArb Vault.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "address": {"type": "string", "description": "Base58 address of the user"}
+            },
+            "required": ["address"]
+        }
     )
 ]
 
