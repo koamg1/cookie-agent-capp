@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CookieMonster } from './CookieMonster';
+import { apiUrl } from '../config/api';
 
 interface CookieBurnOvenProps {
   connectedAddress: string | null;
@@ -31,7 +32,7 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
   const [burnSuccessMsg, setBurnSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/v1/stats/burn')
+    fetch(apiUrl('/api/v1/stats/burn'))
       .then((res) => res.json())
       .then((data) => {
         if (data.cumulative_burned) {

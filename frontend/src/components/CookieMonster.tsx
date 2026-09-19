@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { assetUrl } from '../config/api';
 
 interface CookieMonsterProps {
   isBurning: boolean;
@@ -79,7 +80,7 @@ export const CookieMonster: React.FC<CookieMonsterProps> = ({
           {isBurning ? (
             /* ACTIVE CHOMPING ANIMATION (Real multi-frame eating animation with hand shoveling cookies into open mouth!) */
             <img
-              src="/static/cookie_eating_opt.webp"
+              src={assetUrl('cookie_eating_opt.webp')}
               alt="Cookie Monster actively chomping cookies"
               className="w-48 h-52 sm:w-52 sm:h-56 object-contain drop-shadow-[0_8px_16px_rgba(11,31,58,0.3)]"
               onError={(e) => {
@@ -89,7 +90,7 @@ export const CookieMonster: React.FC<CookieMonsterProps> = ({
           ) : (
             /* LIVING IDLE ANIMATION (Blinking, moving mouth, holding cookie!) */
             <img
-              src="/static/cookie_idle_opt.webp"
+              src={assetUrl('cookie_idle_opt.webp')}
               alt="Cookie Monster holding cookie and breathing"
               className="w-48 h-52 sm:w-52 sm:h-56 object-contain drop-shadow-[0_8px_16px_rgba(11,31,58,0.2)]"
               onError={(e) => {

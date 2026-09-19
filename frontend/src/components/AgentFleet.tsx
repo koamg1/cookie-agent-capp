@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { apiUrl } from '../config/api';
 
 export interface AgentInfo {
   id: string;
@@ -32,7 +33,7 @@ export const AgentFleet: React.FC<AgentFleetProps> = ({ onSelectAgent, selectedA
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   useEffect(() => {
-    fetch('/api/v1/agents/fleet')
+    fetch(apiUrl('/api/v1/agents/fleet'))
       .then((res) => res.json())
       .then((data) => {
         if (data.agents && Array.isArray(data.agents)) {

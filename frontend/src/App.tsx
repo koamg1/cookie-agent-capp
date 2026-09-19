@@ -13,6 +13,7 @@ import { CookieBurnOven } from './components/CookieBurnOven';
 import { AirdropPassportModal } from './components/AirdropPassportModal';
 import { TelemetryConsole, LogEntry } from './components/TelemetryConsole';
 import { WalletModal } from './components/WalletModal';
+import { apiUrl } from './config/api';
 import {
   isValidUserAddress,
   getNightlyProvider,
@@ -112,7 +113,7 @@ export const App: React.FC = () => {
   // Fetch Network Stats
   const fetchNetworkStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/network/stats');
+      const res = await fetch(apiUrl('/api/v1/network/stats'));
       if (res.ok) {
         const data = await res.json();
         setNetworkStats(data);
@@ -130,7 +131,7 @@ export const App: React.FC = () => {
   // Fetch Account Balance
   const fetchBalance = useCallback(async (address: string) => {
     try {
-      const res = await fetch(`/api/v1/wallet/${address}/balance`);
+      const res = await fetch(apiUrl(`/api/v1/wallet/${address}/balance`));
       if (res.ok) {
         const data = await res.json();
         setBalanceCookie(Number(data.balance_cookie || 0));
@@ -364,7 +365,7 @@ export const App: React.FC = () => {
       ) {
         // Graceful Gateway Fallback: Generate real Cookie Chain proof nonce
         try {
-          const simRes = await fetch('/api/v1/agent/ping', {
+          const simRes = await fetch(apiUrl('/api/v1/agent/ping'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ agent_id: agentId, memo: payload })

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiUrl } from '../config/api';
 
 export const McpKitchen: React.FC = () => {
   const [showRpcGuide, setShowRpcGuide] = useState(false);
@@ -64,7 +65,7 @@ export const McpKitchen: React.FC = () => {
 
         <div className="pt-2 flex justify-between items-center text-xs">
           <a
-            href="/api/v1/mcp/manifest"
+            href={apiUrl('/api/v1/mcp/manifest')}
             target="_blank"
             rel="noreferrer"
             className="font-black text-[#0b1f3a] hover:text-[#d97706] underline mono text-[11px]"

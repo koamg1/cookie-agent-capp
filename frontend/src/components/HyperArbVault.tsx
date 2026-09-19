@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import * as solanaWeb3 from '@solana/web3.js';
 import { WalletType } from '../types/wallet';
 import { sendWalletTransaction } from '../utils/solana';
+import { apiUrl } from '../config/api';
 
 interface VaultInfo {
   protocol: string;
@@ -83,7 +84,7 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
 
   const fetchVaultState = async () => {
     try {
-      const res = await fetch('/api/v1/vault/info');
+      const res = await fetch(apiUrl('/api/v1/vault/info'));
       if (res.ok) {
         const data = await res.json();
         setVaultInfo(data);
@@ -95,7 +96,7 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
 
   const fetchUserPosition = async (address: string) => {
     try {
-      const res = await fetch(`/api/v1/vault/position/${address}`);
+      const res = await fetch(apiUrl(`/api/v1/vault/position/${address}`));
       if (res.ok) {
         const data = await res.json();
         setUserPos(data);
@@ -107,7 +108,7 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
 
   const fetchFeed = async () => {
     try {
-      const res = await fetch('/api/v1/vault/feed?limit=12');
+      const res = await fetch(apiUrl('/api/v1/vault/feed?limit=12'));
       if (res.ok) {
         const data = await res.json();
         setTradeFeed(data);
@@ -218,7 +219,7 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
       }
 
       // 4. Register deposit in HyperArb Vault backend
-      const res = await fetch('/api/v1/vault/deposit', {
+      const res = await fetch(apiUrl('/api/v1/vault/deposit'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -308,7 +309,7 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
         onAddLog('WALLET_NOTICE', `Withdrawal signing feedback: ${signMsg}`, 'text-amber-400');
       }
 
-      const res = await fetch('/api/v1/vault/withdraw', {
+      const res = await fetch(apiUrl('/api/v1/vault/withdraw'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

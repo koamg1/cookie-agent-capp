@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../config/api';
 
 interface CrumbOpportunity {
   id: string;
@@ -35,7 +36,7 @@ export const CookieCrumbsRadar: React.FC<CookieCrumbsRadarProps> = ({
 
   const fetchRadar = async () => {
     try {
-      const res = await fetch('/api/v1/opportunities/radar');
+      const res = await fetch(apiUrl('/api/v1/opportunities/radar'));
       if (res.ok) {
         const data = await res.json();
         setCrumbs(data.crumbs || []);
@@ -63,7 +64,7 @@ export const CookieCrumbsRadar: React.FC<CookieCrumbsRadarProps> = ({
     onAddLog('CRUMB_HUNT', `Locking arbitrage spread of ${crumb.spread_pct}% on ${crumb.pair}...`, 'text-amber-400');
 
     try {
-      const res = await fetch('/api/v1/opportunities/eat', {
+      const res = await fetch(apiUrl('/api/v1/opportunities/eat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

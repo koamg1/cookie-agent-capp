@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../config/api';
 
 interface AirdropPassportModalProps {
   isOpen: boolean;
@@ -27,7 +28,7 @@ export const AirdropPassportModal: React.FC<AirdropPassportModalProps> = ({
     }
 
     setLoading(true);
-    fetch(`/api/v1/airdrop/karma/${connectedAddress}`)
+    fetch(apiUrl(`/api/v1/airdrop/karma/${connectedAddress}`))
       .then((res) => res.json())
       .then((data) => setKarmaData(data))
       .catch((err) => console.warn('Failed to load karma data:', err))
@@ -42,7 +43,7 @@ export const AirdropPassportModal: React.FC<AirdropPassportModalProps> = ({
     onAddLog('AIRDROP_CERT', `Baking on-chain Airdrop Certification for ${connectedAddress}...`, 'text-purple-400');
 
     try {
-      const res = await fetch('/api/v1/agent/ping', {
+      const res = await fetch(apiUrl('/api/v1/agent/ping'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
