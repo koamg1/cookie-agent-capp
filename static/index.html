@@ -96,6 +96,9 @@
           <span id="statBalance" class="text-xs text-amber-400 mono block">0.0000 COOKIE</span>
           <a id="explorerLink" href="#" target="_blank" class="hidden text-[10px] text-amber-400 hover:underline mono">Explorer &rarr;</a>
         </div>
+        <button id="signSiwsBtn" onclick="promptSiwsSignature()" class="hidden mt-2 w-full py-1.5 px-2 text-[10px] rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 font-mono flex items-center justify-center gap-1 transition cursor-pointer">
+          ✍️ Solicitar Firma de Verificación (SIWS)
+        </button>
       </div>
     </div>
 
@@ -239,12 +242,12 @@
         </button>
       </div>
 
-      <!-- Signing in Progress Banner -->
+      <!-- Connecting in Progress Banner -->
       <div id="walletSigningStatus" class="hidden p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-xs text-purple-200 flex items-center gap-3">
         <div class="animate-spin rounded-full h-5 w-5 border-2 border-purple-400 border-t-transparent flex-shrink-0"></div>
         <div>
-          <div class="font-bold text-white flex items-center gap-1.5" id="signingWalletTitle">⏳ Solicitud de firma enviada a tu billetera...</div>
-          <div class="text-[11px] text-gray-300">Revisa la ventana emergente de tu billetera y haz clic en <strong class="text-purple-300">Firmar / Aprobar</strong> para autenticarte.</div>
+          <div class="font-bold text-white flex items-center gap-1.5" id="signingWalletTitle">⏳ Conectando con tu billetera...</div>
+          <div class="text-[11px] text-gray-300">Si tu extensión solicita permisos, haz clic en <strong class="text-purple-300">Conectar / Aprobar</strong>.</div>
         </div>
       </div>
 
@@ -310,6 +313,15 @@
             <span class="text-[10px] mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Ready</span>
           </div>
         </div>
+      </div>
+
+      <div class="p-2.5 rounded-lg bg-gray-900/60 border border-gray-800 text-[11px] text-gray-400 space-y-1">
+        <div class="text-amber-400 font-semibold flex items-center gap-1">
+          <span>💡</span> Estándar Web3 en Solana (igual que Jupiter y Raydium):
+        </div>
+        <p class="leading-relaxed">
+          Al conectar, la extensión solo autoriza la lectura de tu dirección pública. La ventana emergente para <strong>firmar y aprobar transacciones</strong> se abrirá al realizar una acción on-chain (<em>🚀 Sign & Broadcast</em>) o al solicitar verificación SIWS.
+        </p>
       </div>
 
       <div class="text-[11px] text-gray-500 text-center">
