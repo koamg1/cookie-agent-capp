@@ -42,6 +42,15 @@ export function getSolflareProvider() {
   return null;
 }
 
+export function getCoinbaseProvider() {
+  if (typeof window === 'undefined') return null;
+  if ((window as any).coinbaseSolana) return (window as any).coinbaseSolana;
+  if (window.solana && ((window.solana as any).isCoinbaseWallet || (window.solana as any).isCoinbaseBrowser)) {
+    return window.solana;
+  }
+  return null;
+}
+
 export function getSessionKey(): solanaWeb3.Keypair {
   const saved = localStorage.getItem('cookie_chain_session_key');
   if (saved) {
@@ -127,6 +136,15 @@ export async function getWalletAddress(type: WalletType, provider: any): Promise
     return addr;
   }
 
+  if (type === 'Coinbase Wallet') {
+    const res = await provider.connect();
+    const addr = res?.publicKey ? res.publicKey.toString() : provider.publicKey?.toString();
+    if (!isValidUserAddress(addr)) {
+      throw new Error("Coinbase Wallet no devolvió una cuenta válida. Abre la extensión Coinbase Wallet y desbloquéala.");
+    }
+    return addr;
+  }
+
   if (type === 'Session Key') {
     if (!provider || !provider.publicKey) {
       throw new Error("Session key no inicializada.");
@@ -178,6 +196,13 @@ export async function requestWalletSignature(
     const signed = await provider.signMessage(messageBytes, 'utf8');
     const sig = signed?.signature || signed;
     if (!sig) throw new Error("Firma cancelada o rechazada en Solflare.");
+    return Array.from(sig).map((b: any) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  if (type === 'Coinbase Wallet') {
+    const signed = await provider.signMessage(messageBytes, 'utf8');
+    const sig = signed?.signature || signed;
+    if (!sig) throw new Error("Firma cancelada o rechazada en Coinbase Wallet.");
     return Array.from(sig).map((b: any) => b.toString(16).padStart(2, '0')).join('');
   }
 

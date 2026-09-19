@@ -1,6 +1,7 @@
 import React from 'react';
 import { WalletType } from '../types/wallet';
 import { ArrowLeft, X, RotateCw, AlertTriangle, Key, ExternalLink } from 'lucide-react';
+import { WalletLogo } from './WalletIcons';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -14,30 +15,28 @@ interface WalletModalProps {
   detectedWallets: Record<string, boolean>;
 }
 
-const WALLET_CONFIG: Record<WalletType, { icon: string; bg: string; storeUrl: string; desc: string }> = {
+const WALLET_CONFIG: Record<WalletType, { storeUrl: string; desc: string; badge?: string }> = {
   'Nightly': {
-    icon: '🦉',
-    bg: 'bg-[#ffe0a8]',
     storeUrl: 'https://nightly.app/download',
-    desc: 'Official SVM wallet for Cookie Chain bounties'
+    desc: 'Official SVM wallet for Cookie Chain bounties',
+    badge: 'Recommended'
   },
   'Phantom': {
-    icon: '👻',
-    bg: 'bg-[#e9d5ff]',
     storeUrl: 'https://phantom.app/download',
     desc: 'Standard Solana / SVM Web3 provider'
   },
   'Solflare': {
-    icon: '☀️',
-    bg: 'bg-[#fed7aa]',
     storeUrl: 'https://solflare.com/download',
     desc: 'Solana SVM Web3 wallet'
   },
+  'Coinbase Wallet': {
+    storeUrl: 'https://www.coinbase.com/wallet/downloads',
+    desc: 'Coinbase multi-chain SVM wallet'
+  },
   'Session Key': {
-    icon: '🔑',
-    bg: 'bg-[#86efac]',
     storeUrl: '',
-    desc: 'Generates real Ed25519 SVM keypair locally in browser'
+    desc: 'Generates real Ed25519 SVM keypair locally in browser',
+    badge: 'Zero-Install'
   }
 };
 
@@ -60,8 +59,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1f3a]/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
       <div className="neo-card max-w-md w-full p-6 space-y-4 shadow-[0_8px_0_#0b1f3a] bg-white transition-all">
         
-        {/* VIEW 1: DECLINED SCREEN (EXACT MATCH TO USER SCREENSHOT) */}
-        {status === 'declined' && currentWalletConfig && (
+        {/* VIEW 1: DECLINED SCREEN (MATCHING EXACT USER SCREENSHOT) */}
+        {status === 'declined' && selectedWallet && currentWalletConfig && (
           <div className="space-y-6">
             {/* Top Navigation Bar: Back arrow, Wallet Name, Close X */}
             <div className="flex items-center justify-between border-b-2 border-[#0b1f3a]/15 pb-3">
@@ -86,10 +85,10 @@ export const WalletModal: React.FC<WalletModalProps> = ({
 
             {/* Central Error Presentation */}
             <div className="flex flex-col items-center justify-center py-4 text-center space-y-3">
-              {/* Wallet Icon with Overlapping Red Cross Badge */}
+              {/* Authentic Wallet Icon with Overlapping Red Cross Badge */}
               <div className="relative">
-                <div className={`w-20 h-20 rounded-full ${currentWalletConfig.bg} border-3 border-[#0b1f3a] flex items-center justify-center text-4xl shadow-[0_4px_0_#0b1f3a]`}>
-                  {currentWalletConfig.icon}
+                <div className="w-20 h-20 rounded-full border-3 border-[#0b1f3a] overflow-hidden shadow-[0_4px_0_#0b1f3a] flex items-center justify-center bg-white p-1">
+                  <WalletLogo wallet={selectedWallet} className="w-full h-full rounded-full" />
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-red-500 border-2 border-[#0b1f3a] flex items-center justify-center text-white shadow-sm">
                   <X className="w-4 h-4 stroke-[3]" />
@@ -106,13 +105,13 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 {errorMessage || 'Connection can be declined if a previous request is still active or was cancelled in your wallet.'}
               </p>
 
-              {/* Try Again Button (prominent pill style) */}
+              {/* Try Again Button */}
               <div className="pt-3 w-full">
                 <button
                   onClick={onRetry}
-                  className="w-full py-3 bg-[#0b1f3a] hover:bg-[#15345d] text-white font-black text-sm rounded-2xl neo-btn flex items-center justify-center gap-2 shadow-[0_4px_0_#0b1f3a] cursor-pointer"
+                  className="w-full py-3 bg-[#0b1f3a] hover:bg-[#15345d] text-white font-black text-sm rounded-2xl neo-btn flex items-center justify-center gap-2 shadow-[0_4px_0_#0b1f3a] cursor-pointer active:translate-y-1"
                 >
-                  <RotateCw className="w-4 h-4 animate-spin-reverse" />
+                  <RotateCw className="w-4 h-4" />
                   <span>Try again</span>
                 </button>
               </div>
@@ -120,33 +119,35 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           </div>
         )}
 
-        {/* VIEW 2: CONNECTING STATUS */}
-        {status === 'connecting' && currentWalletConfig && (
+        {/* VIEW 2: CONNECTING STATUS (WITH AUTHENTIC WALLET LOGO & SLEEK SPINNER) */}
+        {status === 'connecting' && selectedWallet && currentWalletConfig && (
           <div className="space-y-6">
             <div className="flex items-center justify-between border-b-2 border-[#0b1f3a]/15 pb-3">
-              <button onClick={onBackToSelect} className="p-1 text-[#0b1f3a] hover:opacity-70">
+              <button onClick={onBackToSelect} className="p-1 text-[#0b1f3a] hover:opacity-70 cursor-pointer">
                 <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
               </button>
               <h3 className="text-base font-black text-[#0b1f3a]">{selectedWallet}</h3>
-              <button onClick={onClose} className="p-1 text-[#0b1f3a] hover:opacity-70">
+              <button onClick={onClose} className="p-1 text-[#0b1f3a] hover:opacity-70 cursor-pointer">
                 <X className="w-5 h-5 stroke-[2.5]" />
               </button>
             </div>
 
             <div className="flex flex-col items-center justify-center py-6 text-center space-y-4">
-              <div className="relative">
-                <div className={`w-20 h-20 rounded-full ${currentWalletConfig.bg} border-3 border-[#0b1f3a] flex items-center justify-center text-4xl shadow-[0_4px_0_#0b1f3a]`}>
-                  {currentWalletConfig.icon}
+              {/* Authentic Animated Spinner around Official Vector Logo */}
+              <div className="relative p-2">
+                <div className="w-20 h-20 rounded-full border-3 border-[#0b1f3a] overflow-hidden shadow-[0_4px_0_#0b1f3a] flex items-center justify-center bg-white p-1">
+                  <WalletLogo wallet={selectedWallet} className="w-full h-full rounded-full" />
                 </div>
-                <div className="absolute inset-0 rounded-full border-4 border-t-amber-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                {/* Smooth Outer Rotating Ring */}
+                <div className="absolute inset-0 rounded-full border-4 border-t-[#f59e0b] border-r-transparent border-b-[#0b1f3a] border-l-transparent animate-spin pointer-events-none"></div>
               </div>
 
               <div>
                 <h4 className="text-base font-black text-[#0b1f3a]">
                   Connecting to {selectedWallet}...
                 </h4>
-                <p className="text-xs font-medium text-[#0b1f3a]/70 mt-1 max-w-xs">
-                  Please approve the connection in your wallet window to continue.
+                <p className="text-xs font-medium text-[#0b1f3a]/70 mt-1 max-w-xs leading-relaxed">
+                  Por favor aprueba la conexión y la <strong>firma de verificación (SIWS)</strong> en la ventana emergente de tu billetera.
                 </p>
               </div>
             </div>
@@ -154,25 +155,25 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         )}
 
         {/* VIEW 3: INSTALL NOTICE */}
-        {status === 'install_notice' && currentWalletConfig && (
+        {status === 'install_notice' && selectedWallet && currentWalletConfig && (
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b-2 border-[#0b1f3a]/15 pb-3">
-              <button onClick={onBackToSelect} className="p-1 text-[#0b1f3a] hover:opacity-70">
+              <button onClick={onBackToSelect} className="p-1 text-[#0b1f3a] hover:opacity-70 cursor-pointer">
                 <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
               </button>
               <h3 className="text-base font-black text-[#0b1f3a]">{selectedWallet} Not Found</h3>
-              <button onClick={onClose} className="p-1 text-[#0b1f3a] hover:opacity-70">
+              <button onClick={onClose} className="p-1 text-[#0b1f3a] hover:opacity-70 cursor-pointer">
                 <X className="w-5 h-5 stroke-[2.5]" />
               </button>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#fef08a] border-2 border-[#0b1f3a] space-y-3">
+            <div className="p-4 rounded-2xl bg-[#fef08a] border-2 border-[#0b1f3a] space-y-3 shadow-[0_2px_0_#0b1f3a]">
               <div className="flex items-center gap-2 font-black text-xs text-[#0b1f3a]">
                 <AlertTriangle className="w-4 h-4 text-[#d97706]" />
-                <span>Wallet extension not detected</span>
+                <span>Wallet extension not detected in Chrome</span>
               </div>
               <p className="text-xs font-medium text-[#0b1f3a]/80 leading-relaxed">
-                We opened the official install page in a new tab. If you prefer not to install browser extensions, connect instantly using the built-in Session Key:
+                Abrimos la página de descarga oficial. Si prefieres no instalar extensiones, conéctate al instante con la Session Key integrada:
               </p>
               <div className="pt-1 flex flex-col gap-2">
                 <a
@@ -196,7 +197,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           </div>
         )}
 
-        {/* VIEW 4: DEFAULT SELECTION LIST */}
+        {/* VIEW 4: DEFAULT WALLET LIST (AUTHENTIC SVG LOGOS) */}
         {status === 'idle' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center border-b-2 border-[#0b1f3a]/15 pb-3">
@@ -212,17 +213,39 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               </button>
             </div>
 
-            {/* Wallet Rows */}
+            {/* Wallet Rows with Real SVG Logos */}
             <div className="space-y-2.5">
               
+              {/* Phantom */}
+              <div
+                onClick={() => onConnect('Phantom')}
+                className="p-3 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-white p-0.5">
+                    <WalletLogo wallet="Phantom" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black text-[#0b1f3a]">Phantom</span>
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#e9d5ff] text-[#5340C6] border border-[#0b1f3a] font-bold">Popular</span>
+                    </div>
+                    <p className="text-[10px] font-medium text-[#0b1f3a]/65">Standard Solana / SVM Web3 provider</p>
+                  </div>
+                </div>
+                <span className={`text-[10px] mono px-2.5 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['phantom'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
+                  {detectedWallets['phantom'] ? 'Detected' : 'Install ↗'}
+                </span>
+              </div>
+
               {/* Nightly */}
               <div
                 onClick={() => onConnect('Nightly')}
                 className="p-3 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#ffe0a8] border-2 border-[#0b1f3a] flex items-center justify-center text-xl">
-                    🦉
+                  <div className="w-10 h-10 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#0C1021] p-0.5">
+                    <WalletLogo wallet="Nightly" />
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
@@ -237,33 +260,14 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 </span>
               </div>
 
-              {/* Phantom */}
-              <div
-                onClick={() => onConnect('Phantom')}
-                className="p-3 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#e9d5ff] border-2 border-[#0b1f3a] flex items-center justify-center text-xl">
-                    👻
-                  </div>
-                  <div>
-                    <span className="text-xs font-black text-[#0b1f3a]">Phantom</span>
-                    <p className="text-[10px] font-medium text-[#0b1f3a]/65">Standard Solana / SVM Web3 provider</p>
-                  </div>
-                </div>
-                <span className={`text-[10px] mono px-2.5 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['phantom'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
-                  {detectedWallets['phantom'] ? 'Detected' : 'Install ↗'}
-                </span>
-              </div>
-
               {/* Solflare */}
               <div
                 onClick={() => onConnect('Solflare')}
                 className="p-3 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#fed7aa] border-2 border-[#0b1f3a] flex items-center justify-center text-xl">
-                    ☀️
+                  <div className="w-10 h-10 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#181320] p-0.5">
+                    <WalletLogo wallet="Solflare" />
                   </div>
                   <div>
                     <span className="text-xs font-black text-[#0b1f3a]">Solflare</span>
@@ -275,6 +279,28 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 </span>
               </div>
 
+              {/* Coinbase Wallet */}
+              <div
+                onClick={() => onConnect('Coinbase Wallet')}
+                className="p-3 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#0052FF] p-0.5">
+                    <WalletLogo wallet="Coinbase Wallet" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black text-[#0b1f3a]">Coinbase Wallet</span>
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#dbeafe] text-[#1e40af] border border-[#0b1f3a] font-bold">Multi-Chain</span>
+                    </div>
+                    <p className="text-[10px] font-medium text-[#0b1f3a]/65">Direct Solana SVM connection via Coinbase</p>
+                  </div>
+                </div>
+                <span className={`text-[10px] mono px-2.5 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['coinbase'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
+                  {detectedWallets['coinbase'] ? 'Detected' : 'Install ↗'}
+                </span>
+              </div>
+
               {/* Session Key */}
               <div className="pt-2 border-t-2 border-[#0b1f3a]/15">
                 <div
@@ -282,8 +308,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                   className="p-3 bg-[#dcfce7] hover:bg-[#bbf7d0] rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#86efac] border-2 border-[#0b1f3a] flex items-center justify-center text-xl">
-                      🔑
+                    <div className="w-10 h-10 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#059669] p-0.5">
+                      <WalletLogo wallet="Session Key" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5">
@@ -304,10 +330,10 @@ export const WalletModal: React.FC<WalletModalProps> = ({
             {/* Standard Explanation */}
             <div className="p-3 rounded-2xl bg-[#d8f1ff] border-2 border-[#0b1f3a] text-[11px] text-[#0b1f3a] space-y-1">
               <div className="font-extrabold flex items-center gap-1">
-                <span>💡</span> Estándar Web3 en Solana (igual que Jupiter y Raydium):
+                <span>💡</span> Flujo de Autenticación Criptográfica SIWS:
               </div>
               <p className="font-medium text-[#0b1f3a]/80 leading-relaxed">
-                Al conectar, solo se comparte la dirección pública para lectura. Las firmas de transacciones únicamente se solicitan cuando tú presionas una acción on-chain.
+                Al seleccionar tu billetera, se abrirá la ventana emergente solicitándote autorizar la lectura y firmar un mensaje de autenticación gratuito (*Sign-In with Solana*). Si cancelas, podrás pulsar <strong>Try again</strong> en cualquier momento.
               </p>
             </div>
           </div>

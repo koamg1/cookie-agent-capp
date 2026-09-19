@@ -1,4 +1,4 @@
-export type WalletType = 'Nightly' | 'Phantom' | 'Solflare' | 'Session Key';
+export type WalletType = 'Nightly' | 'Phantom' | 'Solflare' | 'Coinbase Wallet' | 'Session Key';
 
 export interface WalletOption {
   id: string;

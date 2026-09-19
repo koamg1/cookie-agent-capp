@@ -13,6 +13,7 @@ import {
   getNightlyProvider,
   getPhantomProvider,
   getSolflareProvider,
+  getCoinbaseProvider,
   getSessionKey,
   getWalletAddress,
   buildAuthChallenge,
@@ -85,7 +86,8 @@ export const App: React.FC = () => {
   const detectedWallets = {
     nightly: !!getNightlyProvider(),
     phantom: !!getPhantomProvider(),
-    solflare: !!getSolflareProvider()
+    solflare: !!getSolflareProvider(),
+    coinbase: !!getCoinbaseProvider()
   };
 
   // Fetch Network Stats
@@ -162,6 +164,14 @@ export const App: React.FC = () => {
         addLog('WALLET', 'Solflare no detectada. Abriendo enlace oficial...', 'text-orange-400');
         return;
       }
+    } else if (type === 'Coinbase Wallet') {
+      provider = getCoinbaseProvider();
+      if (!provider) {
+        window.open('https://www.coinbase.com/wallet/downloads', '_blank');
+        setModalStatus('install_notice');
+        addLog('WALLET', 'Coinbase Wallet no detectada. Abriendo enlace oficial...', 'text-blue-400');
+        return;
+      }
     } else if (type === 'Session Key') {
       provider = getSessionKey();
     }
@@ -171,6 +181,15 @@ export const App: React.FC = () => {
 
     try {
       const address = await getWalletAddress(type, provider);
+
+      // Immediately prompt for SIWS cryptographic signature so Phantom / wallet pops up to sign!
+      addLog('PROMPT', `Abriendo ventana de ${type} para firmar verificación SIWS...`, 'text-purple-400');
+      const challenge = buildAuthChallenge(address);
+      const signatureHex = await requestWalletSignature(type, provider, address, challenge);
+      
+      setIsSiwsVerified(true);
+      sessionStorage.setItem('cookie_auth_signature', signatureHex);
+      addLog('AUTH_OK', `Firma SIWS verificada: ${signatureHex.slice(0, 16)}...`, 'text-emerald-400');
 
       setActiveProvider(provider);
       setActiveWalletType(type);
@@ -205,7 +224,7 @@ export const App: React.FC = () => {
         }
       }
 
-      addLog('WALLET_OK', `${type} conectada con éxito: ${address}`, 'text-emerald-400');
+      addLog('WALLET_OK', `${type} conectada y autenticada: ${address}`, 'text-emerald-400');
       setIsModalOpen(false);
       setModalStatus('idle');
       fetchBalance(address);
