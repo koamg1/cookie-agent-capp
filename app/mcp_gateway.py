@@ -78,7 +78,7 @@ SUPPORTED_TOOLS = [
     ),
     MCPToolDefinition(
         name="cookie_get_bridge_guide",
-        description="Retrieve step-by-step instructions for bridging testnet COOKIE tokens via Hyperlane from Base Sepolia and using the faucet.",
+        description="Retrieve step-by-step instructions for acquiring $COOKIE on Solana DEXs and bridging via Hyperlane from Base Mainnet to Cookie Chain SVM.",
         inputSchema={
             "type": "object",
             "properties": {},
@@ -132,6 +132,72 @@ SUPPORTED_TOOLS = [
                 "address": {"type": "string", "description": "Base58 address of the user"}
             },
             "required": ["address"]
+        }
+    ),
+    MCPToolDefinition(
+        name="cookie_atomic_get_spreads",
+        description="Query live arbitrage spreads across Cookie Chain AMMs and the Arbitrum ↔ Cookie Chain cross-chain price differential via Hyperlane.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    ),
+    MCPToolDefinition(
+        name="cookie_atomic_get_vault_status",
+        description="Retrieve Cookie Atomic Engine & Vault telemetry: NAV share price, TVL, pool discovery state, and SVM atomic driver status on Cookie Chain (Mainnet Beta).",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    ),
+    MCPToolDefinition(
+        name="cookie_atomic_simulate_route",
+        description="Simulate an atomic multi-instruction swap route on Cookie Chain SVM, calculating optimal order sizing, price impact, and net profit before signing.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "amount_cookie": {"type": "number", "description": "Input $COOKIE capital amount to simulate", "default": 1000.0},
+                "simulated_spread_pct": {"type": "number", "description": "Gross spread percentage to simulate", "default": 1.85},
+                "slippage_tolerance_pct": {"type": "number", "description": "Slippage protection tolerance percentage", "default": 0.50}
+            },
+            "required": []
+        }
+    ),
+    MCPToolDefinition(
+        name="cookie_atomic_shoot_and_revert",
+        description="Execute a real-time atomic transaction shot to Cookie Chain SVM Mainnet (https://rpc.cookiescan.io) against a DEX pool and trigger the on-chain Revert Guard to verify capital protection.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "pool_name": {"type": "string", "description": "Target pool name", "default": "Cookoven Protocol (COOK/USDC)"},
+                "amount_cookie": {"type": "number", "description": "Amount of $COOKIE to probe", "default": 100.0}
+            },
+            "required": []
+        }
+    ),
+    MCPToolDefinition(
+        name="cookie_atomic_proof_of_reserves",
+        description="Retrieve live 3-Tier Proof-of-Reserves (PoR) metrics, Solvency Ratio (Assets/Liabilities), and on-chain explorer links for Cold, Warm, and Hot Vault tiers.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    ),
+    MCPToolDefinition(
+        name="cookie_atomic_verify_deposit",
+        description="Zero-Trust verification of an on-chain deposit transaction on Cookie Chain SVM. Enforces UNIQUE tx_hash constraint to eliminate Replay Attacks.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "tx_hash": {"type": "string", "description": "On-chain transaction hash or signature"},
+                "user_address": {"type": "string", "description": "Base58 address of the depositor"},
+                "amount_cookie": {"type": "number", "description": "Amount of $COOKIE transferred", "default": 0.0},
+                "amount_usdc": {"type": "number", "description": "Amount of $USDC transferred", "default": 0.0}
+            },
+            "required": ["tx_hash", "user_address"]
         }
     )
 ]

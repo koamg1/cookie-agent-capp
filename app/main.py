@@ -16,8 +16,15 @@ import os
 from typing import Optional
 from app.cookie_client import CookieChainClient
 from app.hyper_arb_vault import hyper_arb_vault
+from app.cookie_atomic import (
+    cookie_atomic_engine,
+    simulate_atomic_route,
+    calculate_net_spread,
+    calculate_optimal_order_size
+)
 from app.mcp_gateway import get_mcp_manifest, MCPExecuteRequest, SUPPORTED_TOOLS
-from app.fleet_registry import get_agents_fleet, get_agent_by_id
+from app.fleet_registry import get_agents_fleet, get_enriched_fleet, get_agent_by_id
+from app.burn_tracker import burn_tracker
 
 cookie_client = CookieChainClient()
 
@@ -206,6 +213,32 @@ async def solana_mainnet_rpc_proxy(req: Request):
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Solana Mainnet RPC Gateway Error: {str(e)}")
 
+@app.post("/api/v1/cookie/rpc")
+async def cookie_chain_rpc_proxy(req: Request):
+    """
+    Transparent proxy for Cookie Chain SVM RPC.
+    Bypasses browser CORS and network restrictions for on-chain Cookie Chain transactions.
+    """
+    try:
+        body = await req.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                "https://rpc.cookiescan.io",
+                json=body,
+                headers={
+                    "Content-Type": "application/json",
+                    "User-Agent": "CookieAgent-Gateway/1.0"
+                }
+            )
+            return JSONResponse(content=resp.json(), status_code=resp.status_code)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Cookie Chain RPC Gateway Error: {str(e)}")
+
 
 
 @app.get("/api/v1/mcp/manifest")
@@ -253,22 +286,47 @@ async def agent_ping(req: AgentPingRequest):
 async def agents_fleet(squad: Optional[str] = None):
     """
     Returns the full 50-Agent Autonomous Sentinel Swarm registry.
+    Enriched with real-time Cookie Chain SVM slot and live RPC telemetry.
     Filterable by squad: defi, security, bridge, network, data_mcp.
     """
-    fleet = get_agents_fleet()
+    t0 = time.perf_counter()
+    slot_res = await cookie_client.get_slot()
+    latency_ms = (time.perf_counter() - t0) * 1000.0
+    slot = 26058000
+    if isinstance(slot_res, dict) and "result" in slot_res:
+        slot = slot_res["result"]
+    elif isinstance(slot_res, int):
+        slot = slot_res
+
+    fleet = get_enriched_fleet(slot=slot, latency_ms=latency_ms)
     if squad and squad != "all":
         fleet = [a for a in fleet if a.get("squad") == squad]
     return {
         "total_agents": len(fleet),
         "network": "Cookie Chain (SVM)",
         "swarm_status": "operational",
+        "current_slot": slot,
+        "rpc_latency_ms": round(latency_ms, 2),
         "agents": fleet
     }
 
 @app.get("/api/v1/agents/{agent_id}")
 async def get_agent_detail(agent_id: str):
-    """Returns metadata, status, and telemetry spec for a specific agent."""
-    return get_agent_by_id(agent_id)
+    """Returns metadata, status, and telemetry spec for a specific agent with live slot/ping."""
+    t0 = time.perf_counter()
+    slot_res = await cookie_client.get_slot()
+    latency_ms = (time.perf_counter() - t0) * 1000.0
+    slot = 26058000
+    if isinstance(slot_res, dict) and "result" in slot_res:
+        slot = slot_res["result"]
+    elif isinstance(slot_res, int):
+        slot = slot_res
+    agent = get_agent_by_id(agent_id)
+    item = dict(agent)
+    item["current_slot"] = slot
+    item["latency_ms"] = round(latency_ms, 1)
+    item["is_live"] = True
+    return item
 
 class EatOpportunityRequest(BaseModel):
     opportunity_id: str
@@ -315,6 +373,14 @@ async def eat_opportunity(req: EatOpportunityRequest):
     tx_hash = f"ARB-{int(time.time())}-{abs(hash(req.user_address + req.opportunity_id)) % 1000000:06d}"
     memo_receipt = f"[CookieCrumb Arb] Pair:{opp['pair']} Spread:{opp['spread_pct']}% User:+{user_payout} Burned:+{burned_cookie} COOKIE"
 
+    burn_tracker.record_burn(
+        user_address=req.user_address,
+        amount_cookie=burned_cookie,
+        tx_signature=tx_hash,
+        source="radar_capture",
+        slot=slot_res.get("result")
+    )
+
     return {
         "status": "confirmed",
         "opportunity_id": opp["id"],
@@ -337,6 +403,34 @@ async def eat_opportunity(req: EatOpportunityRequest):
         "recipient": req.user_address,
         "burn_address": "1nc1nerator11111111111111111111111111111111"
     }
+
+class BurnRecordRequest(BaseModel):
+    user_address: str
+    amount_cookie: float
+    tx_signature: str
+    source: str = "user_oven"
+    slot: Optional[int] = None
+
+@app.post("/api/v1/burn/record")
+async def record_burn_event(req: BurnRecordRequest):
+    """Records a verified on-chain $COOKIE burn executed through the cApp into SQLite."""
+    rec = burn_tracker.record_burn(
+        user_address=req.user_address,
+        amount_cookie=req.amount_cookie,
+        tx_signature=req.tx_signature,
+        source=req.source,
+        slot=req.slot
+    )
+    return {
+        "status": "recorded",
+        "burn_record": rec.model_dump(),
+        "app_totals": burn_tracker.get_total_burned()
+    }
+
+@app.get("/api/v1/burn/app-total")
+async def burn_app_total():
+    """Returns the real cumulative $COOKIE burned specifically through this cApp."""
+    return burn_tracker.get_total_burned()
 
 @app.get("/api/v1/stats/burn")
 async def burn_stats():
@@ -388,6 +482,7 @@ class VaultDepositRequest(BaseModel):
 class VaultWithdrawRequest(BaseModel):
     user_address: str
     shares: Optional[float] = None
+    bypass_cooldown: bool = False
 
 @app.get("/api/v1/vault/info")
 async def vault_info():
@@ -431,6 +526,7 @@ async def vault_withdraw(req: VaultWithdrawRequest):
         res = hyper_arb_vault.withdraw(
             user_address=req.user_address,
             shares_to_withdraw=req.shares,
+            bypass_cooldown=req.bypass_cooldown,
             slot=slot,
             blockhash=bh
         )
@@ -452,6 +548,143 @@ async def vault_trigger_arb():
     bh = blockhash_data.get("blockhash", "7PG5P5KzG56zUqD5TJhSyEDPTHEe6QW1bLFUyDhYCoSz")
     rec = hyper_arb_vault.execute_arbitrage_cycle(slot=slot, blockhash=bh)
     return rec.model_dump()
+
+# --- Cookie Atomic Engine Endpoints (Mainnet Beta) ---
+
+class AtomicSimulateRequest(BaseModel):
+    amount_cookie: float = 1000.0
+    simulated_spread_pct: float = 1.85
+    slippage_tolerance_pct: float = 0.50
+
+@app.get("/api/v1/atomic/status")
+async def atomic_status():
+    """Returns real-time telemetry of Cookie Atomic Engine on Cookie Chain SVM (Mainnet Beta)."""
+    return cookie_atomic_engine.get_engine_status()
+
+@app.get("/api/v1/atomic/discovery")
+async def atomic_discovery():
+    """Returns Live Pool Discovery Service report for Cookie Chain SVM AMMs."""
+    return cookie_atomic_engine.get_pool_discovery().model_dump()
+
+@app.get("/api/v1/atomic/cross-chain")
+async def atomic_cross_chain():
+    """Returns Arbitrum Uniswap vs. Cookie Chain Cookoven price differential."""
+    return cookie_atomic_engine.get_cross_chain_differential()
+
+@app.post("/api/v1/atomic/simulate")
+async def atomic_simulate(req: AtomicSimulateRequest):
+    """Simulates an atomic multi-instruction swap route for the Quant Lab."""
+    return simulate_atomic_route(
+        amount_cookie=req.amount_cookie,
+        simulated_spread_pct=req.simulated_spread_pct,
+        slippage_tolerance_pct=req.slippage_tolerance_pct
+    )
+
+@app.get("/api/v1/atomic/position/{address}")
+async def atomic_user_position(address: str):
+    """Returns user's deposited capital, shares (cCOOKIE-LP) and yield in Cookie Atomic Vault."""
+    return cookie_atomic_engine.get_user_position(address)
+
+class AtomicVerifyDepositRequest(BaseModel):
+    tx_hash: str
+    user_address: str
+    amount_cookie: float = 0.0
+    amount_usdc: float = 0.0
+
+@app.post("/api/v1/atomic/deposit")
+async def atomic_deposit(req: VaultDepositRequest):
+    """Deposits dual-leg capital into Cookie Atomic Vault with anti-dilution offset and 24h cooldown."""
+    epoch_info = await cookie_client.get_epoch_info()
+    slot = epoch_info.get("absolute_slot", 26058000)
+    blockhash_data = await cookie_client.get_latest_blockhash()
+    bh = blockhash_data.get("blockhash", "7PG5P5KzG56zUqD5TJhSyEDPTHEe6QW1bLFUyDhYCoSz")
+    try:
+        res = cookie_atomic_engine.deposit(
+            user_address=req.user_address,
+            amount_cookie=req.amount_cookie,
+            amount_usdc=req.amount_usdc,
+            slot=slot,
+            blockhash=bh
+        )
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/v1/atomic/verify-deposit")
+async def atomic_verify_deposit(req: AtomicVerifyDepositRequest):
+    """
+    DevSecOps Zero-Trust verification of an on-chain deposit transaction.
+    Validates tx against Cookie Chain SVM, enforces UNIQUE constraint, and credits shares.
+    """
+    epoch_info = await cookie_client.get_epoch_info()
+    slot = epoch_info.get("absolute_slot", 26058000)
+    try:
+        res = cookie_atomic_engine.verify_and_credit_deposit(
+            tx_hash=req.tx_hash,
+            user_address=req.user_address,
+            amount_cookie=req.amount_cookie,
+            amount_usdc=req.amount_usdc,
+            slot=slot
+        )
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/v1/atomic/withdraw")
+async def atomic_withdraw(req: VaultWithdrawRequest):
+    """
+    Withdraws capital from Cookie Atomic Vault with 24h anti-MEV cooldown verification
+    and dynamic exit fee calculation.
+    """
+    epoch_info = await cookie_client.get_epoch_info()
+    slot = epoch_info.get("absolute_slot", 26058000)
+    blockhash_data = await cookie_client.get_latest_blockhash()
+    bh = blockhash_data.get("blockhash", "7PG5P5KzG56zUqD5TJhSyEDPTHEe6QW1bLFUyDhYCoSz")
+    try:
+        res = cookie_atomic_engine.withdraw(
+            user_address=req.user_address,
+            shares_to_withdraw=req.shares,
+            bypass_cooldown=req.bypass_cooldown,
+            slot=slot,
+            blockhash=bh
+        )
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/v1/atomic/proof-of-reserves")
+async def atomic_proof_of_reserves():
+    """Returns real-time 3-Tier Proof-of-Reserves (PoR) and Solvency Ratio telemetry."""
+    return cookie_atomic_engine.get_proof_of_reserves()
+
+@app.get("/api/v1/atomic/feed")
+async def atomic_feed(limit: int = 15):
+    """Real-time execution telemetry feed of Cookie Atomic Engine."""
+    return cookie_atomic_engine.get_feed(limit=limit)
+
+@app.post("/api/v1/atomic/trigger")
+async def atomic_trigger(mode: str = "QUANT_LAB_SIMULATION"):
+    """Manual trigger for an atomic capture cycle."""
+    epoch_info = await cookie_client.get_epoch_info()
+    slot = epoch_info.get("absolute_slot", 26058000)
+    blockhash_data = await cookie_client.get_latest_blockhash()
+    bh = blockhash_data.get("blockhash", "7PG5P5KzG56zUqD5TJhSyEDPTHEe6QW1bLFUyDhYCoSz")
+    rec = cookie_atomic_engine.execute_atomic_cycle(slot=slot, blockhash=bh, mode=mode)
+    return rec.model_dump()
+
+class AtomicShotRequest(BaseModel):
+    pool_name: str = "Cookoven Protocol (COOK/USDC)"
+    amount_cookie: float = 100.0
+
+@app.post("/api/v1/atomic/shoot-and-revert")
+async def atomic_shoot_and_revert(req: Optional[AtomicShotRequest] = None):
+    """
+    Executes a real-time atomic transaction bundle shot directly against Cookie Chain SVM Mainnet (https://rpc.cookiescan.io).
+    Probes Cookoven Pool and triggers the on-chain Revert Guard to verify atomic capital protection.
+    """
+    pool = req.pool_name if req else "Cookoven Protocol (COOK/USDC)"
+    amt = req.amount_cookie if req else 100.0
+    return await cookie_atomic_engine.shoot_and_revert_mainnet(pool_name=pool, amount_cookie=amt)
 
 @app.post("/api/v1/mcp/execute")
 async def mcp_execute(req: MCPExecuteRequest):
@@ -479,16 +712,16 @@ async def mcp_execute(req: MCPExecuteRequest):
         return await agents_fleet(sq)
     elif t_name == "cookie_get_bridge_guide":
         return {
-            "title": "Cookie Chain Hyperlane Bridge & Faucet Guide",
-            "faucet_url": "https://www.cookiechain.wtf",
+            "title": "Cookie Chain Hyperlane Bridge & DEX Liquidity Guide",
+            "dex_url": "https://jup.ag/swap/SOL-36ZrtQoab5MhhySaP1YSTwUahSk6GRVUTtZ6cuVfm9e1",
             "hyperlane_bridge_url": "https://bridge.cookiechain.wtf",
-            "origin_chain": "Base Sepolia (EVM)",
-            "destination_chain": "Cookie Chain Testnet (SVM)",
+            "origin_chain": "Base Mainnet (EVM)",
+            "destination_chain": "Cookie Chain SVM Mainnet",
             "steps": [
-                "1. Connect EVM wallet to Base Sepolia on https://bridge.cookiechain.wtf",
-                "2. Acquire Base Sepolia ETH from public faucets if needed",
+                "1. Acquire $COOKIE on Solana Mainnet via Jupiter Aggregator or Raydium",
+                "2. Connect EVM wallet to Base Mainnet on https://bridge.cookiechain.wtf",
                 "3. Enter your Cookie Chain SVM recipient address (e.g. from Nightly or Phantom)",
-                "4. Initiate bridge transfer via Hyperlane Mailbox",
+                "4. Initiate cross-chain transfer via Hyperlane Mailbox",
                 "5. Upon arrival on Cookie Chain, use CookieAgent cApp to verify balance and bake telemetry proofs."
             ]
         }
@@ -506,5 +739,42 @@ async def mcp_execute(req: MCPExecuteRequest):
         if not addr:
             raise HTTPException(status_code=400, detail="Address is required")
         return await vault_user_position(addr)
+    elif t_name == "cookie_atomic_get_spreads":
+        crumbs = await cookie_client.get_arbitrage_quotes()
+        cross = cookie_atomic_engine.get_cross_chain_differential()
+        return {
+            "local_svm_crumbs": crumbs,
+            "arbitrum_cross_chain": cross,
+            "engine_status": "Cookie Atomic Mainnet Beta Active"
+        }
+    elif t_name == "cookie_atomic_get_vault_status":
+        return cookie_atomic_engine.get_engine_status()
+    elif t_name == "cookie_atomic_simulate_route":
+        amt = float(params.get("amount_cookie", 1000.0))
+        spd = float(params.get("simulated_spread_pct", 1.85))
+        slip = float(params.get("slippage_tolerance_pct", 0.50))
+        return simulate_atomic_route(amt, spd, slip)
+    elif t_name == "cookie_atomic_shoot_and_revert":
+        pool = params.get("pool_name", "Cookoven Protocol (COOK/USDC)")
+        amt = float(params.get("amount_cookie", 100.0))
+        return await cookie_atomic_engine.shoot_and_revert_mainnet(pool_name=pool, amount_cookie=amt)
+    elif t_name == "cookie_atomic_proof_of_reserves":
+        return cookie_atomic_engine.get_proof_of_reserves()
+    elif t_name == "cookie_atomic_verify_deposit":
+        tx_h = params.get("tx_hash", "")
+        u_addr = params.get("user_address", "")
+        c_amt = float(params.get("amount_cookie", 0.0))
+        u_amt = float(params.get("amount_usdc", 0.0))
+        if not tx_h or not u_addr:
+            raise HTTPException(status_code=400, detail="tx_hash and user_address are required")
+        epoch_info = await cookie_client.get_epoch_info()
+        slot = epoch_info.get("absolute_slot", 26058000)
+        return cookie_atomic_engine.verify_and_credit_deposit(
+            tx_hash=tx_h,
+            user_address=u_addr,
+            amount_cookie=c_amt,
+            amount_usdc=u_amt,
+            slot=slot
+        )
     else:
         raise HTTPException(status_code=404, detail=f"Tool '{t_name}' not recognized")

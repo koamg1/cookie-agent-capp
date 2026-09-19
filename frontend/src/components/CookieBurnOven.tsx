@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { CookieMonster } from './CookieMonster';
-import { apiUrl } from '../config/api';
 import { WalletType } from '../types/wallet';
+import { apiUrl } from '../config/api';
 import {
-  executeSolanaMainnetBurn,
   executeCookieChainBurn,
-  COOKIE_MAINNET_MINT,
   CANONICAL_BURN_ADDRESS,
   getWalletProvider
 } from '../utils/solana';
@@ -31,26 +29,6 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
   onRefreshBalance,
   onAddLog
 }) => {
-  const [burnStats, setBurnStats] = useState<{
-    cumulative_burned: number;
-    burn_rate_24h: number;
-    deflation_status: string;
-    burn_address: string;
-  }>({
-    cumulative_burned: 142580.45,
-    burn_rate_24h: 4210.50,
-    deflation_status: 'active',
-    burn_address: CANONICAL_BURN_ADDRESS
-  });
-
-  const [selectedNetwork, setSelectedNetwork] = useState<'solana_mainnet' | 'cookie_chain'>('solana_mainnet');
-  const [mainnetData, setMainnetData] = useState<{
-    has_tokens: boolean;
-    amount_ui: number;
-    token_account?: string;
-  } | null>(null);
-  const [isFetchingMainnet, setIsFetchingMainnet] = useState<boolean>(false);
-
   const [microBurnAmount, setMicroBurnAmount] = useState<number>(1.0);
   const [isBurning, setIsBurning] = useState<boolean>(false);
   const [burnStage, setBurnStage] = useState<'idle' | 'preparing' | 'signing' | 'confirming' | 'eating'>('idle');
@@ -61,44 +39,27 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
   const [burnExplorerUrl, setBurnExplorerUrl] = useState<string | null>(null);
   const [burnError, setBurnError] = useState<string | null>(null);
 
-  // Fetch live network burn stats
-  useEffect(() => {
-    fetch(apiUrl('/api/v1/stats/burn'))
+  // Real on-chain burn counter accumulated specifically by this app
+  const [appBurnedTotal, setAppBurnedTotal] = useState<number>(0.0);
+  const [burnEventsCount, setBurnEventsCount] = useState<number>(0);
+
+  const fetchAppBurnTotal = () => {
+    fetch(apiUrl('/api/v1/burn/app-total'))
       .then((res) => res.json())
       .then((data) => {
-        if (data.cumulative_burned) {
-          setBurnStats(data);
+        if (typeof data.total_burned_by_app === 'number') {
+          setAppBurnedTotal(data.total_burned_by_app);
+          setBurnEventsCount(data.total_burn_events || 0);
         }
       })
-      .catch((err) => console.warn('Failed to load burn stats:', err));
-  }, []);
-
-  // Fetch user's wallet mainnet token balance when connected
-  const refreshMainnetTokens = () => {
-    if (!connectedAddress) {
-      setMainnetData(null);
-      return;
-    }
-    setIsFetchingMainnet(true);
-    fetch(apiUrl(`/api/v1/wallet/${connectedAddress}`))
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.mainnet_cookie) {
-          setMainnetData(data.mainnet_cookie);
-          if (data.mainnet_cookie.amount_ui > 0) {
-            setSelectedNetwork('solana_mainnet');
-          } else if (balanceCookie > 0) {
-            setSelectedNetwork('cookie_chain');
-          }
-        }
-      })
-      .catch((err) => console.warn('Failed to query mainnet cookie balance:', err))
-      .finally(() => setIsFetchingMainnet(false));
+      .catch((err) => console.warn('Failed to load app burn total:', err));
   };
 
   useEffect(() => {
-    refreshMainnetTokens();
-  }, [connectedAddress, balanceCookie]);
+    fetchAppBurnTotal();
+    const interval = setInterval(fetchAppBurnTotal, 8000);
+    return () => clearInterval(interval);
+  }, []);
 
   const playCrunchSound = () => {
     try {
@@ -140,64 +101,51 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
     setBurnStage('preparing');
 
     try {
-      let txSig = '';
-      let explorerUrl = '';
-
-      if (selectedNetwork === 'solana_mainnet') {
-        const available = mainnetData?.amount_ui ?? 0;
-        if (available < microBurnAmount) {
-          throw new Error(
-            `Insufficient $COOKIE balance on Solana Mainnet (${available.toFixed(2)} COOK available, ${microBurnAmount} requested).`
-          );
-        }
-
-        onAddLog(
-          'BURN_START',
-          `Initializing verifiable Token-2022 burn of ${microBurnAmount} $COOKIE on Solana Mainnet...`,
-          'text-amber-400'
+      if (balanceCookie < microBurnAmount) {
+        throw new Error(
+          `Insufficient $COOKIE balance on Cookie Chain (${balanceCookie.toFixed(4)} COOKIE available, ${microBurnAmount} requested). Please acquire or bridge $COOKIE to Cookie Chain first!`
         );
-
-        txSig = await executeSolanaMainnetBurn(
-          activeWalletType,
-          provider,
-          connectedAddress,
-          microBurnAmount,
-          onAddLog,
-          setBurnStage
-        );
-
-        explorerUrl = `https://solscan.io/tx/${txSig}`;
-        onAddLog('BURN_CONFIRMED', `Burn confirmed on Solana Mainnet! Tx: ${txSig}`, 'text-emerald-400');
-
-      } else {
-        // Cookie Chain Testnet
-        if (balanceCookie < microBurnAmount) {
-          throw new Error(
-            `Insufficient testnet $COOKIE on Cookie Chain (${balanceCookie.toFixed(4)} COOKIE available, ${microBurnAmount} requested). Get free tokens via Faucet & Bridge!`
-          );
-        }
-
-        onAddLog(
-          'BURN_START',
-          `Initializing verifiable burn transfer of ${microBurnAmount} COOKIE to Incinerator on Cookie Chain...`,
-          'text-amber-400'
-        );
-
-        txSig = await executeCookieChainBurn(
-          activeWalletType,
-          provider,
-          connectedAddress,
-          microBurnAmount,
-          onAddLog,
-          setBurnStage
-        );
-
-        explorerUrl = `https://cookiescan.io/tx/${txSig}`;
-        onAddLog('BURN_CONFIRMED', `Burn confirmed on Cookie Chain SVM! Tx: ${txSig}`, 'text-emerald-400');
       }
 
+      onAddLog(
+        'BURN_START',
+        `Initializing verifiable burn transfer of ${microBurnAmount} COOKIE to 1nc1nerator on Cookie Chain SVM...`,
+        'text-amber-400'
+      );
+
+      const txSig = await executeCookieChainBurn(
+        activeWalletType,
+        provider,
+        connectedAddress,
+        microBurnAmount,
+        onAddLog,
+        setBurnStage
+      );
+
+      const explorerUrl = `https://cookiescan.io/tx/${txSig}`;
+      onAddLog('BURN_CONFIRMED', `Burn confirmed on Cookie Chain SVM! Tx: ${txSig}`, 'text-emerald-400');
+
+      // Record this real burn in the app's persistent SQLite registry
+      fetch(apiUrl('/api/v1/burn/record'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_address: connectedAddress,
+          amount_cookie: microBurnAmount,
+          tx_signature: txSig,
+          source: 'user_oven'
+        })
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.app_totals) {
+            setAppBurnedTotal(data.app_totals.total_burned_by_app);
+            setBurnEventsCount(data.app_totals.total_burn_events);
+          }
+        })
+        .catch((e) => console.warn('Burn record err:', e));
+
       setBurnStage('eating');
-      // Play bite audio and trigger chomping animations
       playCrunchSound();
       setBurnTxSignature(txSig);
       setBurnExplorerUrl(explorerUrl);
@@ -205,22 +153,14 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
 
       const karmaBonus = Math.round(microBurnAmount * 50);
       setBurnSuccessMsg(
-        `BURP! Successfully burned ${microBurnAmount} $COOKIE on-chain! +${karmaBonus} Baker Karma points added to your Airdrop Passport!`
+        `BURP! Successfully burned ${microBurnAmount} $COOKIE on Cookie Chain SVM! +${karmaBonus} Baker Karma points added to your Airdrop Passport!`
       );
 
-      const newTotal = burnStats.cumulative_burned + microBurnAmount;
-      setBurnStats((prev) => ({ ...prev, cumulative_burned: newTotal }));
-
-      // Immediately optimistically decrement local balance so it reflects on screen
-      if (selectedNetwork === 'solana_mainnet' && mainnetData) {
-        setMainnetData({
-          ...mainnetData,
-          amount_ui: Math.max(0, mainnetData.amount_ui - microBurnAmount)
-        });
-      }
+      // Optimistically increment the local burn total
+      setAppBurnedTotal((prev) => Number((prev + microBurnAmount).toFixed(4)));
+      setBurnEventsCount((prev) => prev + 1);
 
       if (onRefreshBalance) onRefreshBalance();
-      refreshMainnetTokens();
 
       setTimeout(() => {
         setIsSuccess(false);
@@ -252,7 +192,7 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
               The $COOKIE Burn Oven & Hungry Monster
             </h2>
             <p className="text-[11px] font-bold text-[#0b1f3a]/65">
-              Interactive Deflationary Tokenomics & Real On-Chain Furnace
+              Deflationary Furnace &bull; Permanent Supply Reduction on Cookie Chain (SVM)
             </p>
           </div>
         </div>
@@ -263,105 +203,88 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
       </div>
 
       <p className="text-xs font-medium text-[#0b1f3a]/80 leading-relaxed">
-        10% of arbitrage spread captures and voluntary user burns are routed directly to the canonical burn program, permanently reducing circulating supply.
+        10% of arbitrage spread captures and voluntary user burns are routed directly to the canonical burn program (<code className="text-[11px] mono font-bold text-[#0b1f3a]">1nc1nerator...</code>) on Cookie Chain, permanently reducing circulating supply.
       </p>
 
-      {/* Burn Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-        <div className="bg-[#fff1f2] p-3.5 rounded-2xl border-2 border-[#0b1f3a] shadow-[0_2px_0_#0b1f3a] text-center">
-          <span className="text-[10px] uppercase font-black text-red-700 block">Total Burned Supply</span>
-          <span className="text-lg sm:text-xl font-black text-[#0b1f3a] mono mt-1 block">
-            🔥 {burnStats.cumulative_burned.toLocaleString()} COOKIE
-          </span>
+      {/* Real App-Burned Cumulative Counter Badge */}
+      <div className="p-3.5 rounded-2xl border-2 border-[#0b1f3a] bg-gradient-to-r from-[#fff1f2] via-[#fffbeb] to-[#fef2f2] shadow-[0_3px_0_#0b1f3a] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-[#fed7aa] border-2 border-[#0b1f3a] shadow-[0_2px_0_#0b1f3a] flex items-center justify-center text-xl animate-pulse">
+            🔥
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase font-black text-red-700 tracking-wider">
+                Quemado Real Acumulado por esta App
+              </span>
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-red-100 text-red-800 border border-red-300 mono">
+                {burnEventsCount} {burnEventsCount === 1 ? 'quema' : 'quemas'}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-xl sm:text-2xl font-black mono text-[#0b1f3a]">
+                {appBurnedTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+              </span>
+              <span className="text-xs font-black text-[#d97706]">$COOKIE</span>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-[#fffbeb] p-3.5 rounded-2xl border-2 border-[#0b1f3a] shadow-[0_2px_0_#0b1f3a] text-center">
-          <span className="text-[10px] uppercase font-black text-amber-700 block">24h Burn Velocity</span>
-          <span className="text-lg sm:text-xl font-black text-[#0b1f3a] mono mt-1 block">
-            +{burnStats.burn_rate_24h.toLocaleString()} / day
+        <div className="flex flex-col sm:items-end">
+          <span className="text-[10px] font-bold text-[#0b1f3a]/60">
+            Destino Canónico: 1nc1nerator...1111
           </span>
-        </div>
-
-        <div className="bg-[#f0fdf4] p-3.5 rounded-2xl border-2 border-[#0b1f3a] shadow-[0_2px_0_#0b1f3a] text-center">
-          <span className="text-[10px] uppercase font-black text-emerald-700 block">HyperArb Auto-Burn</span>
-          <span className="text-lg sm:text-xl font-black text-[#0b1f3a] mono mt-1 block">
-            20% Per Run
+          <span className="text-[10px] font-black text-emerald-700 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Registro Persistente Monotónico
           </span>
         </div>
       </div>
 
-      {/* Dual-Network Target Selector */}
-      <div className="p-3.5 rounded-2xl border-2 border-[#0b1f3a] bg-white/90 shadow-[0_3px_0_#0b1f3a] space-y-2.5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <span className="text-xs font-black text-[#0b1f3a] uppercase flex items-center gap-1.5">
-            <span>🌐 Select Burning Network:</span>
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => { setSelectedNetwork('solana_mainnet'); setBurnError(null); }}
-              className={`px-3 py-1.5 rounded-xl border-2 border-[#0b1f3a] text-xs font-black transition-all cursor-pointer ${
-                selectedNetwork === 'solana_mainnet'
-                  ? 'bg-[#fed7aa] text-[#0b1f3a] shadow-[0_2px_0_#0b1f3a]'
-                  : 'bg-white hover:bg-gray-50 text-[#0b1f3a]/70'
-              }`}
-            >
-              ⚡ Solana Mainnet {mainnetData && mainnetData.amount_ui > 0 ? `(${mainnetData.amount_ui.toLocaleString()} COOK)` : ''}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setSelectedNetwork('cookie_chain'); setBurnError(null); }}
-              className={`px-3 py-1.5 rounded-xl border-2 border-[#0b1f3a] text-xs font-black transition-all cursor-pointer ${
-                selectedNetwork === 'cookie_chain'
-                  ? 'bg-[#c7d2fe] text-[#0b1f3a] shadow-[0_2px_0_#0b1f3a]'
-                  : 'bg-white hover:bg-gray-50 text-[#0b1f3a]/70'
-              }`}
-            >
-              🍪 Cookie Chain ({balanceCookie.toFixed(2)} COOKIE)
-            </button>
+      {/* Network & Live Wallet Balance Banner */}
+      <div className="p-3.5 rounded-2xl border-2 border-[#0b1f3a] bg-[#eff6ff] shadow-[0_2px_0_#0b1f3a] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-[#c7d2fe] border-2 border-[#0b1f3a] flex items-center justify-center text-lg shadow-[0_1px_0_#0b1f3a]">
+            🍪
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-[#0b1f3a]">Cookie Chain (SVM)</span>
+              <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                ONLINE (400ms)
+              </span>
+            </div>
+            <p className="text-[11px] font-bold text-[#0b1f3a]/70">
+              Your $COOKIE Balance:{' '}
+              <strong className="mono text-[#0b1f3a] text-xs font-black">
+                {balanceCookie.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} COOKIE
+              </strong>
+            </p>
           </div>
         </div>
 
-        {/* Network-specific Live Balance Details */}
-        {selectedNetwork === 'solana_mainnet' ? (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3 py-2 rounded-xl border border-emerald-800/20 bg-[#ecfdf5] text-[11px] font-bold text-emerald-950">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>
-                Mainnet $COOKIE Balance:{' '}
-                <strong className="mono text-emerald-900 text-xs">
-                  {isFetchingMainnet ? 'Querying...' : mainnetData ? `${mainnetData.amount_ui.toLocaleString()} COOK` : '0.00 COOK'}
-                </strong>
-              </span>
-            </div>
-            <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-emerald-200 text-emerald-900 border border-emerald-400">
-              Token-2022 (Mint: 36ZrtQ...9e1)
-            </span>
-          </div>
-        ) : (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3 py-2 rounded-xl border border-blue-800/20 bg-[#eff6ff] text-[11px] font-bold text-blue-950">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-500" />
-              <span>
-                Cookie Chain Balance:{' '}
-                <strong className="mono text-blue-900 text-xs">{balanceCookie.toFixed(4)} COOKIE</strong>
-              </span>
-            </div>
-            {balanceCookie <= 0.001 ? (
-              <button
-                type="button"
-                onClick={onOpenBridgeModal}
-                className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-amber-300 hover:bg-amber-400 text-[#0b1f3a] border border-[#0b1f3a] cursor-pointer shadow-[0_1px_0_#0b1f3a]"
-              >
-                🚰 Get Free Testnet $COOKIE (Faucet)
-              </button>
-            ) : (
-              <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-blue-200 text-blue-900 border border-blue-400">
-                Native Gas Token
-              </span>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <a
+            href={`https://cookiescan.io/address/${CANONICAL_BURN_ADDRESS}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Inspect 1nc1nerator contract on CookieScan"
+            className="text-[10px] font-bold mono text-[#0284c7] hover:text-[#0369a1] hover:underline flex items-center gap-1 bg-white px-2.5 py-1.5 rounded-xl border border-[#0b1f3a]/20 shadow-[0_1px_0_#0b1f3a]/10"
+          >
+            <span>🔥 1nc1nerator...1111</span>
+            <span>↗</span>
+          </a>
+          {balanceCookie <= 0.001 && (
+            <button
+              type="button"
+              onClick={onOpenBridgeModal}
+              className="text-[10px] font-black px-3 py-1.5 rounded-xl bg-[#ffe0a8] hover:bg-[#fed388] text-[#0b1f3a] border-2 border-[#0b1f3a] shadow-[0_1px_0_#0b1f3a] cursor-pointer"
+            >
+              🌉 Bridge $COOKIE
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Interactive Burn Arena: Cookie Monster + Feeding Station */}
@@ -394,19 +317,24 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
               <span className="text-[10px] font-black uppercase text-[#0b1f3a]/60 block mb-1.5">
                 Select Treat Size:
               </span>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 {[
-                  { label: '🍪 1.0 COOKIE', sub: 'Light Snack', val: 1.0 },
-                  { label: '🍪🍪 5.0 COOKIE', sub: 'Good Meal', val: 5.0 },
-                  { label: '🍪🍪🍪 25 COOKIE', sub: 'Grand Feast', val: 25.0 }
+                  { label: '🍪 1.0', sub: 'Light Snack', val: 1.0 },
+                  { label: '🍪 5.0', sub: 'Good Meal', val: 5.0 },
+                  { label: '🍪 25.0', sub: 'Grand Feast', val: 25.0 },
+                  {
+                    label: '⚡ MAX',
+                    sub: `${balanceCookie > 0 ? balanceCookie.toFixed(1) : '0.0'}`,
+                    val: balanceCookie > 0 ? Math.max(0.1, Number((balanceCookie * 0.99).toFixed(2))) : 1.0
+                  }
                 ].map((tier) => (
                   <button
-                    key={tier.val}
+                    key={tier.label}
                     type="button"
                     onClick={() => setMicroBurnAmount(tier.val)}
                     onMouseEnter={() => setIsHoveringBurn(true)}
                     onMouseLeave={() => setIsHoveringBurn(false)}
-                    className={`py-2 px-2.5 rounded-xl border-2 border-[#0b1f3a] text-center transition-colors cursor-pointer shadow-[0_2px_0_#0b1f3a] ${
+                    className={`py-2 px-2 rounded-xl border-2 border-[#0b1f3a] text-center transition-colors cursor-pointer shadow-[0_2px_0_#0b1f3a] ${
                       microBurnAmount === tier.val
                         ? 'bg-[#fed7aa] font-black text-[#0b1f3a]'
                         : 'bg-white hover:bg-[#fff7ed] font-bold text-[#0b1f3a]/80'
@@ -454,7 +382,7 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
                         {burnStage === 'signing'
                           ? `CHECK ${activeWalletType?.toUpperCase() || 'WALLET'} TO APPROVE...`
                           : burnStage === 'confirming'
-                          ? 'CONFIRMING ON SOLANA (~5s)...'
+                          ? 'CONFIRMING ON COOKIE CHAIN (~1s)...'
                           : burnStage === 'eating'
                           ? 'NOM NOM NOM! MUNCHING...'
                           : 'PREPARING ON-CHAIN TX...'}
@@ -464,7 +392,7 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
                     <span className="flex items-center gap-1.5">
                       <span className="text-base">🔥</span>
                       <span>
-                        Feed Monster & Burn {microBurnAmount} $COOKIE on {selectedNetwork === 'solana_mainnet' ? 'Mainnet' : 'Testnet'}
+                        Feed Monster & Burn {microBurnAmount} $COOKIE on Cookie Chain
                       </span>
                     </span>
                   )}
@@ -479,10 +407,10 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
                   </span>
                   <span>
                     {burnStage === 'signing'
-                      ? `Please check your ${activeWalletType || 'wallet'} extension window to sign the burn instruction.`
+                      ? `Please check your ${activeWalletType || 'wallet'} extension window to sign the burn transaction.`
                       : burnStage === 'confirming'
-                      ? 'Transaction signed and broadcasted! Confirming block finality on Solana Mainnet (~5-10s)...'
-                      : 'Connecting to Solana RPC and fetching latest blockhash...'}
+                      ? 'Transaction signed and broadcast! Confirming block finality on Cookie Chain SVM (~400ms)...'
+                      : 'Connecting to Cookie Chain RPC and fetching latest blockhash...'}
                   </span>
                 </div>
               )}
@@ -516,7 +444,7 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
                       rel="noopener noreferrer"
                       className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-white border border-[#059669] text-[#065f46] hover:bg-[#ecfdf5] transition-colors inline-flex items-center gap-1 shadow-[0_1px_0_#059669]"
                     >
-                      <span>View on Explorer</span>
+                      <span>View on CookieScan</span>
                       <span>↗</span>
                     </a>
                   )}
@@ -537,7 +465,7 @@ export const CookieBurnOven: React.FC<CookieBurnOvenProps> = ({
       </div>
 
       <div className="text-[10px] mono text-[#0b1f3a]/60 text-center">
-        Burn Target: <span className="font-bold">{selectedNetwork === 'solana_mainnet' ? 'Token-2022 Burn Program (Solana Mainnet)' : `${burnStats.burn_address} (Cookie Chain SVM)`}</span>
+        Burn Target: <span className="font-bold">{CANONICAL_BURN_ADDRESS} (Cookie Chain SVM)</span>
       </div>
     </div>
   );

@@ -55,7 +55,7 @@ To configure any custom Solana/SVM wallet to talk to Cookie Chain:
 
 ### Configuring Phantom & Solflare
 1. Open **Settings** -> **Developer Settings** -> **Change Network**.
-2. Select **Custom RPC** or **Testnet/Devnet** override.
+2. Select **Custom RPC** or **Cookie Chain Mainnet** override.
 3. Enter `https://rpc.cookiescan.io`.
 
 ---

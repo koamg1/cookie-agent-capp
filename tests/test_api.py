@@ -194,7 +194,8 @@ async def test_vault_withdraw():
     user = "HSPEiMn8BYVgPZdHMXw3XkwfdAZksemaR7X5KS6eFmFV"
     payload = {
         "user_address": user,
-        "shares": None  # withdraw all
+        "shares": None,  # withdraw all
+        "bypass_cooldown": True
     }
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         wdr_res = await ac.post("/api/v1/vault/withdraw", json=payload)

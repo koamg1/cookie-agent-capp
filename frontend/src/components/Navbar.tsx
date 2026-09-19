@@ -64,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>Fleet</span>
           </button>
 
-          {/* Tab 2: Vault with MEV Badge */}
+          {/* Tab 2: Vault with Mainnet Beta Badge */}
           <button
             onClick={() => onSelectTab('vault')}
             className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${
@@ -74,9 +74,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <span>⚡</span>
-            <span>Vault</span>
+            <span>Cookie Atomic</span>
             <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded-md bg-[#fbbf24] border border-[#0b1f3a] text-[#0b1f3a] shadow-[0_1px_0_#0b1f3a]">
-              MEV
+              Mainnet Beta
             </span>
           </button>
 

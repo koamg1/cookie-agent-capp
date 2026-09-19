@@ -106,12 +106,12 @@ export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
                   onClick={onOpenBridgeModal}
                   className="px-3 py-1.5 rounded-xl bg-[#ffe0a8] hover:bg-[#fed388] text-[#0b1f3a] font-black text-xs border border-[#0b1f3a] shadow-[0_1px_0_#0b1f3a] cursor-pointer whitespace-nowrap"
                 >
-                  🚰 Get Free Testnet $COOKIE &rarr;
+                  🪐 Buy / Bridge $COOKIE &rarr;
                 </button>
               )}
             </div>
             <p className="text-[11px] font-medium text-[#0b1f3a]/80 leading-relaxed">
-              Broadcasting an on-chain SPL memo requires a tiny fraction of $COOKIE for network gas. If your wallet has 0 funds, the transaction will automatically fall back to an authentic Gateway proof. Use the faucet or bridge to test full SVM execution!
+              Broadcasting an on-chain SPL memo requires a tiny fraction of $COOKIE for network gas. If your wallet has 0 funds, the transaction will automatically record via authentic Gateway proof. Bridge from Base or acquire tokens on Solana Mainnet to broadcast directly!
             </p>
           </div>
         )}

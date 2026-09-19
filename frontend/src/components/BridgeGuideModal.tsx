@@ -30,10 +30,10 @@ export const BridgeGuideModal: React.FC<BridgeGuideModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between border-b-2 border-[#0b1f3a]/15 pb-3">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🌉</span>
+            <span className="text-2xl">⚡</span>
             <div>
-              <h3 className="text-base font-black text-[#0b1f3a]">Hyperlane Bridge & Faucet</h3>
-              <p className="text-[11px] font-bold text-[#0b1f3a]/65">Fund your Cookie Chain SVM wallet in 2 steps</p>
+              <h3 className="text-base font-black text-[#0b1f3a]">Token Acquisition & Bridge Guide</h3>
+              <p className="text-[11px] font-bold text-[#0b1f3a]/65">Acquire $COOKIE on Solana Mainnet & bridge to Cookie SVM</p>
             </div>
           </div>
           <button
@@ -63,33 +63,33 @@ export const BridgeGuideModal: React.FC<BridgeGuideModalProps> = ({
           </div>
         </div>
 
-        {/* Step 1: Faucet */}
+        {/* Step 1: Acquire on Solana Mainnet */}
         <div className="p-4 rounded-2xl border-2 border-[#0b1f3a] bg-[#f8fafc] space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-[#0b1f3a]">Step 1: Cookie Chain Testnet Faucet</span>
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#86efac] border border-[#0b1f3a]">
-              Direct SVM Drip
+            <span className="text-xs font-black text-[#0b1f3a]">Step 1: Acquire $COOKIE on Solana Mainnet</span>
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#86efac] border border-[#0b1f3a] text-[#065f46]">
+              Token-2022 Mint
             </span>
           </div>
           <p className="text-[11px] text-[#0b1f3a]/80 leading-relaxed">
-            Acquire free testnet $COOKIE tokens directly to your address for gas and on-chain transaction fees. Paste your copied address into the official faucet.
+            Acquire real $COOKIE tokens on Solana Mainnet via Jupiter Aggregator or Raydium. Mint: <code className="mono text-[10px] font-bold bg-[#ffe0a8]/60 px-1 py-0.5 rounded border border-[#0b1f3a]/20">36ZrtQoab5MhhySaP1YSTwUahSk6GRVUTtZ6cuVfm9e1</code>.
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
             <a
-              href="https://www.cookiechain.wtf"
+              href="https://jup.ag/swap/SOL-36ZrtQoab5MhhySaP1YSTwUahSk6GRVUTtZ6cuVfm9e1"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black neo-btn bg-[#ffe0a8] hover:bg-[#fed388] text-[#0b1f3a] border-2 border-[#0b1f3a]"
             >
-              🚰 Open Cookie Faucet &rarr;
+              🪐 Swap on Jupiter &rarr;
             </a>
             <a
-              href="https://docs.cookiechain.wtf"
+              href="https://dexscreener.com/solana/36ZrtQoab5MhhySaP1YSTwUahSk6GRVUTtZ6cuVfm9e1"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black neo-btn bg-white hover:bg-gray-100 text-[#0b1f3a] border-2 border-[#0b1f3a]"
             >
-              📖 Official Docs &rarr;
+              📈 DexScreener Chart &rarr;
             </a>
           </div>
         </div>
@@ -97,16 +97,16 @@ export const BridgeGuideModal: React.FC<BridgeGuideModalProps> = ({
         {/* Step 2: Hyperlane Bridge */}
         <div className="p-4 rounded-2xl border-2 border-[#0b1f3a] bg-[#f8fafc] space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-[#0b1f3a]">Step 2: Hyperlane Bridge (Cross-Chain)</span>
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#e9d5ff] border border-[#0b1f3a]">
-              Base Sepolia &rarr; Cookie SVM
+            <span className="text-xs font-black text-[#0b1f3a]">Step 2: Hyperlane Bridge (Base &rarr; Cookie SVM)</span>
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#e9d5ff] border border-[#0b1f3a] text-[#581c87]">
+              Cross-Chain Mailbox
             </span>
           </div>
           <p className="text-[11px] text-[#0b1f3a]/80 leading-relaxed">
-            Cookie Chain is bridged natively to Base Sepolia via Hyperlane Mailboxes. Transfer tokens seamlessly between EVM and SVM.
+            Cookie Chain is bridged natively to Base Mainnet via Hyperlane Mailboxes. Transfer tokens seamlessly between EVM and SVM.
           </p>
           <div className="space-y-1 text-[11px] text-[#0b1f3a]/75 pl-2 border-l-2 border-[#0b1f3a]/20">
-            <div>1. Connect EVM wallet (MetaMask) on Base Sepolia</div>
+            <div>1. Connect EVM wallet (MetaMask, Coinbase) on Base Mainnet</div>
             <div>2. Enter your Cookie Chain SVM recipient address</div>
             <div>3. Approve and bridge tokens in ~18 seconds</div>
           </div>

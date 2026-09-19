@@ -11,6 +11,9 @@ export interface AgentInfo {
   uptime: string;
   target_program: string;
   telemetry_sample: string;
+  current_slot?: number;
+  latency_ms?: number;
+  is_live?: boolean;
 }
 
 interface AgentFleetProps {
@@ -184,8 +187,9 @@ export const AgentFleet: React.FC<AgentFleetProps> = ({ onSelectAgent, selectedA
                       >
                         {agent.squad_label.split('&')[0].trim()}
                       </span>
-                      <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-[#fef3c7] text-[#92400e] border border-[#b45309] mono uppercase tracking-wider">
-                        SIM PROBE
+                      <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-[#dcfce7] text-[#166534] border border-[#166534] mono uppercase tracking-wider flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        LIVE PROBE
                       </span>
                     </div>
                   </div>
@@ -196,25 +200,39 @@ export const AgentFleet: React.FC<AgentFleetProps> = ({ onSelectAgent, selectedA
 
                   <div className="bg-[#f8fafc] p-2 rounded-xl border border-[#0b1f3a]/15 text-[10px] mono text-[#0b1f3a]/80 space-y-1">
                     <div className="flex justify-between items-center border-b border-[#0b1f3a]/10 pb-1">
-                      <span className="text-[8px] font-black text-amber-800 bg-amber-100/80 px-1.5 py-0.5 rounded border border-amber-300">
-                        ● DEMO PROBE DATA
+                      <span className="text-[8px] font-black text-emerald-800 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-400">
+                        ● LIVE ON-CHAIN
                       </span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[#0b1f3a]/50 text-[9px]">Uptime:</span>
-                        <span className="font-bold text-emerald-600">{agent.uptime}</span>
+                      <div className="flex items-center gap-2">
+                        {agent.current_slot && (
+                          <span className="text-[9px] font-bold text-[#0b1f3a]/70">
+                            Slot #{agent.current_slot.toLocaleString()}
+                          </span>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <span className="text-[#0b1f3a]/50 text-[9px]">Ping:</span>
+                          <span className="font-bold text-emerald-600">{agent.latency_ms ? `${agent.latency_ms}ms` : agent.uptime}</span>
+                        </div>
                       </div>
                     </div>
                     <div className="truncate pt-0.5">
-                      <span className="text-[#0b1f3a]/50">Sample: </span>
+                      <span className="text-[#0b1f3a]/50">Telemetry: </span>
                       <span className="text-[#0b1f3a] font-semibold">{agent.telemetry_sample}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-2.5 mt-2 border-t border-[#0b1f3a]/10 flex items-center justify-between">
-                  <span className="text-[9px] mono text-[#0b1f3a]/45 truncate max-w-[120px]">
-                    {agent.target_program.slice(0, 6)}...{agent.target_program.slice(-4)}
-                  </span>
+                  <a
+                    href={`https://cookiescan.io/address/${agent.target_program}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Inspect ${agent.target_program} on CookieScan`}
+                    className="text-[9px] mono text-[#0284c7] hover:text-[#0369a1] hover:underline font-bold flex items-center gap-1 truncate max-w-[130px]"
+                  >
+                    <span>🔍</span>
+                    <span>{agent.target_program.slice(0, 4)}...{agent.target_program.slice(-4)}</span>
+                  </a>
                   <button
                     onClick={() => onSelectAgent({ ...agent, name: `Telemetry Sentinel: ${agent.name}` })}
                     className="px-2.5 py-1 rounded-xl text-[10px] font-black neo-btn bg-[#d8f1ff] hover:bg-[#86efac] text-[#0b1f3a] border border-[#0b1f3a] shadow-[0_1px_0_#0b1f3a] cursor-pointer"

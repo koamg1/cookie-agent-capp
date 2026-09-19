@@ -8,7 +8,7 @@ import { TelemetryOven } from './components/TelemetryOven';
 import { McpKitchen } from './components/McpKitchen';
 import { AgentFleet, AgentInfo } from './components/AgentFleet';
 import { BridgeGuideModal } from './components/BridgeGuideModal';
-import { HyperArbVault } from './components/HyperArbVault';
+import { CookieAtomicVault } from './components/CookieAtomicVault';
 import { CookieBurnOven } from './components/CookieBurnOven';
 import { AirdropPassportModal } from './components/AirdropPassportModal';
 import { TelemetryConsole, LogEntry } from './components/TelemetryConsole';
@@ -138,7 +138,7 @@ export const App: React.FC = () => {
     setActiveTab(tab);
     window.location.hash = `#${tab}`;
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    const tabName = tab === 'burn' ? '🔥 Burn Oven & Monster' : tab === 'vault' ? '⚡ Cookie HyperArb Vault' : '🛸 Fleet & Swarm';
+    const tabName = tab === 'burn' ? '🔥 Burn Oven & Monster' : tab === 'vault' ? '⚡ Cookie Atomic Vault' : '🛸 Fleet & Swarm';
     addLog('NAV', `Navigated to ${tabName} submenu`, 'text-cyan-300');
   };
 
@@ -419,7 +419,7 @@ export const App: React.FC = () => {
             setBroadcastResult({
               status: 'success',
               txSignature: simData.proof_nonce,
-              details: `Telemetry proof recorded via Gateway (Slot ${simData.slot}). Tip: Fund with testnet COOKIE for direct on-chain SPL memo.`
+              details: `Telemetry proof recorded via Gateway (Slot ${simData.slot}). Tip: Fund with $COOKIE on Mainnet for direct on-chain SPL memo.`
             });
             addLog('GATEWAY_PROOF', `Proof generated: ${simData.proof_nonce} on Slot ${simData.slot}`, 'text-emerald-400');
             return;
@@ -427,7 +427,7 @@ export const App: React.FC = () => {
         } catch {
           // Ignore and use standard notice
         }
-        notice = "Connected address has 0.0000 COOKIE for network fee (~0.000005 COOKIE). Fund via https://www.cookiechain.wtf or click 'Faucet & Bridge'.";
+        notice = "Connected address has 0.0000 COOKIE for network fee (~0.000005 COOKIE). Acquire via Jupiter/Raydium or click 'Bridge'.";
       } else if (errMsg.includes("User rejected") || errMsg.includes("rejected") || errMsg.includes("cancelled")) {
         notice = "Transaction signature was cancelled in your wallet.";
         setSelectedWallet(activeWalletType);
@@ -519,7 +519,7 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'vault' && (
-          <HyperArbVault
+          <CookieAtomicVault
             connectedAddress={connectedAddress}
             activeWalletType={activeWalletType}
             activeProvider={activeProvider}

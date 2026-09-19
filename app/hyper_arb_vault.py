@@ -485,5 +485,6 @@ class HyperArbVault:
         return [r.model_dump() for r in self.recent_executions[:limit]]
 
 
-# Singleton Vault Instance with Monotonic SQLite Persistence
-hyper_arb_vault = HyperArbVault()
+# Singleton Instance pointing to Cookie Atomic Engine (Mainnet Beta)
+from app.cookie_atomic import cookie_atomic_engine
+hyper_arb_vault = cookie_atomic_engine

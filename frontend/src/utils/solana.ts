@@ -456,6 +456,17 @@ export async function executeSolanaMainnetBurn(
   return txSignature;
 }
 
+export function getCookieChainRpcUrl(): string {
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return `${window.location.origin}/api/v1/cookie/rpc`;
+  }
+  const endpoint = apiUrl('/api/v1/cookie/rpc');
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint;
+  }
+  return `http://127.0.0.1:8080${endpoint}`;
+}
+
 export async function executeCookieChainBurn(
   type: WalletType,
   provider: any,
@@ -465,11 +476,15 @@ export async function executeCookieChainBurn(
   onStageChange?: (stage: 'preparing' | 'signing' | 'confirming') => void
 ): Promise<string> {
   if (onStageChange) onStageChange('preparing');
-  const connection = new solanaWeb3.Connection("https://rpc.cookiescan.io", "confirmed");
+  let rpcUrl = getCookieChainRpcUrl();
+  let connection = new solanaWeb3.Connection(rpcUrl, {
+    commitment: "confirmed",
+    wsEndpoint: ""
+  });
   const owner = new solanaWeb3.PublicKey(ownerAddress);
   const incinerator = new solanaWeb3.PublicKey(CANONICAL_BURN_ADDRESS);
 
-  // Lamports for native COOKIE (9 decimals)
+  // Lamports for native COOKIE (9 decimals on Cookie Chain)
   const lamports = Math.round(amount * 1_000_000_000);
   const transferIx = solanaWeb3.SystemProgram.transfer({
     fromPubkey: owner,
@@ -486,7 +501,24 @@ export async function executeCookieChainBurn(
   });
 
   const transaction = new solanaWeb3.Transaction().add(transferIx, memoIx);
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+
+  let blockhash: string;
+  let lastValidBlockHeight: number;
+  try {
+    const res = await connection.getLatestBlockhash("confirmed");
+    blockhash = res.blockhash;
+    lastValidBlockHeight = res.lastValidBlockHeight;
+  } catch (primaryErr) {
+    console.warn("Primary Cookie Chain RPC failed to get blockhash, trying direct fallback:", primaryErr);
+    connection = new solanaWeb3.Connection("https://rpc.cookiescan.io", {
+      commitment: "confirmed",
+      wsEndpoint: ""
+    });
+    const res = await connection.getLatestBlockhash("confirmed");
+    blockhash = res.blockhash;
+    lastValidBlockHeight = res.lastValidBlockHeight;
+  }
+
   transaction.recentBlockhash = blockhash;
   transaction.feePayer = owner;
 
