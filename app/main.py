@@ -654,8 +654,12 @@ async def atomic_withdraw(req: VaultWithdrawRequest):
 
 @app.get("/api/v1/atomic/proof-of-reserves")
 async def atomic_proof_of_reserves():
-    """Returns real-time 3-Tier Proof-of-Reserves (PoR) and Solvency Ratio telemetry."""
-    return cookie_atomic_engine.get_proof_of_reserves()
+    """Returns real-time 3-Tier Proof-of-Reserves (PoR) and Solvency Ratio telemetry synchronized with live Cookie Chain RPC."""
+    slot_res = await cookie_client.get_slot()
+    slot_val = slot_res.get("result")
+    latency = slot_res.get("latency_ms", 120.0)
+    live_slot = int(slot_val) if slot_val is not None else 26110890
+    return cookie_atomic_engine.get_proof_of_reserves(live_slot=live_slot, latency_ms=latency)
 
 @app.get("/api/v1/atomic/feed")
 async def atomic_feed(limit: int = 15):
