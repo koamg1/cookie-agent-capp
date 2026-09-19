@@ -46,6 +46,10 @@ async def serve_dashboard():
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>CookieAgent Gateway is running. Visit /docs for Swagger UI.</h1>")
 
+@app.get("/favicon.ico")
+async def favicon():
+    return HTMLResponse(content="")
+
 @app.get("/health")
 async def health_check():
     """Liveness & Readiness probe with Cookie Chain RPC latency."""
