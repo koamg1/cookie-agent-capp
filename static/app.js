@@ -80,7 +80,7 @@ function showWalletNotice(walletType) {
 
   if (walletType === 'nightly') {
     if (title) title.innerHTML = `🦉 Nightly Wallet no detectada en Chrome`;
-    if (desc) desc.innerHTML = `Hemos abierto la página oficial para instalar Nightly. Una vez instalada, recarga esta página o conéctate al instante sin extensiones usando la <strong>Session Key</strong>:`;
+    if (desc) desc.innerHTML = `Hemos abierto la página oficial para instalar Nightly. Una vez instalada, desbloquéala con tu contraseña o conéctate al instante sin extensiones usando la <strong>Session Key</strong>:`;
   } else if (walletType === 'phantom') {
     if (title) title.innerHTML = `👻 Phantom no detectado en Chrome`;
     if (desc) desc.innerHTML = `Hemos abierto la página oficial de <strong>Phantom</strong>. Si prefieres no instalar extensiones, conéctate al instante usando la <strong>Session Key</strong>:`;
@@ -153,6 +153,14 @@ function detectWallets() {
   }
 }
 
+// Reject dummy/uninitialized zero public keys (11111111111111111111111111111111 is SystemProgram)
+function isValidUserAddress(addr) {
+  if (!addr || typeof addr !== 'string') return false;
+  // 1111...1111 is the Solana System Program / default zero bytes key. Never a user account!
+  if (addr === '11111111111111111111111111111111' || addr.startsWith('11111111111111111111111111111111')) return false;
+  return addr.length >= 32 && addr.length <= 44;
+}
+
 // Build standard SIWS Authentication Challenge
 function buildAuthChallenge(address) {
   const nonce = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
@@ -172,48 +180,59 @@ function buildAuthChallenge(address) {
 // Extract public address from provider (Clean connection handshake)
 async function getWalletAddress(type, provider) {
   if (type === 'nightly') {
+    let candidate = null;
     // 1. Try Wallet Standard standard:connect first (Nightly v2+)
     if (provider.features && provider.features['standard:connect']) {
       try {
-        const res = await provider.features['standard:connect'].connect();
-        if (res && res.accounts && res.accounts.length > 0) {
-          return res.accounts[0].address;
-        }
+        const res = await provider.features['standard:connect'].connect(false);
+        const addr = res?.accounts?.[0]?.address;
+        if (isValidUserAddress(addr)) candidate = addr;
       } catch (err) {
         console.warn("Nightly standard:connect warning:", err);
       }
     }
     // 2. Try connect()
-    if (typeof provider.connect === 'function') {
+    if (!candidate && typeof provider.connect === 'function') {
       try {
-        const res = await provider.connect();
-        if (res && res.publicKey) return res.publicKey.toString();
-        if (res && res.accounts && res.accounts.length > 0) return res.accounts[0].address;
+        const res = await provider.connect({ onlyIfTrusted: false });
+        const addr = res?.publicKey?.toString() || (res?.accounts && res.accounts[0]?.address);
+        if (isValidUserAddress(addr)) candidate = addr;
       } catch (err) {
         console.warn("Nightly connect() warning:", err);
       }
     }
-    // 3. Check provider.accounts or provider.publicKey
-    if (provider.accounts && provider.accounts.length > 0) {
-      return provider.accounts[0].address;
+    // 3. Check provider.accounts only if valid
+    if (!candidate && provider.accounts && provider.accounts.length > 0) {
+      const addr = provider.accounts[0].address;
+      if (isValidUserAddress(addr)) candidate = addr;
     }
-    if (provider.publicKey) {
-      return provider.publicKey.toString();
+    // 4. Check provider.publicKey only if valid
+    if (!candidate && provider.publicKey) {
+      const addr = provider.publicKey.toString();
+      if (isValidUserAddress(addr)) candidate = addr;
     }
-    throw new Error("No se pudo obtener la dirección de Nightly Wallet. Por favor desbloquea la extensión.");
+
+    if (!candidate || !isValidUserAddress(candidate)) {
+      throw new Error("Nightly no devolvió una cuenta pública válida. Abre la extensión Nightly en tu navegador, desbloquéala con tu contraseña y asegúrate de tener una cuenta de Solana creada.");
+    }
+    return candidate;
   }
 
   if (type === 'phantom') {
-    const res = await provider.connect();
+    const res = await provider.connect({ onlyIfTrusted: false });
     const addr = res?.publicKey ? res.publicKey.toString() : provider.publicKey?.toString();
-    if (!addr) throw new Error("No se pudo obtener la dirección de Phantom.");
+    if (!isValidUserAddress(addr)) {
+      throw new Error("Phantom no devolvió una cuenta válida. Abre la extensión Phantom y desbloquéala.");
+    }
     return addr;
   }
 
   if (type === 'solflare') {
     await provider.connect();
     const addr = provider.publicKey ? provider.publicKey.toString() : null;
-    if (!addr) throw new Error("No se pudo obtener la dirección de Solflare.");
+    if (!isValidUserAddress(addr)) {
+      throw new Error("Solflare no devolvió una cuenta válida. Abre la extensión Solflare y desbloquéala.");
+    }
     return addr;
   }
 
@@ -221,7 +240,9 @@ async function getWalletAddress(type, provider) {
     if (!activeWalletProvider || !activeWalletProvider.publicKey) {
       throw new Error("Session key no inicializada.");
     }
-    return activeWalletProvider.publicKey.toString();
+    const addr = activeWalletProvider.publicKey.toString();
+    if (!isValidUserAddress(addr)) throw new Error("Error generando Session Key.");
+    return addr;
   }
 
   throw new Error(`Proveedor desconocido: ${type}`);
