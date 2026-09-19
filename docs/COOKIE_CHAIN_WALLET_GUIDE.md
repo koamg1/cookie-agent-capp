@@ -1,4 +1,4 @@
-﻿# 🍪 Cookie Chain Web3 Wallet Master Guide & Integration Proposal
+# 🍪 Cookie Chain Web3 Wallet Master Guide & Integration Proposal
 
 > **Reference URL**: [https://docs.cookiechain.wtf/wallets](https://docs.cookiechain.wtf/wallets)  
 > **Author**: CookieAgent Gateway & Sentinel Team (Superteam Earn Bounty Submission)  
@@ -86,4 +86,4 @@ The complete production implementation is available in the CookieAgent cApp repo
 * **Universal Adapter**: `frontend/src/utils/solana.ts`
 * **Wallet Modal**: `frontend/src/components/WalletModal.tsx`
 * **SVG Vector Logos**: `frontend/src/components/WalletIcons.tsx`
-* **Live Deployment**: [https://api-stability-coupled-monkey.trycloudflare.com/](https://api-stability-coupled-monkey.trycloudflare.com/)
+* **Live Deployment**: [https://cookie-agent-capp.vercel.app/](https://cookie-agent-capp.vercel.app/)

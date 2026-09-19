@@ -15,12 +15,13 @@
 
 ## 🌐 Live Interactive Demo & Production Endpoints
 
-The cApp is deployed in production on Oracle Cloud (Always Free Tier) with HTTPS via Cloudflare Tunnel:
+The cApp is deployed in production with permanent high-availability cloud infrastructure:
 
-* 🚀 **Live Web Application (React 18 + 9 SVM Wallets)**: [https://api-stability-coupled-monkey.trycloudflare.com/](https://api-stability-coupled-monkey.trycloudflare.com/)
-* 📚 **Interactive Swagger OpenAPI Docs**: [https://api-stability-coupled-monkey.trycloudflare.com/docs](https://api-stability-coupled-monkey.trycloudflare.com/docs)
-* 🤖 **Model Context Protocol (MCP) Manifest (11 Tools)**: [https://api-stability-coupled-monkey.trycloudflare.com/api/v1/mcp/manifest](https://api-stability-coupled-monkey.trycloudflare.com/api/v1/mcp/manifest)
-* 💓 **Production Health Check**: [https://api-stability-coupled-monkey.trycloudflare.com/health](https://api-stability-coupled-monkey.trycloudflare.com/health)
+* 🚀 **Live Web Application (Vercel)**: [https://cookie-agent-capp.vercel.app/](https://cookie-agent-capp.vercel.app/)
+* ⚙️ **Permanent Backend Gateway (Render)**: [https://cookie-agent-capp.onrender.com/](https://cookie-agent-capp.onrender.com/)
+* 📚 **Interactive Swagger OpenAPI Docs**: [https://cookie-agent-capp.onrender.com/docs](https://cookie-agent-capp.onrender.com/docs)
+* 🤖 **Model Context Protocol (MCP) Manifest (11 Tools)**: [https://cookie-agent-capp.onrender.com/api/v1/mcp/manifest](https://cookie-agent-capp.onrender.com/api/v1/mcp/manifest)
+* 💓 **Production Health Check**: [https://cookie-agent-capp.onrender.com/health](https://cookie-agent-capp.onrender.com/health)
 
 ---
 
