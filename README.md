@@ -17,7 +17,7 @@
 
 The cApp is deployed in production with permanent high-availability cloud infrastructure:
 
-* 🚀 **Live Web Application (Vercel)**: [https://cookie-agent-capp.vercel.app/](https://cookie-agent-capp.vercel.app/)
+* 🚀 **Live Web Application (Netlify)**: [https://cookie-agent-capp.netlify.app/](https://cookie-agent-capp.netlify.app/)
 * ⚙️ **Permanent Backend Gateway (Render)**: [https://cookie-agent-capp.onrender.com/](https://cookie-agent-capp.onrender.com/)
 * 📚 **Interactive Swagger OpenAPI Docs**: [https://cookie-agent-capp.onrender.com/docs](https://cookie-agent-capp.onrender.com/docs)
 * 🤖 **Model Context Protocol (MCP) Manifest (11 Tools)**: [https://cookie-agent-capp.onrender.com/api/v1/mcp/manifest](https://cookie-agent-capp.onrender.com/api/v1/mcp/manifest)

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import * as solanaWeb3 from '@solana/web3.js';
 import { WalletType, NetworkStats as INetworkStats } from './types/wallet';
-import { Navbar } from './components/Navbar';
+import { Navbar, NavTab } from './components/Navbar';
 import { HeroBanner } from './components/HeroBanner';
 import { NetworkStats } from './components/NetworkStats';
 import { TelemetryOven } from './components/TelemetryOven';
@@ -110,6 +110,33 @@ export const App: React.FC = () => {
     };
     setLogs((prev) => [...prev.slice(-45), entry]);
   }, []);
+
+  // Submenu Navigation State (fleet vs burn)
+  const [activeTab, setActiveTab] = useState<NavTab>(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#burn') {
+      return 'burn';
+    }
+    return 'fleet';
+  });
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#burn') {
+        setActiveTab('burn');
+      } else if (window.location.hash === '#fleet' || window.location.hash === '') {
+        setActiveTab('fleet');
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const handleSelectTab = (tab: NavTab) => {
+    setActiveTab(tab);
+    window.location.hash = tab === 'burn' ? '#burn' : '#fleet';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    addLog('NAV', `Navigated to ${tab === 'burn' ? '🔥 Burn Oven & Monster' : '🛸 Fleet & Swarm'} submenu`, 'text-cyan-300');
+  };
 
   // Detect Installed Wallets
   const detectedWallets = {
@@ -426,6 +453,8 @@ export const App: React.FC = () => {
       
       {/* Navigation Pill */}
       <Navbar
+        activeTab={activeTab}
+        onSelectTab={handleSelectTab}
         connectedAddress={connectedAddress}
         activeWalletType={activeWalletType}
         onOpenWalletModal={() => {
@@ -440,78 +469,82 @@ export const App: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
         
-        {/* Hero Banner */}
-        <HeroBanner />
+        {activeTab === 'fleet' ? (
+          <>
+            {/* Hero Banner */}
+            <HeroBanner />
 
-        {/* Live Network Metrics */}
-        <NetworkStats
-          stats={networkStats}
-          connectedAddress={connectedAddress}
-          activeWalletType={activeWalletType}
-          balanceCookie={balanceCookie}
-          isSiwsVerified={isSiwsVerified}
-          onPromptSiws={promptSiws}
-          siwsLoading={siwsLoading}
-        />
+            {/* Live Network Metrics */}
+            <NetworkStats
+              stats={networkStats}
+              connectedAddress={connectedAddress}
+              activeWalletType={activeWalletType}
+              balanceCookie={balanceCookie}
+              isSiwsVerified={isSiwsVerified}
+              onPromptSiws={promptSiws}
+              siwsLoading={siwsLoading}
+            />
 
-        {/* 50-Agent Sentinel Swarm Registry */}
-        <AgentFleet
-          onSelectAgent={handleSelectAgent}
-          selectedAgentId={selectedAgent?.id}
-        />
+            {/* 50-Agent Sentinel Swarm Registry */}
+            <AgentFleet
+              onSelectAgent={handleSelectAgent}
+              selectedAgentId={selectedAgent?.id}
+            />
 
-        {/* Dual Operations Grid */}
-        <div id="telemetry-oven-box" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TelemetryOven
+            {/* Dual Operations Grid */}
+            <div id="telemetry-oven-box" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <TelemetryOven
+                connectedAddress={connectedAddress}
+                activeWalletType={activeWalletType}
+                onOpenWalletModal={() => {
+                  setModalStatus('idle');
+                  setIsModalOpen(true);
+                }}
+                onBroadcastMemo={handleBroadcastMemo}
+                broadcastResult={broadcastResult}
+                isBroadcasting={isBroadcasting}
+                selectedAgent={selectedAgent}
+                balanceCookie={balanceCookie}
+                onOpenBridgeModal={() => setIsBridgeModalOpen(true)}
+                onNavigateToBurn={() => handleSelectTab('burn')}
+              />
+              <McpKitchen />
+            </div>
+
+            {/* HyperArb Automated Dual-Leg Vault (Autonomous 24/7 MEV Engine) */}
+            <HyperArbVault
+              connectedAddress={connectedAddress}
+              activeWalletType={activeWalletType}
+              activeProvider={activeProvider}
+              balanceCookie={balanceCookie}
+              onOpenWalletModal={() => {
+                setModalStatus('idle');
+                setIsModalOpen(true);
+              }}
+              onOpenBridgeModal={() => setIsBridgeModalOpen(true)}
+              onRefreshBalance={() => {
+                if (connectedAddress) fetchBalance(connectedAddress);
+              }}
+              onAddLog={addLog}
+            />
+          </>
+        ) : (
+          <CookieBurnOven
             connectedAddress={connectedAddress}
             activeWalletType={activeWalletType}
+            activeProvider={activeProvider}
+            balanceCookie={balanceCookie}
             onOpenWalletModal={() => {
               setModalStatus('idle');
               setIsModalOpen(true);
             }}
-            onBroadcastMemo={handleBroadcastMemo}
-            broadcastResult={broadcastResult}
-            isBroadcasting={isBroadcasting}
-            selectedAgent={selectedAgent}
-            balanceCookie={balanceCookie}
             onOpenBridgeModal={() => setIsBridgeModalOpen(true)}
+            onRefreshBalance={() => {
+              if (connectedAddress) fetchBalance(connectedAddress);
+            }}
+            onAddLog={addLog}
           />
-          <McpKitchen />
-        </div>
-
-        {/* HyperArb Automated Dual-Leg Vault (Autonomous 24/7 MEV Engine) */}
-        <HyperArbVault
-          connectedAddress={connectedAddress}
-          activeWalletType={activeWalletType}
-          activeProvider={activeProvider}
-          balanceCookie={balanceCookie}
-          onOpenWalletModal={() => {
-            setModalStatus('idle');
-            setIsModalOpen(true);
-          }}
-          onOpenBridgeModal={() => setIsBridgeModalOpen(true)}
-          onRefreshBalance={() => {
-            if (connectedAddress) fetchBalance(connectedAddress);
-          }}
-          onAddLog={addLog}
-        />
-
-        {/* Deflationary Burn Oven */}
-        <CookieBurnOven
-          connectedAddress={connectedAddress}
-          activeWalletType={activeWalletType}
-          activeProvider={activeProvider}
-          balanceCookie={balanceCookie}
-          onOpenWalletModal={() => {
-            setModalStatus('idle');
-            setIsModalOpen(true);
-          }}
-          onOpenBridgeModal={() => setIsBridgeModalOpen(true)}
-          onRefreshBalance={() => {
-            if (connectedAddress) fetchBalance(connectedAddress);
-          }}
-          onAddLog={addLog}
-        />
+        )}
 
         {/* Arcade Telemetry Console */}
         <TelemetryConsole logs={logs} />

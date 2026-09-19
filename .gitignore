@@ -13,3 +13,5 @@ dist/
 frontend/.vercel/
 .netlify/
 frontend/.netlify/
+*.zip
+inspect_*.py

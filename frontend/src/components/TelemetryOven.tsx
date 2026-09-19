@@ -14,6 +14,7 @@ interface TelemetryOvenProps {
   selectedAgent?: { id: string; name: string; telemetry_sample: string } | null;
   balanceCookie?: number;
   onOpenBridgeModal?: () => void;
+  onNavigateToBurn?: () => void;
 }
 
 export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
@@ -25,7 +26,8 @@ export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
   isBroadcasting,
   selectedAgent,
   balanceCookie = 0,
-  onOpenBridgeModal
+  onOpenBridgeModal,
+  onNavigateToBurn
 }) => {
   const [agentId, setAgentId] = useState('Sentinel Prime Orchestrator');
   const [memoPayload, setMemoPayload] = useState('prime:swarm_heartbeat | agents_synced:50/50 | network:operational');
@@ -169,6 +171,23 @@ export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {onNavigateToBurn && (
+        <div className="pt-2 border-t border-[#0b1f3a]/10 flex items-center justify-between">
+          <span className="text-xs font-bold text-[#0b1f3a]/75 flex items-center gap-1.5">
+            <span>🍪</span>
+            <span>Looking for $COOKIE Burn Oven & Monster?</span>
+          </span>
+          <button
+            type="button"
+            onClick={onNavigateToBurn}
+            className="text-xs font-black text-[#991b1b] bg-[#fed7aa] hover:bg-[#fca5a5] px-2.5 py-1 rounded-full border border-[#0b1f3a] shadow-[0_1px_0_#0b1f3a] cursor-pointer flex items-center gap-1 hover:translate-y-[-1px] transition-transform"
+          >
+            <span>🔥 Open Burn Oven</span>
+            <span>&rarr;</span>
+          </button>
         </div>
       )}
     </div>
