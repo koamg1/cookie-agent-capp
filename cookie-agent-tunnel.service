@@ -1,0 +1,17 @@
+[Unit]
+Description=Cloudflare Tunnel for CookieAgent Gateway
+After=network.target cookie-agent-capp.service
+
+[Service]
+Type=simple
+User=ubuntu
+ExecStart=/usr/local/bin/cloudflared tunnel --url http://127.0.0.1:8081
+Restart=always
+RestartSec=5
+MemoryMax=60M
+CPUQuota=15%
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

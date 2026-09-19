@@ -1,0 +1,19 @@
+[Unit]
+Description=CookieAgent Gateway & Sentinel cApp (Cookie Chain Bounty)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/cookie_agent_capp
+Environment="PYTHONPATH=/home/ubuntu/cookie_agent_capp"
+ExecStart=/home/ubuntu/cookie_agent_capp/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8081 --workers 1
+Restart=always
+RestartSec=5
+MemoryMax=120M
+CPUQuota=30%
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
