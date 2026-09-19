@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: #8bd3ff;
+  color: #0b1f3a;
+  background-image: radial-gradient(rgba(11, 31, 58, 0.14) 1.5px, transparent 1.5px);
+  background-size: 26px 26px;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Cartoon Neobrutalist Design System */
+.neo-card {
+  background-color: #ffffff;
+  border: 2.5px solid #0b1f3a;
+  box-shadow: 0 5px 0 #0b1f3a;
+  border-radius: 1.5rem;
+}
+
+.neo-card-sm {
+  background-color: #ffffff;
+  border: 2px solid #0b1f3a;
+  box-shadow: 0 4px 0 #0b1f3a;
+  border-radius: 1.25rem;
+}
+
+.neo-pill {
+  background-color: #d8f1ff;
+  border: 2.5px solid #0b1f3a;
+  box-shadow: 0 4px 0 #0b1f3a;
+  border-radius: 9999px;
+}
+
+.neo-btn {
+  border: 2px solid #0b1f3a;
+  box-shadow: 0 4px 0 #0b1f3a;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+  cursor: pointer;
+}
+
+.neo-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #0b1f3a;
+}
+
+.neo-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #0b1f3a;
+}
+
+.neo-input {
+  border: 2px solid #0b1f3a;
+  box-shadow: inset 0 2px 0 rgba(11, 31, 58, 0.08);
+  border-radius: 0.85rem;
+  background-color: #f8fafc;
+  color: #0b1f3a;
+  font-family: 'JetBrains Mono', monospace;
+  outline: none;
+}
+
+.neo-input:focus {
+  border-color: #0b1f3a;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35);
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(5deg); }
+}
+
+@keyframes floatReverse {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(8px) rotate(-6deg); }
+}
+
+.animate-float-1 {
+  animation: floatSlow 4.5s ease-in-out infinite;
+}
+
+.animate-float-2 {
+  animation: floatReverse 5.2s ease-in-out infinite 0.5s;
+}

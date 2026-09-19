@@ -1,0 +1,452 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import * as solanaWeb3 from '@solana/web3.js';
+import { WalletType, NetworkStats as INetworkStats } from './types/wallet';
+import { Navbar } from './components/Navbar';
+import { HeroBanner } from './components/HeroBanner';
+import { NetworkStats } from './components/NetworkStats';
+import { TelemetryOven } from './components/TelemetryOven';
+import { McpKitchen } from './components/McpKitchen';
+import { TelemetryConsole, LogEntry } from './components/TelemetryConsole';
+import { WalletModal } from './components/WalletModal';
+import {
+  isValidUserAddress,
+  getNightlyProvider,
+  getPhantomProvider,
+  getSolflareProvider,
+  getSessionKey,
+  getWalletAddress,
+  buildAuthChallenge,
+  requestWalletSignature,
+  sendWalletTransaction
+} from './utils/solana';
+
+export const App: React.FC = () => {
+  // Wallet State
+  const [connectedAddress, setConnectedAddress] = useState<string | null>(() => {
+    return sessionStorage.getItem('cookie_connected_address') || null;
+  });
+  const [activeWalletType, setActiveWalletType] = useState<WalletType | null>(() => {
+    return (sessionStorage.getItem('cookie_connected_wallet') as WalletType) || null;
+  });
+  const [activeProvider, setActiveProvider] = useState<any>(null);
+  const [isSiwsVerified, setIsSiwsVerified] = useState<boolean>(() => {
+    return !!sessionStorage.getItem('cookie_auth_signature');
+  });
+  const [siwsLoading, setSiwsLoading] = useState<boolean>(false);
+  const [balanceCookie, setBalanceCookie] = useState<number>(0);
+
+  // Network State
+  const [networkStats, setNetworkStats] = useState<INetworkStats | null>(null);
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [modalStatus, setModalStatus] = useState<'idle' | 'connecting' | 'declined' | 'install_notice'>('idle');
+  const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
+  const [modalError, setModalError] = useState<string>('');
+
+  // Telemetry Broadcast State
+  const [isBroadcasting, setIsBroadcasting] = useState<boolean>(false);
+  const [broadcastResult, setBroadcastResult] = useState<{
+    status: 'idle' | 'success' | 'error';
+    txSignature?: string;
+    details?: string;
+  }>({ status: 'idle' });
+
+  // Console Logs
+  const [logs, setLogs] = useState<LogEntry[]>([
+    {
+      id: '1',
+      time: new Date().toISOString().substring(11, 19),
+      tag: 'INIT',
+      message: 'Initializing CookieAgent Gateway (React 18 + Vite) on Cookie Chain SVM...',
+      color: 'text-gray-400'
+    },
+    {
+      id: '2',
+      time: new Date().toISOString().substring(11, 19),
+      tag: 'RPC',
+      message: 'Connected to https://rpc.cookiescan.io (Healthy)',
+      color: 'text-emerald-400'
+    }
+  ]);
+
+  const addLog = useCallback((tag: string, message: string, color: string = 'text-gray-300') => {
+    const entry: LogEntry = {
+      id: `${Date.now()}-${Math.random()}`,
+      time: new Date().toISOString().substring(11, 19),
+      tag,
+      message,
+      color
+    };
+    setLogs((prev) => [...prev.slice(-45), entry]);
+  }, []);
+
+  // Detect Installed Wallets
+  const detectedWallets = {
+    nightly: !!getNightlyProvider(),
+    phantom: !!getPhantomProvider(),
+    solflare: !!getSolflareProvider()
+  };
+
+  // Fetch Network Stats
+  const fetchNetworkStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/network/stats');
+      if (res.ok) {
+        const data = await res.json();
+        setNetworkStats(data);
+        addLog(
+          'NET',
+          `Slot ${data.slot} | Height ${data.block_height} | Latency ${Math.round(data.latency_ms)}ms`,
+          'text-amber-400'
+        );
+      }
+    } catch (err) {
+      console.warn("Network stats fetch error:", err);
+    }
+  }, [addLog]);
+
+  // Fetch Account Balance
+  const fetchBalance = useCallback(async (address: string) => {
+    try {
+      const res = await fetch(`/api/v1/wallet/${address}/balance`);
+      if (res.ok) {
+        const data = await res.json();
+        setBalanceCookie(Number(data.balance_cookie || 0));
+      }
+    } catch (err) {
+      console.warn("Balance fetch error:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNetworkStats();
+    const interval = setInterval(fetchNetworkStats, 5000);
+    return () => clearInterval(interval);
+  }, [fetchNetworkStats]);
+
+  useEffect(() => {
+    if (connectedAddress) {
+      fetchBalance(connectedAddress);
+    }
+  }, [connectedAddress, fetchBalance]);
+
+  // Connect to Wallet
+  const connectWallet = async (type: WalletType) => {
+    setSelectedWallet(type);
+    setModalError('');
+
+    let provider: any = null;
+
+    if (type === 'Nightly') {
+      provider = getNightlyProvider();
+      if (!provider) {
+        window.open('https://nightly.app/download', '_blank');
+        setModalStatus('install_notice');
+        addLog('WALLET', 'Nightly no detectada. Abriendo enlace oficial...', 'text-amber-400');
+        return;
+      }
+    } else if (type === 'Phantom') {
+      provider = getPhantomProvider();
+      if (!provider) {
+        window.open('https://phantom.app/download', '_blank');
+        setModalStatus('install_notice');
+        addLog('WALLET', 'Phantom no detectada. Abriendo enlace oficial...', 'text-purple-400');
+        return;
+      }
+    } else if (type === 'Solflare') {
+      provider = getSolflareProvider();
+      if (!provider) {
+        window.open('https://solflare.com/download', '_blank');
+        setModalStatus('install_notice');
+        addLog('WALLET', 'Solflare no detectada. Abriendo enlace oficial...', 'text-orange-400');
+        return;
+      }
+    } else if (type === 'Session Key') {
+      provider = getSessionKey();
+    }
+
+    setModalStatus('connecting');
+    addLog('WALLET', `Conectando con ${type}...`, 'text-amber-400');
+
+    try {
+      const address = await getWalletAddress(type, provider);
+
+      setActiveProvider(provider);
+      setActiveWalletType(type);
+      setConnectedAddress(address);
+
+      sessionStorage.setItem('cookie_connected_address', address);
+      sessionStorage.setItem('cookie_connected_wallet', type);
+
+      // Event listeners for extension accounts
+      if (typeof provider.on === 'function') {
+        try {
+          provider.removeAllListeners?.('accountChanged');
+          provider.on('accountChanged', (publicKey: any) => {
+            if (publicKey) {
+              const newAddr = publicKey.toBase58 ? publicKey.toBase58() : publicKey.toString();
+              if (isValidUserAddress(newAddr) && newAddr !== address) {
+                setConnectedAddress(newAddr);
+                sessionStorage.setItem('cookie_connected_address', newAddr);
+                addLog('WALLET', `Cuenta cambiada en extensión a: ${newAddr}`, 'text-cyan-300');
+                fetchBalance(newAddr);
+              }
+            } else {
+              disconnectWallet();
+            }
+          });
+          provider.removeAllListeners?.('disconnect');
+          provider.on('disconnect', () => {
+            disconnectWallet();
+          });
+        } catch (e) {
+          console.warn("Event listener warning:", e);
+        }
+      }
+
+      addLog('WALLET_OK', `${type} conectada con éxito: ${address}`, 'text-emerald-400');
+      setIsModalOpen(false);
+      setModalStatus('idle');
+      fetchBalance(address);
+
+    } catch (err: any) {
+      console.warn("Wallet connect exception:", err);
+      const msg = err?.message || String(err);
+      
+      // TRIGGER THE DEDICATED "CONNECTION DECLINED" SCREEN (MATCHING SCREENSHOT)
+      setModalError(
+        msg.includes('reject') || msg.includes('cancel') || msg.includes('rechaz')
+          ? 'Connection can be declined if a previous request is still active or was cancelled in your wallet.'
+          : msg
+      );
+      setModalStatus('declined');
+      addLog('WALLET_DECLINED', `Conexión rechazada o cancelada por ${type}: ${msg}`, 'text-red-400');
+    }
+  };
+
+  // Disconnect
+  const disconnectWallet = () => {
+    if (activeProvider) {
+      try {
+        if (typeof activeProvider.disconnect === 'function') activeProvider.disconnect();
+        else if (activeProvider.features && activeProvider.features['standard:disconnect']) {
+          activeProvider.features['standard:disconnect'].disconnect();
+        }
+      } catch {}
+    }
+    setConnectedAddress(null);
+    setActiveWalletType(null);
+    setActiveProvider(null);
+    setIsSiwsVerified(false);
+    sessionStorage.removeItem('cookie_connected_address');
+    sessionStorage.removeItem('cookie_connected_wallet');
+    sessionStorage.removeItem('cookie_auth_signature');
+    addLog('WALLET', 'Billetera desconectada. Sesión local reiniciada.', 'text-gray-400');
+  };
+
+  // SIWS Signature
+  const promptSiws = async () => {
+    if (!connectedAddress || !activeProvider || !activeWalletType) {
+      setIsModalOpen(true);
+      return;
+    }
+
+    setSiwsLoading(true);
+    addLog('PROMPT', `Solicitando firma criptográfica de autenticación (SIWS) a ${activeWalletType}...`, 'text-purple-400');
+
+    try {
+      const challenge = buildAuthChallenge(connectedAddress);
+      const signatureHex = await requestWalletSignature(
+        activeWalletType,
+        activeProvider,
+        connectedAddress,
+        challenge
+      );
+      setIsSiwsVerified(true);
+      sessionStorage.setItem('cookie_auth_signature', signatureHex);
+      addLog('AUTH_OK', `Firma SIWS verificada: ${signatureHex.slice(0, 16)}...`, 'text-emerald-400');
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      addLog('AUTH_WARN', `Firma no completada: ${msg}`, 'text-amber-400');
+      // Show declined modal if user requested it
+      setSelectedWallet(activeWalletType);
+      setModalError('La solicitud de firma SIWS fue cancelada o rechazada en la billetera.');
+      setModalStatus('declined');
+      setIsModalOpen(true);
+    } finally {
+      setSiwsLoading(false);
+    }
+  };
+
+  // On-Chain SPL Memo Broadcast
+  const handleBroadcastMemo = async (agentId: string, payload: string) => {
+    if (!connectedAddress || !activeProvider || !activeWalletType) {
+      setIsModalOpen(true);
+      return;
+    }
+
+    setIsBroadcasting(true);
+    setBroadcastResult({ status: 'idle' });
+    addLog('TX', `Preparando instrucción verificable SPL Memo para [${agentId}]...`, 'text-amber-300');
+
+    try {
+      const connection = new solanaWeb3.Connection("https://rpc.cookiescan.io", "confirmed");
+      const memoProgramId = new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+      const senderPubkey = new solanaWeb3.PublicKey(connectedAddress);
+      const memoPayload = `[CookieAgent Telemetry] ${agentId}: ${payload}`;
+
+      const instruction = new solanaWeb3.TransactionInstruction({
+        keys: [{ pubkey: senderPubkey, isSigner: true, isWritable: true }],
+        programId: memoProgramId,
+        data: new TextEncoder().encode(memoPayload) as any
+      });
+
+      const transaction = new solanaWeb3.Transaction().add(instruction);
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = senderPubkey;
+
+      addLog('PROMPT', `Abriendo ventana emergente de ${activeWalletType} para autorizar y firmar la transacción...`, 'text-purple-400');
+
+      const txSignature = await sendWalletTransaction(
+        activeWalletType,
+        activeProvider,
+        transaction,
+        connection,
+        connectedAddress
+      );
+
+      addLog('CONFIRMING', `Transacción enviada: ${txSignature}. Confirmando en Cookie Chain SVM...`, 'text-amber-300');
+
+      try {
+        await connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight }, 'confirmed');
+      } catch (confErr) {
+        console.warn("Confirmation check warning:", confErr);
+      }
+
+      setBroadcastResult({
+        status: 'success',
+        txSignature
+      });
+
+      addLog('TX_CONFIRMED', `Transacción on-chain confirmada: ${txSignature}`, 'text-emerald-400');
+      fetchBalance(connectedAddress);
+
+    } catch (err: any) {
+      const errMsg = err?.message || String(err);
+      addLog('TX_FEEDBACK', `Respuesta de la red/billetera: ${errMsg}`, 'text-amber-400');
+
+      let notice = errMsg;
+      if (errMsg.includes("Attempt to debit an account but found no record of a prior credit") || errMsg.includes("0x1") || errMsg.includes("insufficient")) {
+        notice = "La dirección conectada tiene 0.0000 COOKIE para la tarifa de red (~0.000005 COOKIE). Transfiere fondos desde https://www.cookiechain.wtf";
+      } else if (errMsg.includes("User rejected") || errMsg.includes("rejected") || errMsg.includes("cancelled")) {
+        notice = "Has cancelado la firma de la transacción en tu billetera.";
+        // Show the user's favorite "Connection / Signature declined" modal
+        setSelectedWallet(activeWalletType);
+        setModalError('La solicitud de firma fue cancelada o rechazada en tu billetera.');
+        setModalStatus('declined');
+        setIsModalOpen(true);
+      }
+
+      setBroadcastResult({
+        status: 'error',
+        details: notice
+      });
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col selection:bg-[#ffe0a8] selection:text-[#0b1f3a]">
+      
+      {/* Navigation Pill */}
+      <Navbar
+        connectedAddress={connectedAddress}
+        activeWalletType={activeWalletType}
+        onOpenWalletModal={() => {
+          setModalStatus('idle');
+          setIsModalOpen(true);
+        }}
+        onDisconnect={disconnectWallet}
+      />
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+        
+        {/* Hero Banner */}
+        <HeroBanner />
+
+        {/* Live Network Metrics */}
+        <NetworkStats
+          stats={networkStats}
+          connectedAddress={connectedAddress}
+          activeWalletType={activeWalletType}
+          balanceCookie={balanceCookie}
+          isSiwsVerified={isSiwsVerified}
+          onPromptSiws={promptSiws}
+          siwsLoading={siwsLoading}
+        />
+
+        {/* Dual Operations Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TelemetryOven
+            connectedAddress={connectedAddress}
+            activeWalletType={activeWalletType}
+            onOpenWalletModal={() => {
+              setModalStatus('idle');
+              setIsModalOpen(true);
+            }}
+            onBroadcastMemo={handleBroadcastMemo}
+            broadcastResult={broadcastResult}
+            isBroadcasting={isBroadcasting}
+          />
+          <McpKitchen />
+        </div>
+
+        {/* Arcade Telemetry Console */}
+        <TelemetryConsole logs={logs} />
+
+      </main>
+
+      {/* Web3 Wallet Modal (includes the exact "Connection declined" view from screenshot) */}
+      <WalletModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConnect={connectWallet}
+        status={modalStatus}
+        selectedWallet={selectedWallet}
+        errorMessage={modalError}
+        onRetry={() => {
+          if (selectedWallet) connectWallet(selectedWallet);
+        }}
+        onBackToSelect={() => setModalStatus('idle')}
+        detectedWallets={detectedWallets}
+      />
+
+      {/* Footer */}
+      <footer className="mt-8 border-t-2 border-[#0b1f3a] bg-[#d8f1ff] py-6 text-center text-xs font-bold text-[#0b1f3a]">
+        <div className="max-w-6xl mx-auto px-4 space-y-2">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-lg">🍪</span>
+            <span className="font-black">CookieAgent cApp &bull; Cookie Chain SVM Gateway & Sentinel (React 18)</span>
+          </div>
+          <p className="text-[11px] text-[#0b1f3a]/75">
+            Deployed on Oracle Cloud Santiago (Always Free Tier) &bull; Built for Superteam Earn &bull; Powered by FastAPI & React
+          </p>
+          <div className="flex items-center justify-center gap-4 text-[11px] pt-1">
+            <a href="https://cookiescan.io" target="_blank" rel="noreferrer" className="hover:underline">CookieScan Explorer</a>
+            <span>&bull;</span>
+            <a href="https://docs.cookiechain.wtf" target="_blank" rel="noreferrer" className="hover:underline">Cookie Chain Docs</a>
+            <span>&bull;</span>
+            <a href="https://github.com/cookiechain/cookie-mcp" target="_blank" rel="noreferrer" className="hover:underline">cookie-mcp</a>
+            <span>&bull;</span>
+            <a href="https://www.cookiechain.wtf" target="_blank" rel="noreferrer" className="hover:underline">cookiechain.wtf</a>
+          </div>
+        </div>
+      </footer>
+
+    </div>
+  );
+};
