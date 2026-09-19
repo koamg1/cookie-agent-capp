@@ -156,7 +156,6 @@ function detectWallets() {
 // Reject dummy/uninitialized zero public keys (11111111111111111111111111111111 is SystemProgram)
 function isValidUserAddress(addr) {
   if (!addr || typeof addr !== 'string') return false;
-  // 1111...1111 is the Solana System Program / default zero bytes key. Never a user account!
   if (addr === '11111111111111111111111111111111' || addr.startsWith('11111111111111111111111111111111')) return false;
   return addr.length >= 32 && addr.length <= 44;
 }
@@ -198,7 +197,7 @@ async function getWalletAddress(type, provider) {
         const addr = res?.publicKey?.toString() || (res?.accounts && res.accounts[0]?.address);
         if (isValidUserAddress(addr)) candidate = addr;
       } catch (err) {
-        console.warn("Nightly connect() warning:", err);
+        console.warn("Nightly connect():", err);
       }
     }
     // 3. Check provider.accounts only if valid
@@ -401,6 +400,33 @@ async function connectWallet(type) {
     activeWalletProvider = provider;
     activeWalletType = (type === 'nightly' ? 'Nightly' : (type === 'phantom' ? 'Phantom' : (type === 'solflare' ? 'Solflare' : 'Session Key')));
     connectedAddress = address;
+
+    // Attach standard reactive event listeners for live account switching
+    if (typeof provider.on === 'function') {
+      try {
+        provider.removeAllListeners?.('accountChanged');
+        provider.on('accountChanged', (publicKey) => {
+          if (publicKey) {
+            const newAddr = publicKey.toBase58 ? publicKey.toBase58() : publicKey.toString();
+            if (isValidUserAddress(newAddr) && newAddr !== connectedAddress) {
+              connectedAddress = newAddr;
+              sessionStorage.setItem('cookie_connected_address', newAddr);
+              logMessage("WALLET", `Cuenta cambiada en la extensión a: ${connectedAddress}`, "text-cyan-300");
+              updateUI();
+              fetchWalletBalance(connectedAddress);
+            }
+          } else {
+            disconnectWallet();
+          }
+        });
+        provider.removeAllListeners?.('disconnect');
+        provider.on('disconnect', () => {
+          disconnectWallet();
+        });
+      } catch (evtErr) {
+        console.warn("Event listener warning:", evtErr);
+      }
+    }
 
     sessionStorage.setItem('cookie_connected_address', address);
     sessionStorage.setItem('cookie_connected_wallet', activeWalletType);
