@@ -12,6 +12,8 @@ interface TelemetryOvenProps {
   };
   isBroadcasting: boolean;
   selectedAgent?: { id: string; name: string; telemetry_sample: string } | null;
+  balanceCookie?: number;
+  onOpenBridgeModal?: () => void;
 }
 
 export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
@@ -21,7 +23,9 @@ export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
   onBroadcastMemo,
   broadcastResult,
   isBroadcasting,
-  selectedAgent
+  selectedAgent,
+  balanceCookie = 0,
+  onOpenBridgeModal
 }) => {
   const [agentId, setAgentId] = useState('Sentinel Prime Orchestrator');
   const [memoPayload, setMemoPayload] = useState('prime:swarm_heartbeat | agents_synced:50/50 | network:operational');
@@ -83,6 +87,30 @@ export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
             required
           />
         </div>
+
+        {/* Zero-Balance Gas Warning & Direct Faucet Access */}
+        {connectedAddress && balanceCookie <= 0.0001 && (
+          <div className="p-3.5 bg-[#fef3c7] border-2 border-[#b45309] rounded-2xl text-xs text-[#0b1f3a] space-y-2 shadow-[0_2px_0_#b45309]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-base">⛽</span>
+                <span className="font-black text-[#92400e]">Wallet Balance: 0.0000 $COOKIE (No Gas)</span>
+              </div>
+              {onOpenBridgeModal && (
+                <button
+                  type="button"
+                  onClick={onOpenBridgeModal}
+                  className="px-3 py-1.5 rounded-xl bg-[#ffe0a8] hover:bg-[#fed388] text-[#0b1f3a] font-black text-xs border border-[#0b1f3a] shadow-[0_1px_0_#0b1f3a] cursor-pointer whitespace-nowrap"
+                >
+                  🚰 Get Free Testnet $COOKIE &rarr;
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] font-medium text-[#0b1f3a]/80 leading-relaxed">
+              Broadcasting an on-chain SPL memo requires a tiny fraction of $COOKIE for network gas. If your wallet has 0 funds, the transaction will automatically fall back to an authentic Gateway proof. Use the faucet or bridge to test full SVM execution!
+            </p>
+          </div>
+        )}
 
         <button
           type="submit"

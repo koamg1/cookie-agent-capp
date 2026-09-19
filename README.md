@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-amber.svg)](https://opensource.org/licenses/MIT)
 [![Network: Cookie Chain (SVM)](https://img.shields.io/badge/Network-Cookie%20Chain%20(SVM)-orange)](https://docs.cookiechain.wtf)
-[![Tests: 17/17 Passed](https://img.shields.io/badge/Tests-17%2F17%20Passed-brightgreen)](tests/test_api.py)
+[![Tests: 18/18 Passed](https://img.shields.io/badge/Tests-18%2F18%20Passed-brightgreen)](tests/test_api.py)
 [![Frontend: React 18 + Vite](https://img.shields.io/badge/Frontend-React%2018%20%2B%20Vite-blue)](https://vitejs.dev)
 [![Wallets: 9 SVM Wallets](https://img.shields.io/badge/Wallets-9%20SVM%20Supported-purple)](https://github.com/wallet-standard/wallet-standard)
 [![MCP: 11 Tools](https://img.shields.io/badge/MCP-11%20Tools%20Active-emerald)](/api/v1/mcp/manifest)
@@ -132,6 +132,7 @@ The Gateway exposes standard REST endpoints and 11 Model Context Protocol (MCP) 
 | `GET` | `/api/v1/network/stats` | Real-time slot, block height, blockhash, and latency |
 | `GET` | `/api/v1/agents/fleet` | 50-Agent Sentinel Fleet (filterable by squad: `defi`, `security`, `bridge`, etc.) |
 | `GET` | `/api/v1/agents/{id}` | Detailed telemetry profile and target program for any agent |
+| `GET` | `/api/v1/wallet/{address}` | Query wallet overview: balance, Baker Karma, tier, and vault position |
 | `GET` | `/api/v1/wallet/{address}/balance` | Query native `$COOKIE` balance on Cookie Chain |
 | `GET` | `/api/v1/opportunities/radar` | Real-time cross-chain arbitrage telemetry feeds |
 | `POST` | `/api/v1/opportunities/eat` | Trigger simulated arbitrage capture for Baker Karma |

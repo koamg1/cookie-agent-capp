@@ -178,24 +178,34 @@ export const AgentFleet: React.FC<AgentFleetProps> = ({ onSelectAgent, selectedA
                       <span className="text-[10px] mono text-[#0b1f3a]/50">{agent.id}</span>
                     </div>
 
-                    <span
-                      className={`text-[9px] font-black px-2 py-0.5 rounded-md border ${squadStyle.bg} ${squadStyle.text} ${squadStyle.border}`}
-                    >
-                      {agent.squad_label.split('&')[0].trim()}
-                    </span>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span
+                        className={`text-[9px] font-black px-2 py-0.5 rounded-md border ${squadStyle.bg} ${squadStyle.text} ${squadStyle.border}`}
+                      >
+                        {agent.squad_label.split('&')[0].trim()}
+                      </span>
+                      <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-[#fef3c7] text-[#92400e] border border-[#b45309] mono uppercase tracking-wider">
+                        SIM PROBE
+                      </span>
+                    </div>
                   </div>
 
                   <p className="text-[11px] font-medium text-[#0b1f3a]/75 line-clamp-2 leading-snug">
                     {agent.role}
                   </p>
 
-                  <div className="bg-[#f8fafc] p-2 rounded-xl border border-[#0b1f3a]/15 text-[10px] mono text-[#0b1f3a]/80 space-y-0.5">
-                    <div className="flex justify-between">
-                      <span className="text-[#0b1f3a]/50">Uptime:</span>
-                      <span className="font-bold text-emerald-600">{agent.uptime}</span>
+                  <div className="bg-[#f8fafc] p-2 rounded-xl border border-[#0b1f3a]/15 text-[10px] mono text-[#0b1f3a]/80 space-y-1">
+                    <div className="flex justify-between items-center border-b border-[#0b1f3a]/10 pb-1">
+                      <span className="text-[8px] font-black text-amber-800 bg-amber-100/80 px-1.5 py-0.5 rounded border border-amber-300">
+                        ● DEMO PROBE DATA
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[#0b1f3a]/50 text-[9px]">Uptime:</span>
+                        <span className="font-bold text-emerald-600">{agent.uptime}</span>
+                      </div>
                     </div>
-                    <div className="truncate">
-                      <span className="text-[#0b1f3a]/50">Telemetry: </span>
+                    <div className="truncate pt-0.5">
+                      <span className="text-[#0b1f3a]/50">Sample: </span>
                       <span className="text-[#0b1f3a] font-semibold">{agent.telemetry_sample}</span>
                     </div>
                   </div>

@@ -217,5 +217,18 @@ async def test_mcp_execute_vault():
     data = response.json()
     assert data["protocol"] == "Cookie HyperArb Automated Vault"
 
+@pytest.mark.asyncio
+async def test_wallet_details_endpoint():
+    addr = "HSPEiMn8BYVgPZdHMXw3XkwfdAZksemaR7X5KS6eFmFV"
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get(f"/api/v1/wallet/{addr}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["address"] == addr
+    assert "balance_cookie" in data
+    assert "baker_karma" in data
+    assert "vault_shares" in data
+
+
 
 

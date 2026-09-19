@@ -152,6 +152,24 @@ async def recent_memos(limit: int = 8):
         "recent_memos": res.get("result", [])
     }
 
+@app.get("/api/v1/wallet/{address}")
+async def wallet_details(address: str):
+    """Returns wallet details, balance, karma score, and vault position on Cookie Chain SVM."""
+    balance_res = await cookie_client.get_balance(address)
+    karma_res = hyper_arb_vault.get_baker_karma(address)
+    pos_res = hyper_arb_vault.get_user_position(address)
+    return {
+        "address": address,
+        "network": "Cookie Chain (SVM)",
+        "rpc_endpoint": "https://rpc.cookiescan.io",
+        "balance_cookie": balance_res.get("balance_cookie", 0.0),
+        "balance_lamports": balance_res.get("balance_lamports", 0),
+        "baker_karma": karma_res.get("baker_karma_score", 0),
+        "airdrop_tier": karma_res.get("airdrop_tier", "Unranked"),
+        "vault_shares": pos_res.get("shares", 0.0),
+        "vault_current_value_usd": pos_res.get("current_value_usd", 0.0)
+    }
+
 @app.get("/api/v1/wallet/{address}/balance")
 async def wallet_balance(address: str):
     """Queries Cookie balance for any given base58 address on Cookie Chain."""

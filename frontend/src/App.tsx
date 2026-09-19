@@ -460,6 +460,8 @@ export const App: React.FC = () => {
             broadcastResult={broadcastResult}
             isBroadcasting={isBroadcasting}
             selectedAgent={selectedAgent}
+            balanceCookie={balanceCookie}
+            onOpenBridgeModal={() => setIsBridgeModalOpen(true)}
           />
           <McpKitchen />
         </div>
