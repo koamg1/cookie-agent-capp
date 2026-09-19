@@ -486,9 +486,16 @@ export const App: React.FC = () => {
         {/* Deflationary Burn Oven */}
         <CookieBurnOven
           connectedAddress={connectedAddress}
+          activeWalletType={activeWalletType}
+          activeProvider={activeProvider}
+          balanceCookie={balanceCookie}
           onOpenWalletModal={() => {
             setModalStatus('idle');
             setIsModalOpen(true);
+          }}
+          onOpenBridgeModal={() => setIsBridgeModalOpen(true)}
+          onRefreshBalance={() => {
+            if (connectedAddress) fetchBalance(connectedAddress);
           }}
           onAddLog={addLog}
         />

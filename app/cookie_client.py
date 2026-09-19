@@ -176,4 +176,54 @@ class CookieChainClient:
             "canonical_burn_program": "1nc1nerator11111111111111111111111111111111"
         }
 
+    async def get_mainnet_cookie_balance(self, pubkey: str) -> Dict[str, Any]:
+        """
+        Queries Token-2022 $COOKIE balance for pubkey on Solana Mainnet.
+        Mint: 36ZrtQoab5MhhySaP1YSTwUahSk6GRVUTtZ6cuVfm9e1
+        """
+        client = await self.get_client()
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "getTokenAccountsByOwner",
+            "params": [
+                pubkey,
+                {"mint": "36ZrtQoab5MhhySaP1YSTwUahSk6GRVUTtZ6cuVfm9e1"},
+                {"encoding": "jsonParsed"}
+            ]
+        }
+        try:
+            resp = await client.post(
+                "https://api.mainnet-beta.solana.com",
+                json=payload,
+                timeout=httpx.Timeout(4.0)
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                accounts = data.get("result", {}).get("value", [])
+                if accounts:
+                    acc = accounts[0]
+                    info = acc.get("account", {}).get("data", {}).get("parsed", {}).get("info", {})
+                    token_amount = info.get("tokenAmount", {})
+                    return {
+                        "has_tokens": True,
+                        "token_account": acc.get("pubkey"),
+                        "amount_ui": token_amount.get("uiAmount", 0.0),
+                        "amount_raw": token_amount.get("amount", "0"),
+                        "decimals": token_amount.get("decimals", 6),
+                        "mint": "36ZrtQoab5MhhySaP1YSTwUahSk6GRVUTtZ6cuVfm9e1",
+                        "network": "Solana Mainnet"
+                    }
+        except Exception as e:
+            pass
+        return {
+            "has_tokens": False,
+            "amount_ui": 0.0,
+            "amount_raw": "0",
+            "decimals": 6,
+            "mint": "36ZrtQoab5MhhySaP1YSTwUahSk6GRVUTtZ6cuVfm9e1",
+            "network": "Solana Mainnet"
+        }
+
+
 

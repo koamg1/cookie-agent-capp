@@ -154,10 +154,13 @@ async def recent_memos(limit: int = 8):
 
 @app.get("/api/v1/wallet/{address}")
 async def wallet_details(address: str):
-    """Returns wallet details, balance, karma score, and vault position on Cookie Chain SVM."""
-    balance_res = await cookie_client.get_balance(address)
-    karma_res = hyper_arb_vault.get_baker_karma(address)
-    pos_res = hyper_arb_vault.get_user_position(address)
+    """Returns wallet details, balance, karma score, and vault position on Cookie Chain SVM and Solana Mainnet."""
+    balance_res, karma_res, pos_res, mainnet_res = await asyncio.gather(
+        cookie_client.get_balance(address),
+        asyncio.to_thread(hyper_arb_vault.get_baker_karma, address),
+        asyncio.to_thread(hyper_arb_vault.get_user_position, address),
+        cookie_client.get_mainnet_cookie_balance(address)
+    )
     return {
         "address": address,
         "network": "Cookie Chain (SVM)",
@@ -167,7 +170,8 @@ async def wallet_details(address: str):
         "baker_karma": karma_res.get("baker_karma_score", 0),
         "airdrop_tier": karma_res.get("airdrop_tier", "Unranked"),
         "vault_shares": pos_res.get("shares", 0.0),
-        "vault_current_value_usd": pos_res.get("current_value_usd", 0.0)
+        "vault_current_value_usd": pos_res.get("current_value_usd", 0.0),
+        "mainnet_cookie": mainnet_res
     }
 
 @app.get("/api/v1/wallet/{address}/balance")

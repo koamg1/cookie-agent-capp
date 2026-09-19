@@ -1,4 +1,9 @@
 import * as solanaWeb3 from '@solana/web3.js';
+import {
+  getAssociatedTokenAddressSync,
+  createBurnInstruction,
+  TOKEN_2022_PROGRAM_ID
+} from '@solana/spl-token';
 import { WalletType } from '../types/wallet';
 
 declare global {
@@ -359,3 +364,94 @@ export async function sendWalletTransaction(
 
   throw new Error(`The ${type} wallet provider does not support transaction signing.`);
 }
+
+export const COOKIE_MAINNET_MINT = '36ZrtQoab5MhhySaP1YSTwUahSk6GRVUTtZ6cuVfm9e1';
+export const CANONICAL_BURN_ADDRESS = '1nc1nerator11111111111111111111111111111111';
+
+export async function executeSolanaMainnetBurn(
+  type: WalletType,
+  provider: any,
+  ownerAddress: string,
+  amount: number,
+  onLog?: (tag: string, msg: string, color?: string) => void
+): Promise<string> {
+  const connection = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com", "confirmed");
+  const owner = new solanaWeb3.PublicKey(ownerAddress);
+  const mint = new solanaWeb3.PublicKey(COOKIE_MAINNET_MINT);
+  const ata = getAssociatedTokenAddressSync(mint, owner, false, TOKEN_2022_PROGRAM_ID);
+
+  // 6 decimals for Token-2022 Cookie
+  const rawAmount = Math.round(amount * 1_000_000);
+  const burnIx = createBurnInstruction(ata, mint, owner, rawAmount, [], TOKEN_2022_PROGRAM_ID);
+
+  const memoProgramId = new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+  const memoPayload = `[Cookie Monster Burn] Deflation: Burned ${amount} $COOKIE from ${ownerAddress.slice(0, 4)}...${ownerAddress.slice(-4)}`;
+  const memoIx = new solanaWeb3.TransactionInstruction({
+    keys: [{ pubkey: owner, isSigner: true, isWritable: true }],
+    programId: memoProgramId,
+    data: new TextEncoder().encode(memoPayload) as any
+  });
+
+  const transaction = new solanaWeb3.Transaction().add(burnIx, memoIx);
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = owner;
+
+  if (onLog) onLog('BURN_TX', `Prompting ${type} to sign real Token-2022 burn of ${amount} COOKIE on Solana Mainnet...`, 'text-purple-400');
+
+  const txSignature = await sendWalletTransaction(type, provider, transaction, connection, ownerAddress);
+
+  try {
+    await connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight }, 'confirmed');
+  } catch (e) {
+    console.warn("Mainnet confirm warning:", e);
+  }
+
+  return txSignature;
+}
+
+export async function executeCookieChainBurn(
+  type: WalletType,
+  provider: any,
+  ownerAddress: string,
+  amount: number,
+  onLog?: (tag: string, msg: string, color?: string) => void
+): Promise<string> {
+  const connection = new solanaWeb3.Connection("https://rpc.cookiescan.io", "confirmed");
+  const owner = new solanaWeb3.PublicKey(ownerAddress);
+  const incinerator = new solanaWeb3.PublicKey(CANONICAL_BURN_ADDRESS);
+
+  // Lamports for native COOKIE (9 decimals)
+  const lamports = Math.round(amount * 1_000_000_000);
+  const transferIx = solanaWeb3.SystemProgram.transfer({
+    fromPubkey: owner,
+    toPubkey: incinerator,
+    lamports
+  });
+
+  const memoProgramId = new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+  const memoPayload = `[Cookie Monster Testnet Burn] Deflation: Burned ${amount} $COOKIE`;
+  const memoIx = new solanaWeb3.TransactionInstruction({
+    keys: [{ pubkey: owner, isSigner: true, isWritable: true }],
+    programId: memoProgramId,
+    data: new TextEncoder().encode(memoPayload) as any
+  });
+
+  const transaction = new solanaWeb3.Transaction().add(transferIx, memoIx);
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = owner;
+
+  if (onLog) onLog('BURN_TX', `Prompting ${type} to sign burn transfer of ${amount} COOKIE to 1nc1nerator on Cookie Chain...`, 'text-purple-400');
+
+  const txSignature = await sendWalletTransaction(type, provider, transaction, connection, ownerAddress);
+
+  try {
+    await connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight }, 'confirmed');
+  } catch (e) {
+    console.warn("Cookie Chain confirm warning:", e);
+  }
+
+  return txSignature;
+}
+
