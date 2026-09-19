@@ -467,11 +467,14 @@ export const App: React.FC = () => {
         {/* HyperArb Automated Dual-Leg Vault (Autonomous 24/7 MEV Engine) */}
         <HyperArbVault
           connectedAddress={connectedAddress}
+          activeWalletType={activeWalletType}
+          activeProvider={activeProvider}
           balanceCookie={balanceCookie}
           onOpenWalletModal={() => {
             setModalStatus('idle');
             setIsModalOpen(true);
           }}
+          onOpenBridgeModal={() => setIsBridgeModalOpen(true)}
           onRefreshBalance={() => {
             if (connectedAddress) fetchBalance(connectedAddress);
           }}

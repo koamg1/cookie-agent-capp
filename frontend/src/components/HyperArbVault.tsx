@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import * as solanaWeb3 from '@solana/web3.js';
+import { WalletType } from '../types/wallet';
+import { sendWalletTransaction } from '../utils/solana';
 
 interface VaultInfo {
   protocol: string;
@@ -48,16 +51,22 @@ interface TradeRecord {
 
 interface HyperArbVaultProps {
   connectedAddress: string | null;
+  activeWalletType: WalletType | null;
+  activeProvider: any;
   balanceCookie: number;
   onOpenWalletModal: () => void;
+  onOpenBridgeModal?: () => void;
   onRefreshBalance: () => void;
   onAddLog: (tag: string, msg: string, color?: string) => void;
 }
 
 export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
   connectedAddress,
+  activeWalletType,
+  activeProvider,
   balanceCookie,
   onOpenWalletModal,
+  onOpenBridgeModal,
   onRefreshBalance,
   onAddLog
 }) => {
@@ -127,7 +136,7 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
   }, [connectedAddress]);
 
   const handleDeposit = async () => {
-    if (!connectedAddress) {
+    if (!connectedAddress || !activeProvider || !activeWalletType) {
       onOpenWalletModal();
       return;
     }
@@ -140,9 +149,75 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
     }
 
     setIsSubmitting(true);
-    onAddLog('VAULT_DEPOSIT', `Depositing ${cVal} COOKIE + $${uVal} USDC into HyperArb Vault...`, 'text-blue-400');
+    onAddLog('VAULT_CHECK', `Checking live balance on Cookie Chain RPC for ${connectedAddress.slice(0, 4)}...${connectedAddress.slice(-4)}...`, 'text-blue-400');
 
     try {
+      const connection = new solanaWeb3.Connection("https://rpc.cookiescan.io", "confirmed");
+      const senderPubkey = new solanaWeb3.PublicKey(connectedAddress);
+
+      // 1. Check real on-chain balance
+      let realLamports = 0;
+      try {
+        realLamports = await connection.getBalance(senderPubkey);
+      } catch (balErr) {
+        console.warn("RPC balance check error:", balErr);
+      }
+      const realCookieBal = realLamports / 1e9;
+      onAddLog('RPC_AUDIT', `Live On-Chain Balance: ${realCookieBal.toFixed(4)} COOKIE`, 'text-cyan-400');
+
+      if (realCookieBal === 0 && balanceCookie === 0) {
+        onAddLog(
+          'FAUCET_ALERT',
+          'Notice: Wallet has 0 testnet COOKIE. Opening wallet to sign verifiable proof; to fund on-chain gas, use Faucet & Bridge.',
+          'text-amber-300'
+        );
+      }
+
+      // 2. Build real Solana / Cookie Chain Transaction
+      const memoProgramId = new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+      const memoPayload = `[HyperArb Vault Deposit] Holder:${connectedAddress.slice(0, 4)}..${connectedAddress.slice(-4)} +${cVal} COOKIE +$${uVal} USDC -> Mint cCOOKIE-LP`;
+
+      const instruction = new solanaWeb3.TransactionInstruction({
+        keys: [{ pubkey: senderPubkey, isSigner: true, isWritable: true }],
+        programId: memoProgramId,
+        data: new TextEncoder().encode(memoPayload) as any
+      });
+
+      const transaction = new solanaWeb3.Transaction().add(instruction);
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = senderPubkey;
+
+      onAddLog('PROMPT_WALLET', `Opening ${activeWalletType} window to authorize and sign deposit...`, 'text-purple-400');
+
+      // 3. Prompt user's wallet (Nightly / Phantom / etc.)
+      let onChainSignature: string | null = null;
+      try {
+        onChainSignature = await sendWalletTransaction(
+          activeWalletType,
+          activeProvider,
+          transaction,
+          connection,
+          connectedAddress
+        );
+        onAddLog('WALLET_SIGNED', `Transaction signed by ${activeWalletType}! Sig: ${onChainSignature}`, 'text-emerald-400');
+
+        try {
+          await connection.confirmTransaction({ signature: onChainSignature, blockhash, lastValidBlockHeight }, 'confirmed');
+        } catch (confErr) {
+          console.warn("Confirmation check warning:", confErr);
+        }
+      } catch (signErr: any) {
+        const signMsg = String(signErr?.message || signErr);
+        if (signMsg.includes('reject') || signMsg.includes('cancel') || signMsg.includes('User rejected')) {
+          onAddLog('WALLET_DECLINED', `Deposit declined by user in ${activeWalletType}.`, 'text-red-400');
+          setIsSubmitting(false);
+          return;
+        }
+        onAddLog('WALLET_NOTICE', `Wallet signing feedback: ${signMsg}`, 'text-amber-400');
+      }
+
+      // 4. Register deposit in HyperArb Vault backend
       const res = await fetch('/api/v1/vault/deposit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -155,10 +230,13 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
 
       if (res.ok) {
         const data = await res.json();
+        if (onChainSignature) {
+          data.tx_signature = onChainSignature;
+        }
         setLastActionReceipt({ type: 'deposit', data });
         onAddLog(
           'VAULT_CONFIRMED',
-          `Deposit success! Minted ${data.shares_minted} cCOOKIE-LP shares | TX: ${data.tx_signature}`,
+          `HyperArb deposit active! Minted ${data.shares_minted} cCOOKIE-LP | NAV: $${data.current_share_price_nav}`,
           'text-emerald-400'
         );
         fetchVaultState();
@@ -166,7 +244,7 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
         onRefreshBalance();
       } else {
         const errData = await res.json();
-        onAddLog('VAULT_ERROR', `Deposit failed: ${errData.detail || 'Unknown error'}`, 'text-red-400');
+        onAddLog('VAULT_ERROR', `Deposit registration failed: ${errData.detail || 'Unknown error'}`, 'text-red-400');
       }
     } catch (err: any) {
       onAddLog('VAULT_ERROR', `Deposit exception: ${err.message || err}`, 'text-red-400');
@@ -176,7 +254,7 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
   };
 
   const handleWithdraw = async () => {
-    if (!connectedAddress) {
+    if (!connectedAddress || !activeProvider || !activeWalletType) {
       onOpenWalletModal();
       return;
     }
@@ -190,6 +268,46 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
     onAddLog('VAULT_WITHDRAW', `Redeeming ${userPos.shares} cCOOKIE-LP shares from HyperArb Vault...`, 'text-purple-400');
 
     try {
+      const connection = new solanaWeb3.Connection("https://rpc.cookiescan.io", "confirmed");
+      const senderPubkey = new solanaWeb3.PublicKey(connectedAddress);
+
+      // Prompt wallet signature to authorize withdrawal
+      const memoProgramId = new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+      const memoPayload = `[HyperArb Vault Withdraw] Burn ${userPos.shares} cCOOKIE-LP -> Redeem COOKIE + USDC`;
+
+      const instruction = new solanaWeb3.TransactionInstruction({
+        keys: [{ pubkey: senderPubkey, isSigner: true, isWritable: true }],
+        programId: memoProgramId,
+        data: new TextEncoder().encode(memoPayload) as any
+      });
+
+      const transaction = new solanaWeb3.Transaction().add(instruction);
+      const { blockhash } = await connection.getLatestBlockhash("confirmed");
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = senderPubkey;
+
+      onAddLog('PROMPT_WALLET', `Opening ${activeWalletType} to sign withdrawal authorization...`, 'text-purple-400');
+
+      let onChainSig: string | null = null;
+      try {
+        onChainSig = await sendWalletTransaction(
+          activeWalletType,
+          activeProvider,
+          transaction,
+          connection,
+          connectedAddress
+        );
+        onAddLog('WALLET_SIGNED', `Withdrawal authorized in ${activeWalletType}! Sig: ${onChainSig}`, 'text-emerald-400');
+      } catch (signErr: any) {
+        const signMsg = String(signErr?.message || signErr);
+        if (signMsg.includes('reject') || signMsg.includes('cancel') || signMsg.includes('User rejected')) {
+          onAddLog('WALLET_DECLINED', `Withdrawal declined by user in ${activeWalletType}.`, 'text-red-400');
+          setIsSubmitting(false);
+          return;
+        }
+        onAddLog('WALLET_NOTICE', `Withdrawal signing feedback: ${signMsg}`, 'text-amber-400');
+      }
+
       const res = await fetch('/api/v1/vault/withdraw', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -201,6 +319,7 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
 
       if (res.ok) {
         const data = await res.json();
+        if (onChainSig) data.tx_signature = onChainSig;
         setLastActionReceipt({ type: 'withdraw', data });
         onAddLog(
           'WITHDRAW_CONFIRMED',
@@ -333,10 +452,31 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
 
           {activeTab === 'deposit' ? (
             <div className="space-y-3.5">
+              
+              {/* Real Balance & Faucet Banner */}
+              {connectedAddress && (
+                <div className="p-2.5 bg-[#f8fafc] border border-[#0b1f3a]/30 rounded-lg text-xs flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-[#0b1f3a]">Wallet Live Balance:</span>
+                    <span className={`font-black ${balanceCookie > 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      {balanceCookie.toLocaleString()} $COOKIE
+                    </span>
+                  </div>
+                  {balanceCookie === 0 && onOpenBridgeModal && (
+                    <button
+                      onClick={onOpenBridgeModal}
+                      className="text-[11px] font-black bg-[#ffe0a8] hover:bg-[#fed388] text-[#0b1f3a] border border-[#0b1f3a] px-2 py-0.5 rounded shadow-[0_1px_0_#0b1f3a] cursor-pointer animate-pulse"
+                    >
+                      🚰 Get Faucet Tokens
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-bold text-[#0b1f3a]">
                   <span>Leg 1: $COOKIE Amount</span>
-                  <span>Wallet: {balanceCookie.toLocaleString()} COOKIE</span>
+                  <span>Max: {balanceCookie.toLocaleString()} COOKIE</span>
                 </div>
                 <div className="relative">
                   <input
