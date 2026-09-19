@@ -1,4 +1,13 @@
-export type WalletType = 'Nightly' | 'Phantom' | 'Solflare' | 'Coinbase Wallet' | 'Session Key';
+export type WalletType =
+  | 'Phantom'
+  | 'Backpack'
+  | 'OKX Wallet'
+  | 'Solflare'
+  | 'Magic Eden'
+  | 'Coinbase Wallet'
+  | 'Nightly'
+  | 'Brave Wallet'
+  | 'Session Key';
 
 export interface WalletOption {
   id: string;

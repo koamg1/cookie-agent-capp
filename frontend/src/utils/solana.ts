@@ -42,6 +42,21 @@ export function getSolflareProvider() {
   return null;
 }
 
+export function getBackpackProvider() {
+  if (typeof window === 'undefined') return null;
+  return (window as any).backpack || null;
+}
+
+export function getOkxProvider() {
+  if (typeof window === 'undefined') return null;
+  return (window as any).okxwallet?.solana || null;
+}
+
+export function getMagicEdenProvider() {
+  if (typeof window === 'undefined') return null;
+  return (window as any).magicEden?.solana || null;
+}
+
 export function getCoinbaseProvider() {
   if (typeof window === 'undefined') return null;
   if ((window as any).coinbaseSolana) return (window as any).coinbaseSolana;
@@ -49,6 +64,36 @@ export function getCoinbaseProvider() {
     return window.solana;
   }
   return null;
+}
+
+export function getBraveProvider() {
+  if (typeof window === 'undefined') return null;
+  return (window as any).braveSolana || null;
+}
+
+export function getWalletProvider(type: WalletType): any {
+  switch (type) {
+    case 'Phantom':
+      return getPhantomProvider();
+    case 'Backpack':
+      return getBackpackProvider();
+    case 'OKX Wallet':
+      return getOkxProvider();
+    case 'Solflare':
+      return getSolflareProvider();
+    case 'Magic Eden':
+      return getMagicEdenProvider();
+    case 'Coinbase Wallet':
+      return getCoinbaseProvider();
+    case 'Nightly':
+      return getNightlyProvider();
+    case 'Brave Wallet':
+      return getBraveProvider();
+    case 'Session Key':
+      return getSessionKey();
+    default:
+      return null;
+  }
 }
 
 export function getSessionKey(): solanaWeb3.Keypair {
@@ -82,69 +127,32 @@ export function buildAuthChallenge(address: string): string {
     `Sign this message to authenticate your wallet session and cryptographically prove ownership of this SVM address. This request does not trigger any blockchain transaction or network fee.`;
 }
 
+export function extractSignatureHex(raw: any): string {
+  let bytes: Uint8Array | null = null;
+  if (raw instanceof Uint8Array) {
+    bytes = raw;
+  } else if (raw?.signature instanceof Uint8Array) {
+    bytes = raw.signature;
+  } else if (Array.isArray(raw) && raw.length > 0) {
+    const item = raw[0];
+    if (item instanceof Uint8Array) bytes = item;
+    else if (item?.signature instanceof Uint8Array) bytes = item.signature;
+  } else if (raw?.signedMessage instanceof Uint8Array) {
+    bytes = raw.signedMessage;
+  }
+
+  if (bytes) {
+    return Array.from(bytes).map((b: number) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  if (typeof raw === 'string' && raw.length > 0) {
+    return raw;
+  }
+
+  throw new Error("Formato de firma no reconocido por la billetera.");
+}
+
 export async function getWalletAddress(type: WalletType, provider: any): Promise<string> {
-  if (type === 'Nightly') {
-    let candidate: string | null = null;
-    if (provider.features && provider.features['standard:connect']) {
-      try {
-        const res = await provider.features['standard:connect'].connect(false);
-        const addr = res?.accounts?.[0]?.address;
-        if (isValidUserAddress(addr)) candidate = addr;
-      } catch (err) {
-        console.warn("Nightly standard:connect warning:", err);
-      }
-    }
-    if (!candidate && typeof provider.connect === 'function') {
-      try {
-        const res = await provider.connect({ onlyIfTrusted: false });
-        const addr = res?.publicKey?.toString() || (res?.accounts && res.accounts[0]?.address);
-        if (isValidUserAddress(addr)) candidate = addr;
-      } catch (err) {
-        console.warn("Nightly connect():", err);
-      }
-    }
-    if (!candidate && provider.accounts && provider.accounts.length > 0) {
-      const addr = provider.accounts[0].address;
-      if (isValidUserAddress(addr)) candidate = addr;
-    }
-    if (!candidate && provider.publicKey) {
-      const addr = provider.publicKey.toString();
-      if (isValidUserAddress(addr)) candidate = addr;
-    }
-
-    if (!candidate || !isValidUserAddress(candidate)) {
-      throw new Error("Nightly no devolvió una cuenta pública válida. Abre la extensión Nightly, desbloquéala con tu contraseña y asegúrate de tener una cuenta activa de Solana.");
-    }
-    return candidate;
-  }
-
-  if (type === 'Phantom') {
-    const res = await provider.connect({ onlyIfTrusted: false });
-    const addr = res?.publicKey ? res.publicKey.toString() : provider.publicKey?.toString();
-    if (!isValidUserAddress(addr)) {
-      throw new Error("Phantom no devolvió una cuenta válida. Abre la extensión Phantom y desbloquéala.");
-    }
-    return addr;
-  }
-
-  if (type === 'Solflare') {
-    await provider.connect();
-    const addr = provider.publicKey ? provider.publicKey.toString() : null;
-    if (!isValidUserAddress(addr)) {
-      throw new Error("Solflare no devolvió una cuenta válida. Abre la extensión Solflare y desbloquéala.");
-    }
-    return addr;
-  }
-
-  if (type === 'Coinbase Wallet') {
-    const res = await provider.connect();
-    const addr = res?.publicKey ? res.publicKey.toString() : provider.publicKey?.toString();
-    if (!isValidUserAddress(addr)) {
-      throw new Error("Coinbase Wallet no devolvió una cuenta válida. Abre la extensión Coinbase Wallet y desbloquéala.");
-    }
-    return addr;
-  }
-
   if (type === 'Session Key') {
     if (!provider || !provider.publicKey) {
       throw new Error("Session key no inicializada.");
@@ -154,7 +162,54 @@ export async function getWalletAddress(type: WalletType, provider: any): Promise
     return addr;
   }
 
-  throw new Error(`Proveedor desconocido: ${type}`);
+  if (!provider) {
+    throw new Error(`Proveedor no disponible para ${type}. Asegúrate de tener la extensión instalada.`);
+  }
+
+  let candidate: string | null = null;
+
+  // 1. Try Solana Wallet Standard connect
+  if (provider.features && provider.features['standard:connect']) {
+    try {
+      const res = await provider.features['standard:connect'].connect();
+      const addr = res?.accounts?.[0]?.address;
+      if (isValidUserAddress(addr)) candidate = addr;
+    } catch (err) {
+      console.warn(`standard:connect warning for ${type}:`, err);
+    }
+  }
+
+  // 2. Try standard connect()
+  if (!candidate && typeof provider.connect === 'function') {
+    try {
+      const res = await provider.connect({ onlyIfTrusted: false });
+      const addr = res?.publicKey?.toString() || provider.publicKey?.toString() || (res?.accounts && res.accounts[0]?.address);
+      if (isValidUserAddress(addr)) candidate = addr;
+    } catch (err) {
+      console.warn(`connect() warning for ${type}:`, err);
+      // Re-throw if user deliberately cancelled or rejected
+      const msg = String(err);
+      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
+        throw err;
+      }
+    }
+  }
+
+  // 3. Fallback: check already connected public key or accounts
+  if (!candidate && provider.publicKey) {
+    const addr = provider.publicKey.toString();
+    if (isValidUserAddress(addr)) candidate = addr;
+  }
+  if (!candidate && provider.accounts && provider.accounts.length > 0) {
+    const addr = provider.accounts[0].address || provider.accounts[0].publicKey?.toString();
+    if (isValidUserAddress(addr)) candidate = addr;
+  }
+
+  if (!candidate || !isValidUserAddress(candidate)) {
+    throw new Error(`${type} no devolvió una cuenta pública válida. Abre la extensión, desbloquéala y autoriza la conexión.`);
+  }
+
+  return candidate;
 }
 
 export async function requestWalletSignature(
@@ -163,54 +218,61 @@ export async function requestWalletSignature(
   address: string,
   messageText: string
 ): Promise<string> {
+  if (type === 'Session Key') {
+    return "session_key_sig_" + Date.now();
+  }
+
+  if (!provider) {
+    throw new Error(`Proveedor de ${type} no encontrado.`);
+  }
+
   const messageBytes = new TextEncoder().encode(messageText);
 
-  if (type === 'Nightly') {
-    if (typeof provider.signMessage === 'function') {
-      const res = await provider.signMessage(messageBytes, 'utf8');
-      const sig = res?.signature || res;
-      if (!sig) throw new Error("Firma cancelada o rechazada en Nightly.");
-      return Array.from(sig).map((b: any) => b.toString(16).padStart(2, '0')).join('');
-    }
-    if (provider.features && provider.features['solana:signMessage']) {
+  // Strategy 1: Standard Wallet feature (features['solana:signMessage']) - supported by Nightly, Backpack, Solflare, etc.
+  if (provider.features && provider.features['solana:signMessage']) {
+    try {
       const account = (provider.accounts || []).find((a: any) => a.address === address) || provider.accounts?.[0] || { address };
       const signResults = await provider.features['solana:signMessage'].signMessage({
         account: account,
         message: messageBytes
       });
-      const sig = Array.isArray(signResults) ? signResults[0]?.signature : (signResults?.signature || signResults);
-      if (!sig) throw new Error("Firma cancelada o rechazada en Nightly.");
-      return Array.from(sig).map((b: any) => b.toString(16).padStart(2, '0')).join('');
+      return extractSignatureHex(signResults);
+    } catch (stdErr: any) {
+      console.warn(`Standard wallet signMessage warning on ${type}, trying legacy fallback:`, stdErr);
+      const msg = String(stdErr);
+      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
+        throw stdErr;
+      }
     }
-    throw new Error("Nightly no soporta la función signMessage.");
   }
 
-  if (type === 'Phantom') {
+  // Strategy 2: Phantom specific (supports utf8 parameter)
+  if (type === 'Phantom' && typeof provider.signMessage === 'function') {
     const signed = await provider.signMessage(messageBytes, 'utf8');
-    const sig = signed?.signature || signed;
-    if (!sig) throw new Error("Firma cancelada o rechazada en Phantom.");
-    return Array.from(sig).map((b: any) => b.toString(16).padStart(2, '0')).join('');
+    return extractSignatureHex(signed);
   }
 
-  if (type === 'Solflare') {
-    const signed = await provider.signMessage(messageBytes, 'utf8');
-    const sig = signed?.signature || signed;
-    if (!sig) throw new Error("Firma cancelada o rechazada en Solflare.");
-    return Array.from(sig).map((b: any) => b.toString(16).padStart(2, '0')).join('');
+  // Strategy 3: Standard single-argument signMessage(bytes) for Solflare, Backpack, OKX, Magic Eden, Brave, Nightly, Coinbase
+  if (typeof provider.signMessage === 'function') {
+    try {
+      const signed = await provider.signMessage(messageBytes);
+      return extractSignatureHex(signed);
+    } catch (firstErr: any) {
+      console.warn(`Direct signMessage(bytes) error on ${type}, trying utf8 hint:`, firstErr);
+      const msg = String(firstErr);
+      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
+        throw firstErr;
+      }
+      try {
+        const signed2 = await provider.signMessage(messageBytes, 'utf8');
+        return extractSignatureHex(signed2);
+      } catch {
+        throw firstErr;
+      }
+    }
   }
 
-  if (type === 'Coinbase Wallet') {
-    const signed = await provider.signMessage(messageBytes, 'utf8');
-    const sig = signed?.signature || signed;
-    if (!sig) throw new Error("Firma cancelada o rechazada en Coinbase Wallet.");
-    return Array.from(sig).map((b: any) => b.toString(16).padStart(2, '0')).join('');
-  }
-
-  if (type === 'Session Key') {
-    return "session_key_sig_" + Date.now();
-  }
-
-  throw new Error("Tipo de billetera no soportado para firma.");
+  throw new Error(`La billetera ${type} no soporta la función signMessage.`);
 }
 
 export async function sendWalletTransaction(

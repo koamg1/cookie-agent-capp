@@ -77,16 +77,89 @@ export const SessionKeyIcon: React.FC<{ className?: string }> = ({ className = "
   </svg>
 );
 
+export const BackpackIcon: React.FC<{ className?: string }> = ({ className = "w-full h-full" }) => (
+  <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <rect width="128" height="128" rx="64" fill="#E33E38" />
+    {/* Backpack Handle */}
+    <path
+      d="M50 36C50 28.27 56.27 22 64 22C71.73 22 78 28.27 78 36V40H50V36Z"
+      stroke="#FFFFFF"
+      strokeWidth="6"
+    />
+    {/* Backpack Main Body */}
+    <rect x="36" y="38" width="56" height="66" rx="16" fill="#FFFFFF" />
+    {/* Backpack Front Pocket */}
+    <rect x="44" y="66" width="40" height="30" rx="8" fill="#E33E38" />
+    {/* Zipper details */}
+    <rect x="54" y="52" width="20" height="4" rx="2" fill="#E33E38" />
+    <rect x="58" y="74" width="12" height="3" rx="1.5" fill="#FFFFFF" />
+  </svg>
+);
+
+export const OkxIcon: React.FC<{ className?: string }> = ({ className = "w-full h-full" }) => (
+  <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <rect width="128" height="128" rx="64" fill="#000000" />
+    {/* OKX Iconic White Cubes */}
+    <rect x="36" y="36" width="24" height="24" rx="4" fill="#FFFFFF" />
+    <rect x="68" y="36" width="24" height="24" rx="4" fill="#FFFFFF" />
+    <rect x="52" y="52" width="24" height="24" rx="4" fill="#000000" stroke="#FFFFFF" strokeWidth="4" />
+    <rect x="36" y="68" width="24" height="24" rx="4" fill="#FFFFFF" />
+    <rect x="68" y="68" width="24" height="24" rx="4" fill="#FFFFFF" />
+  </svg>
+);
+
+export const MagicEdenIcon: React.FC<{ className?: string }> = ({ className = "w-full h-full" }) => (
+  <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <rect width="128" height="128" rx="64" fill="#1C102E" />
+    {/* Magic Eden Emblem */}
+    <path
+      d="M32 88L50 40L64 74L78 40L96 88H82L73 60L64 80L55 60L46 88H32Z"
+      fill="url(#me_grad)"
+    />
+    <defs>
+      <linearGradient id="me_grad" x1="32" y1="40" x2="96" y2="88" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#E42575" />
+        <stop offset="1" stopColor="#9333EA" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
+export const BraveIcon: React.FC<{ className?: string }> = ({ className = "w-full h-full" }) => (
+  <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <rect width="128" height="128" rx="64" fill="#FB542B" />
+    {/* Brave Lion Geometric Face Silhouette */}
+    <path
+      d="M64 24L86 38L98 62L86 96L64 106L42 96L30 62L42 38L64 24Z"
+      fill="#FFFFFF"
+    />
+    <path
+      d="M64 42L76 54L80 72L64 90L48 72L52 54L64 42Z"
+      fill="#FB542B"
+    />
+    <circle cx="58" cy="62" r="3" fill="#FFFFFF" />
+    <circle cx="70" cy="62" r="3" fill="#FFFFFF" />
+  </svg>
+);
+
 export const WalletLogo: React.FC<{ wallet: WalletType; className?: string }> = ({ wallet, className = "w-full h-full" }) => {
   switch (wallet) {
     case 'Phantom':
       return <PhantomIcon className={className} />;
-    case 'Nightly':
-      return <NightlyIcon className={className} />;
+    case 'Backpack':
+      return <BackpackIcon className={className} />;
+    case 'OKX Wallet':
+      return <OkxIcon className={className} />;
     case 'Solflare':
       return <SolflareIcon className={className} />;
+    case 'Magic Eden':
+      return <MagicEdenIcon className={className} />;
     case 'Coinbase Wallet':
       return <CoinbaseIcon className={className} />;
+    case 'Nightly':
+      return <NightlyIcon className={className} />;
+    case 'Brave Wallet':
+      return <BraveIcon className={className} />;
     case 'Session Key':
       return <SessionKeyIcon className={className} />;
     default:

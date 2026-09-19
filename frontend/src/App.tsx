@@ -14,6 +14,11 @@ import {
   getPhantomProvider,
   getSolflareProvider,
   getCoinbaseProvider,
+  getBackpackProvider,
+  getOkxProvider,
+  getMagicEdenProvider,
+  getBraveProvider,
+  getWalletProvider,
   getSessionKey,
   getWalletAddress,
   buildAuthChallenge,
@@ -84,10 +89,14 @@ export const App: React.FC = () => {
 
   // Detect Installed Wallets
   const detectedWallets = {
-    nightly: !!getNightlyProvider(),
     phantom: !!getPhantomProvider(),
+    backpack: !!getBackpackProvider(),
+    okx: !!getOkxProvider(),
     solflare: !!getSolflareProvider(),
-    coinbase: !!getCoinbaseProvider()
+    magiceden: !!getMagicEdenProvider(),
+    coinbase: !!getCoinbaseProvider(),
+    nightly: !!getNightlyProvider(),
+    brave: !!getBraveProvider()
   };
 
   // Fetch Network Stats
@@ -138,42 +147,22 @@ export const App: React.FC = () => {
     setSelectedWallet(type);
     setModalError('');
 
-    let provider: any = null;
-
-    if (type === 'Nightly') {
-      provider = getNightlyProvider();
-      if (!provider) {
-        window.open('https://nightly.app/download', '_blank');
-        setModalStatus('install_notice');
-        addLog('WALLET', 'Nightly no detectada. Abriendo enlace oficial...', 'text-amber-400');
-        return;
-      }
-    } else if (type === 'Phantom') {
-      provider = getPhantomProvider();
-      if (!provider) {
-        window.open('https://phantom.app/download', '_blank');
-        setModalStatus('install_notice');
-        addLog('WALLET', 'Phantom no detectada. Abriendo enlace oficial...', 'text-purple-400');
-        return;
-      }
-    } else if (type === 'Solflare') {
-      provider = getSolflareProvider();
-      if (!provider) {
-        window.open('https://solflare.com/download', '_blank');
-        setModalStatus('install_notice');
-        addLog('WALLET', 'Solflare no detectada. Abriendo enlace oficial...', 'text-orange-400');
-        return;
-      }
-    } else if (type === 'Coinbase Wallet') {
-      provider = getCoinbaseProvider();
-      if (!provider) {
-        window.open('https://www.coinbase.com/wallet/downloads', '_blank');
-        setModalStatus('install_notice');
-        addLog('WALLET', 'Coinbase Wallet no detectada. Abriendo enlace oficial...', 'text-blue-400');
-        return;
-      }
-    } else if (type === 'Session Key') {
-      provider = getSessionKey();
+    const provider = getWalletProvider(type);
+    if (!provider && type !== 'Session Key') {
+      const storeUrls: Record<string, string> = {
+        'Phantom': 'https://phantom.app/download',
+        'Backpack': 'https://backpack.app/download',
+        'OKX Wallet': 'https://www.okx.com/web3',
+        'Solflare': 'https://solflare.com/download',
+        'Magic Eden': 'https://wallet.magiceden.io',
+        'Coinbase Wallet': 'https://www.coinbase.com/wallet/downloads',
+        'Nightly': 'https://nightly.app/download',
+        'Brave Wallet': 'https://brave.com/wallet'
+      };
+      if (storeUrls[type]) window.open(storeUrls[type], '_blank');
+      setModalStatus('install_notice');
+      addLog('WALLET', `${type} no detectada. Abriendo enlace oficial...`, 'text-amber-400');
+      return;
     }
 
     setModalStatus('connecting');

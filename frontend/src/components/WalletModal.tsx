@@ -16,22 +16,41 @@ interface WalletModalProps {
 }
 
 const WALLET_CONFIG: Record<WalletType, { storeUrl: string; desc: string; badge?: string }> = {
+  'Phantom': {
+    storeUrl: 'https://phantom.app/download',
+    desc: 'Standard Solana / SVM Web3 provider',
+    badge: 'Popular'
+  },
+  'Backpack': {
+    storeUrl: 'https://backpack.app/download',
+    desc: 'Native Solana & xNFT community wallet',
+    badge: 'Solana'
+  },
+  'OKX Wallet': {
+    storeUrl: 'https://www.okx.com/web3',
+    desc: 'Global leading multi-chain Web3 wallet',
+    badge: 'Global'
+  },
+  'Solflare': {
+    storeUrl: 'https://solflare.com/download',
+    desc: 'Classic Solana SVM Web3 wallet'
+  },
+  'Magic Eden': {
+    storeUrl: 'https://wallet.magiceden.io',
+    desc: 'SVM wallet for collectibles & tokens'
+  },
+  'Coinbase Wallet': {
+    storeUrl: 'https://www.coinbase.com/wallet/downloads',
+    desc: 'Coinbase multi-chain SVM wallet'
+  },
   'Nightly': {
     storeUrl: 'https://nightly.app/download',
     desc: 'Official SVM wallet for Cookie Chain bounties',
     badge: 'Recommended'
   },
-  'Phantom': {
-    storeUrl: 'https://phantom.app/download',
-    desc: 'Standard Solana / SVM Web3 provider'
-  },
-  'Solflare': {
-    storeUrl: 'https://solflare.com/download',
-    desc: 'Solana SVM Web3 wallet'
-  },
-  'Coinbase Wallet': {
-    storeUrl: 'https://www.coinbase.com/wallet/downloads',
-    desc: 'Coinbase multi-chain SVM wallet'
+  'Brave Wallet': {
+    storeUrl: 'https://brave.com/wallet',
+    desc: 'Built-in privacy Web3 wallet in Brave Browser'
   },
   'Session Key': {
     storeUrl: '',
@@ -213,91 +232,173 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               </button>
             </div>
 
-            {/* Wallet Rows with Real SVG Logos */}
-            <div className="space-y-2.5">
+            {/* Scrollable Wallet Rows with Real SVG Logos */}
+            <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
               
               {/* Phantom */}
               <div
                 onClick={() => onConnect('Phantom')}
-                className="p-3 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
+                className="p-2.5 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-white p-0.5">
+                  <div className="w-9 h-9 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-white p-0.5">
                     <WalletLogo wallet="Phantom" />
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-black text-[#0b1f3a]">Phantom</span>
-                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#e9d5ff] text-[#5340C6] border border-[#0b1f3a] font-bold">Popular</span>
+                      <span className="text-[9px] px-2 py-0.2 rounded-full bg-[#e9d5ff] text-[#5340C6] border border-[#0b1f3a] font-bold">Popular</span>
                     </div>
                     <p className="text-[10px] font-medium text-[#0b1f3a]/65">Standard Solana / SVM Web3 provider</p>
                   </div>
                 </div>
-                <span className={`text-[10px] mono px-2.5 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['phantom'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
+                <span className={`text-[10px] mono px-2 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['phantom'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
                   {detectedWallets['phantom'] ? 'Detected' : 'Install ↗'}
                 </span>
               </div>
 
-              {/* Nightly */}
+              {/* Backpack */}
               <div
-                onClick={() => onConnect('Nightly')}
-                className="p-3 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
+                onClick={() => onConnect('Backpack')}
+                className="p-2.5 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#0C1021] p-0.5">
-                    <WalletLogo wallet="Nightly" />
+                  <div className="w-9 h-9 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#E33E38] p-0.5">
+                    <WalletLogo wallet="Backpack" />
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-black text-[#0b1f3a]">Nightly Wallet</span>
-                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#d8f1ff] text-[#0b1f3a] border border-[#0b1f3a] font-bold">Recommended</span>
+                      <span className="text-xs font-black text-[#0b1f3a]">Backpack</span>
+                      <span className="text-[9px] px-2 py-0.2 rounded-full bg-[#fee2e2] text-[#b91c1c] border border-[#0b1f3a] font-bold">Solana</span>
                     </div>
-                    <p className="text-[10px] font-medium text-[#0b1f3a]/65">Official SVM wallet for Cookie Chain bounties</p>
+                    <p className="text-[10px] font-medium text-[#0b1f3a]/65">Native Solana community & xNFT wallet</p>
                   </div>
                 </div>
-                <span className={`text-[10px] mono px-2.5 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['nightly'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
-                  {detectedWallets['nightly'] ? 'Detected' : 'Install ↗'}
+                <span className={`text-[10px] mono px-2 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['backpack'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
+                  {detectedWallets['backpack'] ? 'Detected' : 'Install ↗'}
+                </span>
+              </div>
+
+              {/* OKX Wallet */}
+              <div
+                onClick={() => onConnect('OKX Wallet')}
+                className="p-2.5 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-black p-0.5">
+                    <WalletLogo wallet="OKX Wallet" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black text-[#0b1f3a]">OKX Wallet</span>
+                      <span className="text-[9px] px-2 py-0.2 rounded-full bg-gray-200 text-black border border-[#0b1f3a] font-bold">Global</span>
+                    </div>
+                    <p className="text-[10px] font-medium text-[#0b1f3a]/65">Global leading multi-chain Web3 wallet</p>
+                  </div>
+                </div>
+                <span className={`text-[10px] mono px-2 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['okx'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
+                  {detectedWallets['okx'] ? 'Detected' : 'Install ↗'}
                 </span>
               </div>
 
               {/* Solflare */}
               <div
                 onClick={() => onConnect('Solflare')}
-                className="p-3 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
+                className="p-2.5 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#181320] p-0.5">
+                  <div className="w-9 h-9 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#181320] p-0.5">
                     <WalletLogo wallet="Solflare" />
                   </div>
                   <div>
                     <span className="text-xs font-black text-[#0b1f3a]">Solflare</span>
-                    <p className="text-[10px] font-medium text-[#0b1f3a]/65">Solana SVM Web3 wallet</p>
+                    <p className="text-[10px] font-medium text-[#0b1f3a]/65">Classic Solana SVM Web3 wallet</p>
                   </div>
                 </div>
-                <span className={`text-[10px] mono px-2.5 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['solflare'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
+                <span className={`text-[10px] mono px-2 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['solflare'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
                   {detectedWallets['solflare'] ? 'Detected' : 'Install ↗'}
+                </span>
+              </div>
+
+              {/* Magic Eden */}
+              <div
+                onClick={() => onConnect('Magic Eden')}
+                className="p-2.5 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#1C102E] p-0.5">
+                    <WalletLogo wallet="Magic Eden" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-[#0b1f3a]">Magic Eden</span>
+                    <p className="text-[10px] font-medium text-[#0b1f3a]/65">SVM wallet for collectibles & tokens</p>
+                  </div>
+                </div>
+                <span className={`text-[10px] mono px-2 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['magiceden'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
+                  {detectedWallets['magiceden'] ? 'Detected' : 'Install ↗'}
                 </span>
               </div>
 
               {/* Coinbase Wallet */}
               <div
                 onClick={() => onConnect('Coinbase Wallet')}
-                className="p-3 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
+                className="p-2.5 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#0052FF] p-0.5">
+                  <div className="w-9 h-9 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#0052FF] p-0.5">
                     <WalletLogo wallet="Coinbase Wallet" />
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-black text-[#0b1f3a]">Coinbase Wallet</span>
-                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#dbeafe] text-[#1e40af] border border-[#0b1f3a] font-bold">Multi-Chain</span>
+                      <span className="text-[9px] px-2 py-0.2 rounded-full bg-[#dbeafe] text-[#1e40af] border border-[#0b1f3a] font-bold">Multi-Chain</span>
                     </div>
                     <p className="text-[10px] font-medium text-[#0b1f3a]/65">Direct Solana SVM connection via Coinbase</p>
                   </div>
                 </div>
-                <span className={`text-[10px] mono px-2.5 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['coinbase'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
+                <span className={`text-[10px] mono px-2 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['coinbase'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
                   {detectedWallets['coinbase'] ? 'Detected' : 'Install ↗'}
+                </span>
+              </div>
+
+              {/* Nightly */}
+              <div
+                onClick={() => onConnect('Nightly')}
+                className="p-2.5 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#0C1021] p-0.5">
+                    <WalletLogo wallet="Nightly" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black text-[#0b1f3a]">Nightly Wallet</span>
+                      <span className="text-[9px] px-2 py-0.2 rounded-full bg-[#d8f1ff] text-[#0b1f3a] border border-[#0b1f3a] font-bold">Recommended</span>
+                    </div>
+                    <p className="text-[10px] font-medium text-[#0b1f3a]/65">Official SVM wallet for Cookie Chain bounties</p>
+                  </div>
+                </div>
+                <span className={`text-[10px] mono px-2 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['nightly'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
+                  {detectedWallets['nightly'] ? 'Detected' : 'Install ↗'}
+                </span>
+              </div>
+
+              {/* Brave Wallet */}
+              <div
+                onClick={() => onConnect('Brave Wallet')}
+                className="p-2.5 bg-[#f8fafc] hover:bg-[#ffe0a8]/50 rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#FB542B] p-0.5">
+                    <WalletLogo wallet="Brave Wallet" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-[#0b1f3a]">Brave Wallet</span>
+                    <p className="text-[10px] font-medium text-[#0b1f3a]/65">Built-in privacy Web3 wallet in Brave Browser</p>
+                  </div>
+                </div>
+                <span className={`text-[10px] mono px-2 py-0.5 rounded-full border border-[#0b1f3a] font-bold ${detectedWallets['brave'] ? 'bg-[#bbf7d0] text-[#065f46]' : 'bg-gray-200 text-gray-700'}`}>
+                  {detectedWallets['brave'] ? 'Detected' : 'Install ↗'}
                 </span>
               </div>
 
@@ -305,21 +406,21 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               <div className="pt-2 border-t-2 border-[#0b1f3a]/15">
                 <div
                   onClick={() => onConnect('Session Key')}
-                  className="p-3 bg-[#dcfce7] hover:bg-[#bbf7d0] rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
+                  className="p-2.5 bg-[#dcfce7] hover:bg-[#bbf7d0] rounded-2xl border-2 border-[#0b1f3a] flex items-center justify-between transition cursor-pointer shadow-[0_2px_0_#0b1f3a] hover:-translate-y-0.5"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#059669] p-0.5">
+                    <div className="w-9 h-9 rounded-xl border-2 border-[#0b1f3a] overflow-hidden shadow-sm flex items-center justify-center bg-[#059669] p-0.5">
                       <WalletLogo wallet="Session Key" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-black text-[#065f46]">In-Browser Session Key</span>
-                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-white text-[#065f46] border border-[#0b1f3a] font-bold">Zero-Install</span>
+                        <span className="text-[9px] px-2 py-0.2 rounded-full bg-white text-[#065f46] border border-[#0b1f3a] font-bold">Zero-Install</span>
                       </div>
                       <p className="text-[10px] font-medium text-[#065f46]/80">Generates real Ed25519 SVM keypair locally in browser</p>
                     </div>
                   </div>
-                  <span className="text-[10px] mono px-2.5 py-0.5 rounded-full bg-[#86efac] text-[#065f46] border border-[#0b1f3a] font-bold">
+                  <span className="text-[10px] mono px-2 py-0.5 rounded-full bg-[#86efac] text-[#065f46] border border-[#0b1f3a] font-bold">
                     Ready
                   </span>
                 </div>
