@@ -64,6 +64,26 @@ SUPPORTED_TOOLS = [
             },
             "required": ["entity_type", "identifier"]
         }
+    ),
+    MCPToolDefinition(
+        name="cookie_list_agent_fleet",
+        description="List all 50 autonomous agents in the Cookie Sentinel Swarm across 5 squads (DeFi, Security, Bridge, Network, Data/MCP).",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "squad": {"type": "string", "enum": ["all", "defi", "security", "bridge", "network", "data_mcp"], "description": "Filter by squad (optional)"}
+            },
+            "required": []
+        }
+    ),
+    MCPToolDefinition(
+        name="cookie_get_bridge_guide",
+        description="Retrieve step-by-step instructions for bridging testnet COOKIE tokens via Hyperlane from Base Sepolia and using the faucet.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
     )
 ]
 

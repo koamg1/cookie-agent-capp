@@ -11,6 +11,7 @@ interface TelemetryOvenProps {
     details?: string;
   };
   isBroadcasting: boolean;
+  selectedAgent?: { id: string; name: string; telemetry_sample: string } | null;
 }
 
 export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
@@ -19,10 +20,18 @@ export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
   onOpenWalletModal,
   onBroadcastMemo,
   broadcastResult,
-  isBroadcasting
+  isBroadcasting,
+  selectedAgent
 }) => {
-  const [agentId, setAgentId] = useState('CookieSentinel-Oracle Santiago');
-  const [memoPayload, setMemoPayload] = useState('heartbeat:healthy | latency:12ms | tps:840');
+  const [agentId, setAgentId] = useState('Sentinel Prime Orchestrator');
+  const [memoPayload, setMemoPayload] = useState('prime:swarm_heartbeat | agents_synced:50/50 | network:operational');
+
+  React.useEffect(() => {
+    if (selectedAgent) {
+      setAgentId(selectedAgent.name);
+      setMemoPayload(selectedAgent.telemetry_sample);
+    }
+  }, [selectedAgent]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +94,7 @@ export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
           }`}
         >
           {isBroadcasting ? (
-            <span>⏳ Abriendo billetera para firmar...</span>
+            <span>⏳ Opening wallet to sign...</span>
           ) : connectedAddress ? (
             <span>🚀 Sign & Broadcast to Cookie Chain SVM</span>
           ) : (
@@ -114,7 +123,7 @@ export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
                       rel="noreferrer"
                       className="text-[#059669] underline font-black"
                     >
-                      Ver en CookieScan ({broadcastResult.txSignature.slice(0, 12)}...) &rarr;
+                      View on CookieScan ({broadcastResult.txSignature.slice(0, 12)}...) &rarr;
                     </a>
                   </>
                 )}
@@ -123,12 +132,12 @@ export const TelemetryOven: React.FC<TelemetryOvenProps> = ({
           ) : (
             <>
               <div className="text-[#d97706] font-black flex items-center gap-1.5 text-sm">
-                <span>⚠️</span> Notificación de Transacción / Validación
+                <span>⚠️</span> Transaction Notice / Validation
               </div>
               <div className="text-[#0b1f3a]/85 break-all text-[11px] leading-relaxed pt-1">
                 <strong>Signer:</strong> {connectedAddress} ({activeWalletType})<br />
-                <strong>Target Network:</strong> Cookie Chain SVM (<a href={`https://cookiescan.io/address/${connectedAddress}`} target="_blank" rel="noreferrer" className="text-[#0b1f3a] underline font-bold">Ver dirección en CookieScan</a>)<br />
-                <strong>Detalle:</strong> <span className="text-[#b45309] font-bold">{broadcastResult.details}</span>
+                <strong>Target Network:</strong> Cookie Chain SVM (<a href={`https://cookiescan.io/address/${connectedAddress}`} target="_blank" rel="noreferrer" className="text-[#0b1f3a] underline font-bold">View address on CookieScan</a>)<br />
+                <strong>Details:</strong> <span className="text-[#b45309] font-bold">{broadcastResult.details}</span>
               </div>
             </>
           )}

@@ -68,14 +68,17 @@ If a signature is cancelled or rejected, the interface displays an authentic **"
 flowchart TD
     subgraph CLIENT["Frontend Client (React 18 + Vite + Tailwind)"]
         MODAL["Universal Wallet Modal (9 Wallets)"]
+        SWARM["50-Agent Sentinel Swarm (5 Squads)"]
         SIWS["SIWS Cryptographic Verifier"]
         OVEN["Telemetry Oven (SPL Memo Dispatcher)"]
         KITCHEN["MCP Kitchen (AI Tool Tester)"]
+        BRIDGE_MODAL["Hyperlane Bridge & Faucet Guide"]
         CONSOLE["Arcade Telemetry Console (Live Logs)"]
     end
 
     subgraph BACKEND["FastAPI Gateway Engine (Python 3.13)"]
         ROUTER["API Router (/api/v1)"]
+        FLEET_REG["50-Agent Fleet Registry Engine"]
         MCP_GATEWAY["cookie-mcp Protocol Controller"]
         DAS_CLIENT["Cookie Chain RPC Client"]
         STATIC_SRV["Static Asset Server (Vite Bundles)"]
@@ -88,10 +91,12 @@ flowchart TD
     end
 
     CLIENT <-->|REST API / State| ROUTER
+    SWARM -->|Select Agent| OVEN
     MODAL -->|Sign-In with Solana| SIWS
     SIWS -->|Signed Tx / Ed25519| RPC
     OVEN -->|SPL Memo Instruction| MEMO_PROG
     MEMO_PROG --> SCANNER
+    ROUTER --> FLEET_REG
     ROUTER --> MCP_GATEWAY
     ROUTER --> DAS_CLIENT
     DAS_CLIENT <-->|JSON-RPC 2.0| RPC
@@ -108,9 +113,11 @@ The Gateway exposes standard REST endpoints and Model Context Protocol (MCP) too
 | :--- | :--- | :--- |
 | `GET` | `/health` | Service health status, uptime, and memory metrics |
 | `GET` | `/api/v1/network/stats` | Real-time slot, block height, blockhash, and latency |
+| `GET` | `/api/v1/agents/fleet` | Returns the 50-Agent Swarm (Filterable by `?squad=defi,security,bridge...`) |
+| `GET` | `/api/v1/agents/{id}` | Detailed telemetry profile and target program for any agent |
 | `GET` | `/api/v1/wallet/{address}/balance` | Query native `$COOKIE` balance on Cookie Chain |
-| `GET` | `/api/v1/mcp/manifest` | Returns standard `cookie-mcp` JSON manifest with tool schemas |
-| `POST` | `/api/v1/mcp/execute` | Executes an MCP tool (`cookie_get_network_stats`, `cookie_get_balance`, `cookie_broadcast_telemetry`) |
+| `GET` | `/api/v1/mcp/manifest` | Returns standard `cookie-mcp` JSON manifest with 6 tool schemas |
+| `POST` | `/api/v1/mcp/execute` | Executes an MCP tool (`cookie_get_network_stats`, `cookie_check_balance`, `cookie_list_agent_fleet`, `cookie_get_bridge_guide`, `cookie_simulate_agent_ping`) |
 | `POST` | `/api/v1/agent/ping` | Autonomous agent pulse test for live telemetry display |
 
 ---

@@ -6,13 +6,15 @@ interface NavbarProps {
   activeWalletType: WalletType | null;
   onOpenWalletModal: () => void;
   onDisconnect: () => void;
+  onOpenBridgeModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   connectedAddress,
   activeWalletType,
   onOpenWalletModal,
-  onDisconnect
+  onDisconnect,
+  onOpenBridgeModal
 }) => {
   const shortAddr = connectedAddress
     ? `${connectedAddress.slice(0, 4)}...${connectedAddress.slice(-4)}`
@@ -38,6 +40,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Links & Connect Button */}
         <div className="flex items-center space-x-2 sm:space-x-3">
+          {onOpenBridgeModal && (
+            <button
+              onClick={onOpenBridgeModal}
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-black text-[#0b1f3a] bg-[#ffe0a8] hover:bg-[#fed388] border border-[#0b1f3a] px-2.5 py-1.5 rounded-full shadow-[0_1px_0_#0b1f3a] cursor-pointer"
+            >
+              <span>🚰 Faucet & Bridge</span>
+            </button>
+          )}
           <a
             href="https://cookiescan.io"
             target="_blank"

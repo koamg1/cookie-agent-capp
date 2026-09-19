@@ -6,6 +6,8 @@ import { HeroBanner } from './components/HeroBanner';
 import { NetworkStats } from './components/NetworkStats';
 import { TelemetryOven } from './components/TelemetryOven';
 import { McpKitchen } from './components/McpKitchen';
+import { AgentFleet, AgentInfo } from './components/AgentFleet';
+import { BridgeGuideModal } from './components/BridgeGuideModal';
 import { TelemetryConsole, LogEntry } from './components/TelemetryConsole';
 import { WalletModal } from './components/WalletModal';
 import {
@@ -49,6 +51,10 @@ export const App: React.FC = () => {
   const [modalStatus, setModalStatus] = useState<'idle' | 'connecting' | 'declined' | 'install_notice'>('idle');
   const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
   const [modalError, setModalError] = useState<string>('');
+
+  // Fleet & Bridge State
+  const [selectedAgent, setSelectedAgent] = useState<AgentInfo | null>(null);
+  const [isBridgeModalOpen, setIsBridgeModalOpen] = useState<boolean>(false);
 
   // Telemetry Broadcast State
   const [isBroadcasting, setIsBroadcasting] = useState<boolean>(false);
@@ -366,6 +372,13 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleSelectAgent = (agent: AgentInfo) => {
+    setSelectedAgent(agent);
+    addLog('FLEET', `Selected ${agent.name} (${agent.squad.toUpperCase()}) for on-chain baking`, 'text-emerald-400');
+    const el = document.getElementById('telemetry-oven-box');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen flex flex-col selection:bg-[#ffe0a8] selection:text-[#0b1f3a]">
       
@@ -378,6 +391,7 @@ export const App: React.FC = () => {
           setIsModalOpen(true);
         }}
         onDisconnect={disconnectWallet}
+        onOpenBridgeModal={() => setIsBridgeModalOpen(true)}
       />
 
       {/* Main Content */}
@@ -397,8 +411,14 @@ export const App: React.FC = () => {
           siwsLoading={siwsLoading}
         />
 
+        {/* 50-Agent Sentinel Swarm Registry */}
+        <AgentFleet
+          onSelectAgent={handleSelectAgent}
+          selectedAgentId={selectedAgent?.id}
+        />
+
         {/* Dual Operations Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div id="telemetry-oven-box" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <TelemetryOven
             connectedAddress={connectedAddress}
             activeWalletType={activeWalletType}
@@ -409,6 +429,7 @@ export const App: React.FC = () => {
             onBroadcastMemo={handleBroadcastMemo}
             broadcastResult={broadcastResult}
             isBroadcasting={isBroadcasting}
+            selectedAgent={selectedAgent}
           />
           <McpKitchen />
         </div>
@@ -431,6 +452,13 @@ export const App: React.FC = () => {
         }}
         onBackToSelect={() => setModalStatus('idle')}
         detectedWallets={detectedWallets}
+      />
+
+      {/* Bridge & Faucet Guide Modal */}
+      <BridgeGuideModal
+        isOpen={isBridgeModalOpen}
+        onClose={() => setIsBridgeModalOpen(false)}
+        connectedAddress={connectedAddress}
       />
 
       {/* Footer */}

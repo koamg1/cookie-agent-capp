@@ -12,8 +12,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 
+from typing import Optional
 from app.cookie_client import CookieChainClient
 from app.mcp_gateway import get_mcp_manifest, MCPExecuteRequest, SUPPORTED_TOOLS
+from app.fleet_registry import get_agents_fleet, get_agent_by_id
 
 app = FastAPI(
     title="CookieAgent Gateway & Sentinel cApp",
@@ -135,6 +137,27 @@ async def agent_ping(req: AgentPingRequest):
         "is_simulation": True
     }
 
+@app.get("/api/v1/agents/fleet")
+async def agents_fleet(squad: Optional[str] = None):
+    """
+    Returns the full 50-Agent Autonomous Sentinel Swarm registry.
+    Filterable by squad: defi, security, bridge, network, data_mcp.
+    """
+    fleet = get_agents_fleet()
+    if squad and squad != "all":
+        fleet = [a for a in fleet if a.get("squad") == squad]
+    return {
+        "total_agents": len(fleet),
+        "network": "Cookie Chain (SVM)",
+        "swarm_status": "operational",
+        "agents": fleet
+    }
+
+@app.get("/api/v1/agents/{agent_id}")
+async def get_agent_detail(agent_id: str):
+    """Returns metadata, status, and telemetry spec for a specific agent."""
+    return get_agent_by_id(agent_id)
+
 @app.post("/api/v1/mcp/execute")
 async def mcp_execute(req: MCPExecuteRequest):
     """Executes an MCP tool call directly through the gateway."""
@@ -156,5 +179,23 @@ async def mcp_execute(req: MCPExecuteRequest):
         etype = params.get("entity_type", "tx")
         ident = params.get("identifier", "")
         return {"explorer_url": f"https://cookiescan.io/{etype}/{ident}"}
+    elif t_name == "cookie_list_agent_fleet":
+        sq = params.get("squad", "all")
+        return await agents_fleet(sq)
+    elif t_name == "cookie_get_bridge_guide":
+        return {
+            "title": "Cookie Chain Hyperlane Bridge & Faucet Guide",
+            "faucet_url": "https://www.cookiechain.wtf",
+            "hyperlane_bridge_url": "https://bridge.cookiechain.wtf",
+            "origin_chain": "Base Sepolia (EVM)",
+            "destination_chain": "Cookie Chain Testnet (SVM)",
+            "steps": [
+                "1. Connect EVM wallet to Base Sepolia on https://bridge.cookiechain.wtf",
+                "2. Acquire Base Sepolia ETH from public faucets if needed",
+                "3. Enter your Cookie Chain SVM recipient address (e.g. from Nightly or Phantom)",
+                "4. Initiate bridge transfer via Hyperlane Mailbox",
+                "5. Upon arrival on Cookie Chain, use CookieAgent cApp to verify balance and bake telemetry proofs."
+            ]
+        }
     else:
         raise HTTPException(status_code=404, detail=f"Tool '{t_name}' not recognized")

@@ -59,3 +59,36 @@ async def test_mcp_execute_tool():
     assert response.status_code == 200
     data = response.json()
     assert data["network"] == "Cookie Chain (SVM)"
+
+@pytest.mark.asyncio
+async def test_agents_fleet_endpoint():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get("/api/v1/agents/fleet")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_agents"] == 50
+    assert data["swarm_status"] == "operational"
+    assert len(data["agents"]) == 50
+
+@pytest.mark.asyncio
+async def test_agents_fleet_filter():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get("/api/v1/agents/fleet?squad=defi")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_agents"] == 10
+    for agent in data["agents"]:
+        assert agent["squad"] == "defi"
+
+@pytest.mark.asyncio
+async def test_mcp_execute_fleet():
+    payload = {
+        "tool_name": "cookie_list_agent_fleet",
+        "parameters": {"squad": "security"}
+    }
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.post("/api/v1/mcp/execute", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_agents"] == 10
+
