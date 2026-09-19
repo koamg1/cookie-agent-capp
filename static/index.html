@@ -29,16 +29,16 @@
     body { font-family: 'Inter', sans-serif; }
     .mono { font-family: 'JetBrains Mono', monospace; }
     .glass {
-      background: rgba(17, 24, 39, 0.75);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(251, 191, 36, 0.15);
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(251, 191, 36, 0.18);
     }
   </style>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col">
 
   <!-- Header -->
-  <header class="border-b border-gray-800 glass sticky top-0 z-50">
+  <header class="border-b border-gray-800 glass sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-xl shadow-lg shadow-amber-500/20">
@@ -51,10 +51,10 @@
       </div>
       <div class="flex items-center space-x-4">
         <a href="/docs" target="_blank" class="text-xs text-gray-400 hover:text-amber-400 mono transition flex items-center gap-1">
-          <span>[Swagger API Docs]</span>
+          <span>[OpenAPI Docs]</span>
         </a>
-        <button id="connectWalletBtn" onclick="toggleWalletConnect()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-bold text-xs rounded-lg transition duration-200 shadow-md shadow-amber-500/20 flex items-center gap-2">
-          <span>⚡ Connect Nightly</span>
+        <button id="connectWalletBtn" onclick="openWalletModal()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-bold text-xs rounded-lg transition duration-200 shadow-md shadow-amber-500/20 flex items-center gap-2">
+          <span>⚡ Connect Wallet</span>
         </button>
       </div>
     </div>
@@ -66,7 +66,7 @@
     <!-- Top Status Row -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="glass p-4 rounded-xl">
-        <span class="text-xs text-gray-400 uppercase tracking-wider block">Network</span>
+        <span class="text-xs text-gray-400 uppercase tracking-wider block">Network Target</span>
         <div class="flex items-center gap-2 mt-1">
           <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
           <span class="text-sm font-semibold text-white">Cookie Chain (SVM)</span>
@@ -83,13 +83,19 @@
       <div class="glass p-4 rounded-xl">
         <span class="text-xs text-gray-400 uppercase tracking-wider block">RPC Latency</span>
         <span id="statLatency" class="text-xl font-extrabold text-emerald-400 mono block mt-1">-- ms</span>
-        <span class="text-xs text-gray-500 mt-1 block">Gateway benchmark</span>
+        <span class="text-xs text-gray-500 mt-1 block">Live RPC benchmark</span>
       </div>
 
       <div class="glass p-4 rounded-xl">
-        <span class="text-xs text-gray-400 uppercase tracking-wider block">Connected Account</span>
-        <span id="statWallet" class="text-xs font-semibold text-gray-300 mono block mt-2 truncate">Not Connected</span>
-        <span id="statBalance" class="text-xs text-amber-400 mono mt-0.5 block">0.0000 COOKIE</span>
+        <div class="flex justify-between items-center">
+          <span class="text-xs text-gray-400 uppercase tracking-wider block">Connected Account</span>
+          <span id="walletProviderBadge" class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 mono">None</span>
+        </div>
+        <span id="statWallet" class="text-xs font-semibold text-gray-300 mono block mt-1 truncate">Not Connected</span>
+        <div class="flex items-center justify-between mt-1">
+          <span id="statBalance" class="text-xs text-amber-400 mono block">0.0000 COOKIE</span>
+          <a id="explorerLink" href="#" target="_blank" class="hidden text-[10px] text-amber-400 hover:underline mono">Explorer &rarr;</a>
+        </div>
       </div>
     </div>
 
@@ -105,7 +111,7 @@
           <span class="text-xs bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 mono">SPL Memo SVM</span>
         </div>
         <p class="text-xs text-gray-400 leading-relaxed">
-          Executes verifiable AI Agent state telemetry on Cookie Chain. Integrates with the <strong class="text-gray-200">cookie-mcp</strong> standard to prove real autonomous actions.
+          Broadcasts cryptographic AI Agent telemetry directly onto Cookie Chain SVM. Requires an authentic Web3 signature (Nightly, Phantom, Solflare) or an in-browser cryptographic session key.
         </p>
 
         <div class="space-y-3">
@@ -117,13 +123,13 @@
             <label class="text-xs text-gray-300 block mb-1">Telemetry Payload / State Proof</label>
             <input id="agentMemoInput" type="text" value="heartbeat:healthy | latency:12ms | tps:840" class="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-gray-200 mono focus:border-amber-500 focus:outline-none">
           </div>
-          <button onclick="triggerAgentPing()" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-bold text-xs rounded-lg transition duration-200 shadow-md shadow-amber-500/20">
-            🚀 Broadcast Telemetry to Cookie Chain
+          <button id="broadcastBtn" onclick="triggerAgentPing()" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-bold text-xs rounded-lg transition duration-200 shadow-md shadow-amber-500/20">
+            ⚡ Connect Wallet to Broadcast On-Chain
           </button>
         </div>
 
         <div id="pingResultBox" class="hidden p-3 bg-gray-900/90 rounded-lg border border-gray-800 text-xs mono space-y-1">
-          <div class="text-emerald-400 font-bold flex items-center gap-1">
+          <div id="pingStatusHeader" class="text-emerald-400 font-bold flex items-center gap-1">
             <span>✓</span> Confirmed on Cookie Chain SVM
           </div>
           <div id="pingResultDetails" class="text-gray-400 break-all text-[11px]"></div>
@@ -148,14 +154,14 @@
               <span class="text-xs font-semibold text-amber-300 mono">cookie_get_network_stats</span>
               <span class="text-[10px] text-gray-500 mono">READ</span>
             </div>
-            <p class="text-[11px] text-gray-400 mt-1">Queries current slot, block height and RPC health.</p>
+            <p class="text-[11px] text-gray-400 mt-1">Queries current slot, block height and RPC health in parallel.</p>
           </div>
           <div class="p-3 bg-gray-900/60 rounded-lg border border-gray-800">
             <div class="flex items-center justify-between">
               <span class="text-xs font-semibold text-amber-300 mono">cookie_check_balance</span>
               <span class="text-[10px] text-gray-500 mono">READ</span>
             </div>
-            <p class="text-[11px] text-gray-400 mt-1">Inspects token and COOKIE balances for any SVM public key.</p>
+            <p class="text-[11px] text-gray-400 mt-1">Inspects real token and COOKIE balances for any SVM public key.</p>
           </div>
           <div class="p-3 bg-gray-900/60 rounded-lg border border-gray-800">
             <div class="flex items-center justify-between">
@@ -170,10 +176,28 @@
           <a href="/api/v1/mcp/manifest" target="_blank" class="text-amber-400 hover:underline mono text-[11px]">
             View Raw MCP Manifest JSON &rarr;
           </a>
-          <span class="text-gray-500 text-[11px]">Sub-second finality ($0.0001 tx fee)</span>
+          <button onclick="toggleRpcGuide()" class="text-gray-400 hover:text-amber-300 mono text-[11px] underline">
+            📋 Network Parameters
+          </button>
         </div>
       </div>
 
+    </div>
+
+    <!-- RPC Parameters Guide (Collapsible) -->
+    <div id="rpcGuidePanel" class="hidden glass p-4 rounded-xl border border-amber-500/20 text-xs space-y-2">
+      <div class="flex justify-between items-center pb-2 border-b border-gray-800">
+        <span class="font-bold text-amber-400">Cookie Chain Network Parameters (For Nightly & Phantom)</span>
+        <button onclick="toggleRpcGuide()" class="text-gray-400 hover:text-white">&times;</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] mono">
+        <div><span class="text-gray-500">Network Name:</span> <span class="text-gray-200">Cookie Chain</span></div>
+        <div><span class="text-gray-500">RPC URL:</span> <span class="text-amber-300 select-all">https://rpc.cookiescan.io</span></div>
+        <div><span class="text-gray-500">Currency Symbol:</span> <span class="text-gray-200">COOKIE</span></div>
+        <div><span class="text-gray-500">Block Explorer:</span> <span class="text-amber-300 select-all">https://cookiescan.io</span></div>
+        <div><span class="text-gray-500">Canonical SPL Memo:</span> <span class="text-gray-300 select-all">MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr</span></div>
+        <div><span class="text-gray-500">Official Bridge:</span> <a href="https://www.cookiechain.wtf" target="_blank" class="text-amber-400 underline">https://www.cookiechain.wtf</a></div>
+      </div>
     </div>
 
     <!-- Live Explorer & Transaction Log -->
@@ -191,6 +215,81 @@
     </div>
 
   </main>
+
+  <!-- Real Web3 Wallet Connection Modal -->
+  <div id="walletModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+    <div class="glass max-w-md w-full rounded-2xl p-6 border border-amber-500/30 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-white">Connect SVM Wallet</h3>
+          <p class="text-xs text-gray-400">Select an authentic Web3 provider on Cookie Chain</p>
+        </div>
+        <button onclick="closeWalletModal()" class="text-gray-400 hover:text-white text-lg">&times;</button>
+      </div>
+
+      <div class="space-y-2.5">
+        <!-- Nightly Wallet -->
+        <div id="walletRowNightly" class="p-3 bg-gray-900/80 hover:bg-gray-800/90 rounded-xl border border-gray-800 flex items-center justify-between transition cursor-pointer" onclick="connectWallet('nightly')">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-lg">🦉</div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-bold text-white">Nightly Wallet</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">Recommended</span>
+              </div>
+              <p class="text-[10px] text-gray-400">Official SVM wallet for Cookie Chain bounties</p>
+            </div>
+          </div>
+          <span id="badgeNightly" class="text-[10px] mono px-2 py-0.5 rounded bg-gray-800 text-gray-400">Checking...</span>
+        </div>
+
+        <!-- Phantom Wallet -->
+        <div id="walletRowPhantom" class="p-3 bg-gray-900/80 hover:bg-gray-800/90 rounded-xl border border-gray-800 flex items-center justify-between transition cursor-pointer" onclick="connectWallet('phantom')">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-lg">👻</div>
+            <div>
+              <span class="text-xs font-bold text-white">Phantom</span>
+              <p class="text-[10px] text-gray-400">Standard Solana / SVM Web3 provider</p>
+            </div>
+          </div>
+          <span id="badgePhantom" class="text-[10px] mono px-2 py-0.5 rounded bg-gray-800 text-gray-400">Checking...</span>
+        </div>
+
+        <!-- Solflare Wallet -->
+        <div id="walletRowSolflare" class="p-3 bg-gray-900/80 hover:bg-gray-800/90 rounded-xl border border-gray-800 flex items-center justify-between transition cursor-pointer" onclick="connectWallet('solflare')">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-lg">☀️</div>
+            <div>
+              <span class="text-xs font-bold text-white">Solflare</span>
+              <p class="text-[10px] text-gray-400">Solana SVM Web3 wallet</p>
+            </div>
+          </div>
+          <span id="badgeSolflare" class="text-[10px] mono px-2 py-0.5 rounded bg-gray-800 text-gray-400">Checking...</span>
+        </div>
+
+        <!-- In-Browser Session Key -->
+        <div class="pt-2 border-t border-gray-800">
+          <div class="p-3 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-xl border border-emerald-500/20 flex items-center justify-between transition cursor-pointer" onclick="connectWallet('session_key')">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-lg">🔑</div>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-bold text-emerald-400">In-Browser Session Key</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">Instant Web3</span>
+                </div>
+                <p class="text-[10px] text-gray-400">Generates real Ed25519 SVM keypair in browser</p>
+              </div>
+            </div>
+            <span class="text-[10px] mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Ready</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-[11px] text-gray-500 text-center">
+        No mock keys or fake strings. All addresses and balances are cryptographically grounded.
+      </div>
+    </div>
+  </div>
 
   <!-- Footer -->
   <footer class="border-t border-gray-900 py-6 text-center text-xs text-gray-500 glass">
