@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import * as solanaWeb3 from '@solana/web3.js';
 import { WalletType } from '../types/wallet';
 import { apiUrl } from '../config/api';
-import { executeCookieVaultDeposit, getWalletProvider, PROTOCOL_TREASURY_VAULT_ADDRESS } from '../utils/solana';
+import { executeCookieVaultDeposit, getWalletProvider, sendWalletTransaction, PROTOCOL_TREASURY_VAULT_ADDRESS } from '../utils/solana';
 
 interface VaultStatus {
   protocol: string;
@@ -462,7 +463,49 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
     setIsSubmitting(true);
     setWithdrawNotice(null);
     try {
-      onAddLog('ATOMIC_WITHDRAW', bypassCooldown ? `Ejecutando retiro de emergencia (desbloqueo inmediato)...` : `Quemando acciones cCOOKIE-LP en Cookie Atomic Vault...`, 'text-amber-400');
+      // 1. Prompt real wallet signature to authorize withdrawal on Cookie Chain SVM
+      if (activeWalletType) {
+        onAddLog('PROMPT_WALLET', `Abriendo ${activeWalletType} para autorizar y firmar el retiro on-chain...`, 'text-purple-400');
+        const connection = new solanaWeb3.Connection("https://rpc.cookiescan.io", "confirmed");
+        const senderPubkey = new solanaWeb3.PublicKey(connectedAddress);
+        const memoProgramId = new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+        const memoPayload = bypassCooldown
+          ? `[Cookie Atomic Vault] Emergency Withdraw (-20% penalty) for ${connectedAddress.slice(0, 4)}...${connectedAddress.slice(-4)}`
+          : `[Cookie Atomic Vault] Standard Withdraw cCOOKIE-LP for ${connectedAddress.slice(0, 4)}...${connectedAddress.slice(-4)}`;
+
+        const instruction = new solanaWeb3.TransactionInstruction({
+          keys: [{ pubkey: senderPubkey, isSigner: true, isWritable: true }],
+          programId: memoProgramId,
+          data: new TextEncoder().encode(memoPayload) as any
+        });
+
+        const transaction = new solanaWeb3.Transaction().add(instruction);
+        const { blockhash } = await connection.getLatestBlockhash("confirmed");
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = senderPubkey;
+
+        const providerToUse = activeProvider || getWalletProvider(activeWalletType);
+        try {
+          const authSig = await sendWalletTransaction(
+            activeWalletType,
+            providerToUse,
+            transaction,
+            connection,
+            connectedAddress
+          );
+          onAddLog('WALLET_SIGNED', `¡Retiro firmado y autorizado en ${activeWalletType}! Sig: ${authSig.slice(0, 16)}...`, 'text-emerald-400');
+        } catch (signErr: any) {
+          const signMsg = String(signErr?.message || signErr);
+          if (signMsg.includes('reject') || signMsg.includes('cancel') || signMsg.includes('User rejected')) {
+            onAddLog('WALLET_DECLINED', `Retiro cancelado por el usuario en la billetera (${activeWalletType}).`, 'text-red-400');
+            setIsSubmitting(false);
+            return;
+          }
+          onAddLog('WALLET_NOTICE', `Nota de firma: ${signMsg}. Continuando con el procesamiento...`, 'text-amber-400');
+        }
+      }
+
+      onAddLog('ATOMIC_WITHDRAW', bypassCooldown ? `Ejecutando retiro de emergencia y despacho desde la Tesorería...` : `Quemando acciones cCOOKIE-LP en Cookie Atomic Vault...`, 'text-amber-400');
       const res = await fetch(apiUrl('/api/v1/atomic/withdraw'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
