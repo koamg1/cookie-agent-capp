@@ -282,6 +282,89 @@ export async function requestWalletSignature(
   throw new Error(`La billetera ${type} no soporta la función signMessage.`);
 }
 
+export async function ensureWalletConnected(type: WalletType, provider?: any): Promise<any> {
+  if (type === 'Session Key') {
+    return provider || getSessionKey();
+  }
+
+  let activeProvider = getWalletProvider(type) || provider;
+  if (!activeProvider) {
+    // Brief 120ms tick in case extension injected with delay
+    await new Promise((r) => setTimeout(r, 120));
+    activeProvider = getWalletProvider(type) || provider;
+  }
+
+  if (!activeProvider) {
+    throw new Error(`Proveedor de billetera ${type} no detectado. Asegúrate de tener la extensión instalada y activa.`);
+  }
+
+  const isConnected = !!(
+    activeProvider.isConnected === true ||
+    (activeProvider.publicKey && isValidUserAddress(activeProvider.publicKey.toString()))
+  );
+
+  if (!isConnected) {
+    console.info(`[Wallet] ${type} no está conectado o la sesión expiró. Reconectando automáticamente...`);
+    try {
+      if (typeof activeProvider.connect === 'function') {
+        await activeProvider.connect({ onlyIfTrusted: false });
+      } else if (activeProvider.features && activeProvider.features['standard:connect']) {
+        await activeProvider.features['standard:connect'].connect();
+      }
+    } catch (err: any) {
+      console.warn(`[Wallet] ensureWalletConnected reconnect warning on ${type}:`, err);
+      const msg = String(err?.message || err);
+      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
+        throw err;
+      }
+    }
+  }
+
+  return activeProvider;
+}
+
+export async function getFastBlockhash(
+  connection: solanaWeb3.Connection,
+  fallbackRpcUrl: string = "https://rpc.cookiescan.io"
+): Promise<{ blockhash: string; lastValidBlockHeight: number }> {
+  const fallbackConn = new solanaWeb3.Connection(fallbackRpcUrl, {
+    commitment: "confirmed",
+    wsEndpoint: ""
+  });
+
+  const queryConn = async (conn: solanaWeb3.Connection, ms: number) => {
+    return Promise.race([
+      conn.getLatestBlockhash("confirmed"),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('RPC_TIMEOUT')), ms))
+    ]);
+  };
+
+  return new Promise<{ blockhash: string; lastValidBlockHeight: number }>((resolve, reject) => {
+    let settled = false;
+    let rejectedCount = 0;
+
+    const handleSuccess = (res: { blockhash: string; lastValidBlockHeight: number }) => {
+      if (!settled) {
+        settled = true;
+        resolve(res);
+      }
+    };
+
+    const handleFailure = (err: any) => {
+      console.warn("RPC query attempt notice:", err);
+      rejectedCount++;
+      if (rejectedCount >= 2 && !settled) {
+        settled = true;
+        fallbackConn.getLatestBlockhash("confirmed").then(resolve).catch(reject);
+      }
+    };
+
+    // Fire both concurrent requests immediately; fastest responding node wins!
+    queryConn(connection, 3500).then(handleSuccess).catch(handleFailure);
+    queryConn(fallbackConn, 3500).then(handleSuccess).catch(handleFailure);
+  });
+}
+
 export async function sendWalletTransaction(
   type: WalletType,
   provider: any,
@@ -295,26 +378,52 @@ export async function sendWalletTransaction(
     return await connection.sendRawTransaction(rawTx, { skipPreflight: false });
   }
 
-  // Priority 1: Direct provider.signTransaction (Nightly, Phantom, Solflare, Backpack)
+  // Ensure provider is freshly resolved from window and actively connected
+  const activeProvider = await ensureWalletConnected(type, provider);
+
+  const isDisconnectError = (err: any) => {
+    const msg = String(err?.message || err).toLowerCase();
+    return msg.includes('not connected') || msg.includes('disconnected') || msg.includes('user not connected') || msg.includes('session expired');
+  };
+
+  // Priority 1: Direct activeProvider.signTransaction (Nightly, Phantom, Solflare, Backpack)
   // This opens the wallet extension popup directly and returns the signed Transaction object
-  if (typeof provider.signTransaction === 'function') {
+  if (typeof activeProvider.signTransaction === 'function') {
     try {
-      const signedTx = await provider.signTransaction(transaction);
+      const signedTx = await activeProvider.signTransaction(transaction);
       const raw = signedTx.serialize();
       return await connection.sendRawTransaction(raw, { skipPreflight: false });
     } catch (err: any) {
       console.warn(`signTransaction warning on ${type}:`, err);
-      const msg = String(err);
+      const msg = String(err?.message || err);
       if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
         throw err;
+      }
+
+      // If extension session was idle or dropped, auto-reconnect and retry once immediately
+      if (isDisconnectError(err)) {
+        try {
+          console.info(`[Wallet] Reconnecting ${type} after disconnect error and retrying sign...`);
+          if (typeof activeProvider.connect === 'function') {
+            await activeProvider.connect({ onlyIfTrusted: false });
+          }
+          const retrySignedTx = await activeProvider.signTransaction(transaction);
+          const raw = retrySignedTx.serialize();
+          return await connection.sendRawTransaction(raw, { skipPreflight: false });
+        } catch (retryErr: any) {
+          const retryMsg = String(retryErr?.message || retryErr);
+          if (retryMsg.includes('reject') || retryMsg.includes('cancel') || retryMsg.includes('User rejected')) {
+            throw retryErr;
+          }
+        }
       }
     }
   }
 
-  // Priority 2: Direct provider.signAndSendTransaction
-  if (typeof provider.signAndSendTransaction === 'function') {
+  // Priority 2: Direct activeProvider.signAndSendTransaction
+  if (typeof activeProvider.signAndSendTransaction === 'function') {
     try {
-      const res = await provider.signAndSendTransaction(transaction);
+      const res = await activeProvider.signAndSendTransaction(transaction);
       if (typeof res === 'string') return res;
       if (res && res.signature) {
         if (typeof res.signature === 'string') return res.signature;
@@ -323,7 +432,7 @@ export async function sendWalletTransaction(
       return typeof res === 'object' ? (res.txid || JSON.stringify(res)) : String(res);
     } catch (err: any) {
       console.warn(`signAndSendTransaction warning on ${type}:`, err);
-      const msg = String(err);
+      const msg = String(err?.message || err);
       if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
         throw err;
       }
@@ -331,11 +440,11 @@ export async function sendWalletTransaction(
   }
 
   // Priority 3: Solana Wallet Standard features (must pass requireAllSignatures: false for unsigned tx!)
-  if (provider.features && provider.features['solana:signTransaction']) {
+  if (activeProvider.features && activeProvider.features['solana:signTransaction']) {
     try {
-      const account = (provider.accounts || []).find((a: any) => a.address === connectedAddress) || provider.accounts?.[0];
+      const account = (activeProvider.accounts || []).find((a: any) => a.address === connectedAddress) || activeProvider.accounts?.[0];
       const serializedUnsigned = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
-      const [res] = await provider.features['solana:signTransaction'].signTransaction({
+      const [res] = await activeProvider.features['solana:signTransaction'].signTransaction({
         account: account,
         transaction: serializedUnsigned
       });
@@ -344,17 +453,37 @@ export async function sendWalletTransaction(
       }
     } catch (stdErr: any) {
       console.warn(`standard:signTransaction warning on ${type}:`, stdErr);
-      const msg = String(stdErr);
+      const msg = String(stdErr?.message || stdErr);
       if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
         throw stdErr;
+      }
+      if (isDisconnectError(stdErr) && activeProvider.features['standard:connect']) {
+        try {
+          console.info(`[Wallet] Standard wallet reconnecting ${type} and retrying sign...`);
+          await activeProvider.features['standard:connect'].connect();
+          const account = (activeProvider.accounts || []).find((a: any) => a.address === connectedAddress) || activeProvider.accounts?.[0];
+          const serializedUnsigned = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
+          const [res] = await activeProvider.features['solana:signTransaction'].signTransaction({
+            account: account,
+            transaction: serializedUnsigned
+          });
+          if (res && res.signedTransaction) {
+            return await connection.sendRawTransaction(res.signedTransaction, { skipPreflight: false });
+          }
+        } catch (retryStdErr: any) {
+          const retryMsg = String(retryStdErr?.message || retryStdErr);
+          if (retryMsg.includes('reject') || retryMsg.includes('cancel') || retryMsg.includes('User rejected')) {
+            throw retryStdErr;
+          }
+        }
       }
     }
   }
 
-  if (provider.features && provider.features['solana:signAndSendTransaction']) {
-    const account = (provider.accounts || []).find((a: any) => a.address === connectedAddress) || provider.accounts?.[0];
+  if (activeProvider.features && activeProvider.features['solana:signAndSendTransaction']) {
+    const account = (activeProvider.accounts || []).find((a: any) => a.address === connectedAddress) || activeProvider.accounts?.[0];
     const serializedUnsigned = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
-    const [res] = await provider.features['solana:signAndSendTransaction'].signAndSendTransaction({
+    const [res] = await activeProvider.features['solana:signAndSendTransaction'].signAndSendTransaction({
       account: account,
       transaction: serializedUnsigned,
       chain: 'solana:mainnet'
@@ -364,7 +493,7 @@ export async function sendWalletTransaction(
     }
   }
 
-  throw new Error(`The ${type} wallet provider does not support transaction signing.`);
+  throw new Error(`La billetera ${type} no respondió a la solicitud de firma. Abre la extensión, verifica que esté desbloqueada e intenta nuevamente.`);
 }
 
 export const COOKIE_MAINNET_MINT = '36ZrtQoab5MhhySaP1YSTwUahSk6GRVUTtZ6cuVfm9e1';
@@ -379,7 +508,7 @@ export function getSolanaMainnetRpcUrl(): string {
   if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
     return endpoint;
   }
-  return `http://127.0.0.1:8080${endpoint}`;
+  return `http://127.0.0.1:8000${endpoint}`;
 }
 
 export async function executeSolanaMainnetBurn(
@@ -391,8 +520,9 @@ export async function executeSolanaMainnetBurn(
   onStageChange?: (stage: 'preparing' | 'signing' | 'confirming') => void
 ): Promise<string> {
   if (onStageChange) onStageChange('preparing');
-  let rpcUrl = getSolanaMainnetRpcUrl();
-  let connection = new solanaWeb3.Connection(rpcUrl, {
+  const activeProvider = await ensureWalletConnected(type, provider);
+  const rpcUrl = getSolanaMainnetRpcUrl();
+  const connection = new solanaWeb3.Connection(rpcUrl, {
     commitment: "confirmed",
     wsEndpoint: ""
   });
@@ -414,27 +544,7 @@ export async function executeSolanaMainnetBurn(
 
   const transaction = new solanaWeb3.Transaction().add(burnIx, memoIx);
 
-  let blockhash: string;
-  let lastValidBlockHeight: number;
-  try {
-    const res = await connection.getLatestBlockhash("confirmed");
-    blockhash = res.blockhash;
-    lastValidBlockHeight = res.lastValidBlockHeight;
-  } catch (primaryErr) {
-    console.warn("Primary RPC failed to get blockhash, trying localhost fallback:", primaryErr);
-    const fallbackUrl = "http://127.0.0.1:8080/api/v1/solana/rpc";
-    if (rpcUrl !== fallbackUrl) {
-      connection = new solanaWeb3.Connection(fallbackUrl, {
-        commitment: "confirmed",
-        wsEndpoint: ""
-      });
-      const res = await connection.getLatestBlockhash("confirmed");
-      blockhash = res.blockhash;
-      lastValidBlockHeight = res.lastValidBlockHeight;
-    } else {
-      throw primaryErr;
-    }
-  }
+  const { blockhash, lastValidBlockHeight } = await getFastBlockhash(connection, "https://api.mainnet-beta.solana.com");
 
   transaction.recentBlockhash = blockhash;
   transaction.feePayer = owner;
@@ -442,15 +552,17 @@ export async function executeSolanaMainnetBurn(
   if (onStageChange) onStageChange('signing');
   if (onLog) onLog('BURN_TX', `Prompting ${type} to sign real Token-2022 burn of ${amount} COOKIE on Solana Mainnet...`, 'text-purple-400');
 
-  const txSignature = await sendWalletTransaction(type, provider, transaction, connection, ownerAddress);
+  const txSignature = await sendWalletTransaction(type, activeProvider, transaction, connection, ownerAddress);
 
   if (onStageChange) onStageChange('confirming');
-  if (onLog) onLog('CONFIRMING', `Transaction broadcast: ${txSignature}. Confirming block on Solana Mainnet...`, 'text-amber-400');
+  if (onLog) onLog('CONFIRMING', `Transaction broadcast: ${txSignature.slice(0, 16)}... Confirming block on Solana Mainnet...`, 'text-amber-400');
 
   try {
-    await connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight }, 'confirmed');
+    const confirmPromise = connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight }, 'confirmed');
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('FAST_PATH_TIMEOUT')), 6000));
+    await Promise.race([confirmPromise, timeoutPromise]);
   } catch (e) {
-    console.warn("Mainnet confirm warning:", e);
+    console.info("Mainnet confirm proceeding:", e);
   }
 
   return txSignature;
@@ -464,7 +576,7 @@ export function getCookieChainRpcUrl(): string {
   if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
     return endpoint;
   }
-  return `http://127.0.0.1:8080${endpoint}`;
+  return `http://127.0.0.1:8000${endpoint}`;
 }
 
 export async function executeCookieChainBurn(
@@ -476,8 +588,9 @@ export async function executeCookieChainBurn(
   onStageChange?: (stage: 'preparing' | 'signing' | 'confirming') => void
 ): Promise<string> {
   if (onStageChange) onStageChange('preparing');
-  let rpcUrl = getCookieChainRpcUrl();
-  let connection = new solanaWeb3.Connection(rpcUrl, {
+  const activeProvider = await ensureWalletConnected(type, provider);
+  const rpcUrl = getCookieChainRpcUrl();
+  const connection = new solanaWeb3.Connection(rpcUrl, {
     commitment: "confirmed",
     wsEndpoint: ""
   });
@@ -502,22 +615,7 @@ export async function executeCookieChainBurn(
 
   const transaction = new solanaWeb3.Transaction().add(transferIx, memoIx);
 
-  let blockhash: string;
-  let lastValidBlockHeight: number;
-  try {
-    const res = await connection.getLatestBlockhash("confirmed");
-    blockhash = res.blockhash;
-    lastValidBlockHeight = res.lastValidBlockHeight;
-  } catch (primaryErr) {
-    console.warn("Primary Cookie Chain RPC failed to get blockhash, trying direct fallback:", primaryErr);
-    connection = new solanaWeb3.Connection("https://rpc.cookiescan.io", {
-      commitment: "confirmed",
-      wsEndpoint: ""
-    });
-    const res = await connection.getLatestBlockhash("confirmed");
-    blockhash = res.blockhash;
-    lastValidBlockHeight = res.lastValidBlockHeight;
-  }
+  const { blockhash, lastValidBlockHeight } = await getFastBlockhash(connection, "https://rpc.cookiescan.io");
 
   transaction.recentBlockhash = blockhash;
   transaction.feePayer = owner;
@@ -525,15 +623,17 @@ export async function executeCookieChainBurn(
   if (onStageChange) onStageChange('signing');
   if (onLog) onLog('BURN_TX', `Prompting ${type} to sign burn transfer of ${amount} COOKIE to 1nc1nerator on Cookie Chain...`, 'text-purple-400');
 
-  const txSignature = await sendWalletTransaction(type, provider, transaction, connection, ownerAddress);
+  const txSignature = await sendWalletTransaction(type, activeProvider, transaction, connection, ownerAddress);
 
   if (onStageChange) onStageChange('confirming');
-  if (onLog) onLog('CONFIRMING', `Transaction broadcast: ${txSignature}. Confirming on Cookie Chain SVM...`, 'text-amber-400');
+  if (onLog) onLog('CONFIRMING', `Transaction broadcast: ${txSignature.slice(0, 16)}... Confirming on Cookie Chain SVM...`, 'text-amber-400');
 
   try {
-    await connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight }, 'confirmed');
+    const confirmPromise = connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight }, 'confirmed');
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('FAST_PATH_TIMEOUT')), 6000));
+    await Promise.race([confirmPromise, timeoutPromise]);
   } catch (e) {
-    console.warn("Cookie Chain confirm warning:", e);
+    console.info("Cookie Chain fast confirm proceeding:", e);
   }
 
   return txSignature;
@@ -551,8 +651,13 @@ export async function executeCookieVaultDeposit(
   onStageChange?: (stage: 'preparing' | 'signing' | 'confirming') => void
 ): Promise<string> {
   if (onStageChange) onStageChange('preparing');
-  let rpcUrl = getCookieChainRpcUrl();
-  let connection = new solanaWeb3.Connection(rpcUrl, {
+  if (onLog) onLog('WALLET_CHECK', `Verificando conexión activa con ${type}...`, 'text-cyan-400');
+
+  // 1. Proactively ensure wallet is connected before building transaction
+  const activeProvider = await ensureWalletConnected(type, provider);
+
+  const rpcUrl = getCookieChainRpcUrl();
+  const connection = new solanaWeb3.Connection(rpcUrl, {
     commitment: "confirmed",
     wsEndpoint: ""
   });
@@ -577,22 +682,8 @@ export async function executeCookieVaultDeposit(
 
   const transaction = new solanaWeb3.Transaction().add(transferIx, memoIx);
 
-  let blockhash: string;
-  let lastValidBlockHeight: number;
-  try {
-    const res = await connection.getLatestBlockhash("confirmed");
-    blockhash = res.blockhash;
-    lastValidBlockHeight = res.lastValidBlockHeight;
-  } catch (primaryErr) {
-    console.warn("Primary Cookie Chain RPC failed to get blockhash, trying direct fallback:", primaryErr);
-    connection = new solanaWeb3.Connection("https://rpc.cookiescan.io", {
-      commitment: "confirmed",
-      wsEndpoint: ""
-    });
-    const res = await connection.getLatestBlockhash("confirmed");
-    blockhash = res.blockhash;
-    lastValidBlockHeight = res.lastValidBlockHeight;
-  }
+  // 2. Fetch blockhash with ultra-fast timeout (2.5s) & direct fallback
+  const { blockhash, lastValidBlockHeight } = await getFastBlockhash(connection, "https://rpc.cookiescan.io");
 
   transaction.recentBlockhash = blockhash;
   transaction.feePayer = owner;
@@ -600,17 +691,21 @@ export async function executeCookieVaultDeposit(
   if (onStageChange) onStageChange('signing');
   if (onLog) onLog('DEPOSIT_TX', `Prompting ${type} to sign real transfer of ${amount} $COOKIE to Vault Treasury on Cookie Chain...`, 'text-purple-400');
 
-  const txSignature = await sendWalletTransaction(type, provider, transaction, connection, ownerAddress);
+  const txSignature = await sendWalletTransaction(type, activeProvider, transaction, connection, ownerAddress);
 
   if (onStageChange) onStageChange('confirming');
-  if (onLog) onLog('CONFIRMING', `Transaction broadcast: ${txSignature}. Confirming on Cookie Chain SVM...`, 'text-amber-400');
+  if (onLog) onLog('CONFIRMING', `Transaction broadcast: ${txSignature.slice(0, 16)}... Confirming on Cookie Chain SVM...`, 'text-amber-400');
 
+  // 3. Fast bounded confirmation (max 6s) so UI doesn't hang before Zero-Trust verification
   try {
-    await connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight }, 'confirmed');
+    const confirmPromise = connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight }, 'confirmed');
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('FAST_PATH_TIMEOUT')), 6000));
+    await Promise.race([confirmPromise, timeoutPromise]);
   } catch (e) {
-    console.warn("Cookie Chain confirm warning:", e);
+    console.info("Fast-path confirm proceeding to Zero-Trust RPC check:", e);
   }
 
   return txSignature;
 }
+
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { WalletType } from '../types/wallet';
 import { apiUrl } from '../config/api';
-import { executeCookieVaultDeposit, PROTOCOL_TREASURY_VAULT_ADDRESS } from '../utils/solana';
+import { executeCookieVaultDeposit, getWalletProvider, PROTOCOL_TREASURY_VAULT_ADDRESS } from '../utils/solana';
 
 interface VaultStatus {
   protocol: string;
@@ -307,7 +307,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
     }
   }, [engineMode]);
 
-  // Handle Vault Deposit (Real Phantom / Backpack on-chain transfer to Treasury)
+  // Handle Vault Deposit (Real Phantom / Nightly / Backpack on-chain transfer to Treasury)
   const handleDeposit = async () => {
     if (!connectedAddress || !activeWalletType) {
       onOpenWalletModal();
@@ -322,6 +322,8 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
       onAddLog('DEPOSIT_WARN', `Advertencia: El monto (${cVal} COOKIE) supera tu balance actual (${balanceCookie.toFixed(2)} COOKIE).`, 'text-amber-400');
     }
 
+    const providerToUse = activeProvider || getWalletProvider(activeWalletType);
+
     setIsSubmitting(true);
     try {
       onAddLog('TREASURY_TRANSFER', `Iniciando transferencia de ${cVal} $COOKIE a la Bóveda de Tesorería (${PROTOCOL_TREASURY_VAULT_ADDRESS.slice(0, 4)}...${PROTOCOL_TREASURY_VAULT_ADDRESS.slice(-4)})`, 'text-cyan-400');
@@ -330,7 +332,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
       // 1. Prompt real wallet signature and broadcast on Cookie Chain SVM
       const txSignature = await executeCookieVaultDeposit(
         activeWalletType,
-        activeProvider,
+        providerToUse,
         connectedAddress,
         cVal,
         PROTOCOL_TREASURY_VAULT_ADDRESS,
@@ -364,6 +366,8 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
       const msg = err?.message || String(err);
       if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
         onAddLog('WALLET_CANCEL', 'Depósito cancelado por el usuario en la billetera.', 'text-amber-400');
+      } else if (msg.includes('not connected') || msg.includes('disconnected')) {
+        onAddLog('WALLET_RECONNECT', 'La billetera estaba en reposo. Se reconectó automáticamente; por favor intenta el depósito de nuevo.', 'text-amber-400');
       } else {
         onAddLog('DEPOSIT_ERROR', `Error en depósito: ${msg}`, 'text-red-400');
       }

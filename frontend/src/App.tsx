@@ -45,11 +45,16 @@ export const App: React.FC = () => {
     return savedType ? getWalletProvider(savedType) : null;
   });
 
-  // Ensure activeProvider is always restored on mount / reload
+  // Ensure activeProvider is always restored and warmed up on mount / reload
   useEffect(() => {
-    if (activeWalletType && !activeProvider) {
-      const p = getWalletProvider(activeWalletType);
-      if (p) setActiveProvider(p);
+    if (activeWalletType) {
+      const p = activeProvider || getWalletProvider(activeWalletType);
+      if (p) {
+        if (!activeProvider) setActiveProvider(p);
+        if (typeof p.connect === 'function' && !p.isConnected) {
+          p.connect({ onlyIfTrusted: true }).catch(() => {});
+        }
+      }
     }
   }, [activeWalletType, activeProvider]);
 

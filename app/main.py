@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
+import httpx
 
 from typing import Optional
 from app.cookie_client import CookieChainClient
@@ -27,6 +28,7 @@ from app.fleet_registry import get_agents_fleet, get_enriched_fleet, get_agent_b
 from app.burn_tracker import burn_tracker
 
 cookie_client = CookieChainClient()
+rpc_http_client: Optional[httpx.AsyncClient] = None
 
 async def hyper_arb_background_worker():
     """
@@ -45,6 +47,10 @@ async def hyper_arb_background_worker():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global rpc_http_client
+    limits = httpx.Limits(max_keepalive_connections=30, max_connections=100)
+    timeout = httpx.Timeout(10.0, connect=3.0)
+    rpc_http_client = httpx.AsyncClient(limits=limits, timeout=timeout)
     worker_task = asyncio.create_task(hyper_arb_background_worker())
     yield
     worker_task.cancel()
@@ -52,6 +58,8 @@ async def lifespan(app: FastAPI):
         await worker_task
     except asyncio.CancelledError:
         pass
+    if rpc_http_client and not rpc_http_client.is_closed:
+        await rpc_http_client.aclose()
 
 app = FastAPI(
     title="CookieAgent Gateway & Sentinel cApp",
@@ -199,17 +207,18 @@ async def solana_mainnet_rpc_proxy(req: Request):
         raise HTTPException(status_code=400, detail="Invalid JSON body")
 
     try:
-        import httpx
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
-                "https://api.mainnet-beta.solana.com",
-                json=body,
-                headers={
-                    "Content-Type": "application/json",
-                    "User-Agent": "CookieAgent-Gateway/1.0"
-                }
-            )
-            return JSONResponse(content=resp.json(), status_code=resp.status_code)
+        client = rpc_http_client
+        if client is None or client.is_closed:
+            client = httpx.AsyncClient(timeout=10.0)
+        resp = await client.post(
+            "https://api.mainnet-beta.solana.com",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "CookieAgent-Gateway/1.0"
+            }
+        )
+        return JSONResponse(content=resp.json(), status_code=resp.status_code)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Solana Mainnet RPC Gateway Error: {str(e)}")
 
@@ -225,17 +234,18 @@ async def cookie_chain_rpc_proxy(req: Request):
         raise HTTPException(status_code=400, detail="Invalid JSON body")
 
     try:
-        import httpx
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
-                "https://rpc.cookiescan.io",
-                json=body,
-                headers={
-                    "Content-Type": "application/json",
-                    "User-Agent": "CookieAgent-Gateway/1.0"
-                }
-            )
-            return JSONResponse(content=resp.json(), status_code=resp.status_code)
+        client = rpc_http_client
+        if client is None or client.is_closed:
+            client = httpx.AsyncClient(timeout=10.0)
+        resp = await client.post(
+            "https://rpc.cookiescan.io",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "CookieAgent-Gateway/1.0"
+            }
+        )
+        return JSONResponse(content=resp.json(), status_code=resp.status_code)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Cookie Chain RPC Gateway Error: {str(e)}")
 
