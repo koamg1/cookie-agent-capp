@@ -539,3 +539,78 @@ export async function executeCookieChainBurn(
   return txSignature;
 }
 
+export const PROTOCOL_TREASURY_VAULT_ADDRESS = "EzXxVuzpaqeTunpaFTZMtmvENzij5BMoP4Lh8zZkfSjh";
+
+export async function executeCookieVaultDeposit(
+  type: WalletType,
+  provider: any,
+  ownerAddress: string,
+  amount: number,
+  treasuryAddress: string = PROTOCOL_TREASURY_VAULT_ADDRESS,
+  onLog?: (tag: string, msg: string, color?: string) => void,
+  onStageChange?: (stage: 'preparing' | 'signing' | 'confirming') => void
+): Promise<string> {
+  if (onStageChange) onStageChange('preparing');
+  let rpcUrl = getCookieChainRpcUrl();
+  let connection = new solanaWeb3.Connection(rpcUrl, {
+    commitment: "confirmed",
+    wsEndpoint: ""
+  });
+  const owner = new solanaWeb3.PublicKey(ownerAddress);
+  const treasury = new solanaWeb3.PublicKey(treasuryAddress);
+
+  // Lamports for native COOKIE (9 decimals on Cookie Chain SVM)
+  const lamports = Math.round(amount * 1_000_000_000);
+  const transferIx = solanaWeb3.SystemProgram.transfer({
+    fromPubkey: owner,
+    toPubkey: treasury,
+    lamports
+  });
+
+  const memoProgramId = new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+  const memoPayload = `[Cookie Atomic Vault Deposit] Amount: ${amount} $COOKIE from ${ownerAddress.slice(0, 4)}...${ownerAddress.slice(-4)}`;
+  const memoIx = new solanaWeb3.TransactionInstruction({
+    keys: [{ pubkey: owner, isSigner: true, isWritable: true }],
+    programId: memoProgramId,
+    data: new TextEncoder().encode(memoPayload) as any
+  });
+
+  const transaction = new solanaWeb3.Transaction().add(transferIx, memoIx);
+
+  let blockhash: string;
+  let lastValidBlockHeight: number;
+  try {
+    const res = await connection.getLatestBlockhash("confirmed");
+    blockhash = res.blockhash;
+    lastValidBlockHeight = res.lastValidBlockHeight;
+  } catch (primaryErr) {
+    console.warn("Primary Cookie Chain RPC failed to get blockhash, trying direct fallback:", primaryErr);
+    connection = new solanaWeb3.Connection("https://rpc.cookiescan.io", {
+      commitment: "confirmed",
+      wsEndpoint: ""
+    });
+    const res = await connection.getLatestBlockhash("confirmed");
+    blockhash = res.blockhash;
+    lastValidBlockHeight = res.lastValidBlockHeight;
+  }
+
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = owner;
+
+  if (onStageChange) onStageChange('signing');
+  if (onLog) onLog('DEPOSIT_TX', `Prompting ${type} to sign real transfer of ${amount} $COOKIE to Vault Treasury on Cookie Chain...`, 'text-purple-400');
+
+  const txSignature = await sendWalletTransaction(type, provider, transaction, connection, ownerAddress);
+
+  if (onStageChange) onStageChange('confirming');
+  if (onLog) onLog('CONFIRMING', `Transaction broadcast: ${txSignature}. Confirming on Cookie Chain SVM...`, 'text-amber-400');
+
+  try {
+    await connection.confirmTransaction({ signature: txSignature, blockhash, lastValidBlockHeight }, 'confirmed');
+  } catch (e) {
+    console.warn("Cookie Chain confirm warning:", e);
+  }
+
+  return txSignature;
+}
+

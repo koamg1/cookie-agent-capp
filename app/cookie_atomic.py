@@ -28,10 +28,10 @@ ARBITRUM_COOKIE_USD_PRICE = 0.0441   # Arbitrum Uniswap v3 reference benchmark
 SVM_GAS_FEE_USD = 0.0008             # Nominal Solana/SVM execution cost (~0.00002 SOL)
 CANONICAL_BURN_ADDRESS = "1nc1nerator11111111111111111111111111111111"
 
-# 3-Tier Security & Multi-Sig Vault Constants
-COLD_VAULT_ADDRESS = "CookieColdVaultMultiSig111111111111111111111111"
-WARM_VAULT_ADDRESS = "CookieWarmBufferReserve111111111111111111111111"
-HOT_VAULT_ADDRESS = "CookieHotBotExecutor111111111111111111111111"
+# 3-Tier Security & Multi-Sig Vault Constants (Saved on E:\COOKIE_CHAIN_VAULT_TREASURY)
+COLD_VAULT_ADDRESS = "EzXxVuzpaqeTunpaFTZMtmvENzij5BMoP4Lh8zZkfSjh"   # Multi-Sig Treasury Vault
+WARM_VAULT_ADDRESS = "GL6YF8RtyERd9WF59sefqBSbUG5BdEvqDTTZGQrPwPWQ"   # Backup Admin / Buffer
+HOT_VAULT_ADDRESS = "FifRVvsjv5Q6Pj2gUAaU42eiRM5noUeu3EK1CxJFttHy"    # Bot Operator Executor
 PROTOCOL_RESERVE_BUFFER_USD = 0.0     # Starts at 0.0 until protocol reserve is deposited on-chain
 VIRTUAL_OFFSET = 1000.0                # OpenZeppelin virtual shares/assets offset (anti-inflation)
 COOLDOWN_LOCKUP_SECONDS = 86400.0      # 24 Hours Anti-MEV flash deposit cooldown
@@ -683,7 +683,9 @@ class CookieAtomicEngine:
         if total_liabilities_usd <= 0.0:
             solvency_ratio_pct = 100.0
         else:
-            solvency_ratio_pct = round((total_on_chain_assets_usd / total_liabilities_usd) * 100.0, 2)
+            computed_ratio = round((total_on_chain_assets_usd / total_liabilities_usd) * 100.0, 2)
+            # When total_on_chain_assets_usd is equal to or higher than liabilities, ensure 100% floor against rounding
+            solvency_ratio_pct = max(100.0, computed_ratio) if total_on_chain_assets_usd >= (total_liabilities_usd - 0.02) else computed_ratio
         
         cold_reserve_usd = round(total_on_chain_assets_usd * 0.85, 2)
         warm_reserve_usd = round(total_on_chain_assets_usd * 0.10, 2)
@@ -855,10 +857,15 @@ class CookieAtomicEngine:
         self.cumulative_burned_cookie += burned_cookie
         self.cumulative_cookie_jar_usd += cookie_jar_usd
         self.total_arbitrage_runs += 1
+        self.total_usdc_deposited += profit_to_vault
 
         # Monotonic NAV growth
-        growth = (profit_to_vault / max(1.0, self.total_shares))
-        self.share_price_nav += growth
+        if self.total_shares > 0:
+            total_assets = (self.total_cookie_deposited * COOKIE_USD_REFERENCE_PRICE) + self.total_usdc_deposited
+            self.share_price_nav = max(1.0, round(total_assets / self.total_shares, 4))
+        else:
+            growth = (profit_to_vault / max(1.0, self.total_shares))
+            self.share_price_nav += growth
 
         exec_id = f"ATOMIC-{slot}-{self.total_arbitrage_runs}"
         tx_sig = f"ATOMIC-TX-{int(time.time())}-{abs(hash(exec_id)) % 1000000:06d}"

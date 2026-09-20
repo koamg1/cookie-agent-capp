@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { WalletType } from '../types/wallet';
 import { apiUrl } from '../config/api';
+import { executeCookieVaultDeposit, PROTOCOL_TREASURY_VAULT_ADDRESS } from '../utils/solana';
 
 interface VaultStatus {
   protocol: string;
@@ -186,9 +187,8 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
   const [tradeFeed, setTradeFeed] = useState<AtomicExecution[]>([]);
   const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw'>('deposit');
 
-  // Capital management inputs
-  const [depositCookie, setDepositCookie] = useState<string>('250');
-  const [depositUsdc, setDepositUsdc] = useState<string>('10.85');
+  // Capital management inputs (Single-Asset $COOKIE only)
+  const [depositCookie, setDepositCookie] = useState<string>('50');
   const [depositTxHash, setDepositTxHash] = useState<string>('');
   const [isVerifyingTx, setIsVerifyingTx] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -307,38 +307,66 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
     }
   }, [engineMode]);
 
-  // Handle Vault Deposit
+  // Handle Vault Deposit (Real Phantom / Backpack on-chain transfer to Treasury)
   const handleDeposit = async () => {
-    if (!connectedAddress) {
+    if (!connectedAddress || !activeWalletType) {
       onOpenWalletModal();
       return;
     }
     const cVal = parseFloat(depositCookie) || 0;
-    const uVal = parseFloat(depositUsdc) || 0;
-    if (cVal <= 0 && uVal <= 0) return;
+    if (cVal <= 0) {
+      onAddLog('DEPOSIT_ERROR', 'Por favor ingresa un monto válido de $COOKIE (> 0)', 'text-red-400');
+      return;
+    }
+    if (balanceCookie > 0 && cVal > balanceCookie) {
+      onAddLog('DEPOSIT_WARN', `Advertencia: El monto (${cVal} COOKIE) supera tu balance actual (${balanceCookie.toFixed(2)} COOKIE).`, 'text-amber-400');
+    }
 
     setIsSubmitting(true);
     try {
-      onAddLog('ATOMIC_DEPOSIT', `Depositing ${cVal} $COOKIE + ${uVal} $USDC into Cookie Atomic Vault...`, 'text-amber-400');
-      const res = await fetch(apiUrl('/api/v1/atomic/deposit'), {
+      onAddLog('TREASURY_TRANSFER', `Iniciando transferencia de ${cVal} $COOKIE a la Bóveda de Tesorería (${PROTOCOL_TREASURY_VAULT_ADDRESS.slice(0, 4)}...${PROTOCOL_TREASURY_VAULT_ADDRESS.slice(-4)})`, 'text-cyan-400');
+      onAddLog('WALLET_APPROVAL', `Abre tu billetera (${activeWalletType}) y aprueba la transacción on-chain...`, 'text-purple-400');
+
+      // 1. Prompt real wallet signature and broadcast on Cookie Chain SVM
+      const txSignature = await executeCookieVaultDeposit(
+        activeWalletType,
+        activeProvider,
+        connectedAddress,
+        cVal,
+        PROTOCOL_TREASURY_VAULT_ADDRESS,
+        onAddLog
+      );
+
+      onAddLog('CHAIN_CONFIRMED', `¡Transacción transmitida a Cookie Chain! Hash: ${txSignature.slice(0, 16)}...`, 'text-emerald-400');
+
+      // 2. Cryptographic Zero-Trust verification via backend RPC
+      onAddLog('ZERO_TRUST_AUDIT', 'Verificando firma on-chain con el nodo RPC de Cookie Chain (Zero-Trust)...', 'text-amber-400');
+      const res = await fetch(apiUrl('/api/v1/atomic/verify-deposit'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          tx_hash: txSignature,
           user_address: connectedAddress,
           amount_cookie: cVal,
-          amount_usdc: uVal
+          amount_usdc: 0.0
         })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Deposit failed');
+      if (!res.ok) throw new Error(data.detail || 'Fallo en la acreditación del depósito');
 
       setLastActionReceipt(data);
-      onAddLog('DEPOSIT_SUCCESS', `Minted ${data.shares_minted} cCOOKIE-LP shares at NAV $${data.share_price_nav}!`, 'text-emerald-400');
+      onAddLog('DEPOSIT_SUCCESS', `¡Depósito on-chain acreditado! Recibiste ${data.shares_minted} cCOOKIE-LP (NAV: $${data.share_price_nav}).`, 'text-emerald-400');
       fetchTelemetry();
       fetchUserPosition(connectedAddress);
       onRefreshBalance();
     } catch (err: any) {
-      onAddLog('DEPOSIT_ERROR', err.message, 'text-red-400');
+      console.error('Deposit error:', err);
+      const msg = err?.message || String(err);
+      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
+        onAddLog('WALLET_CANCEL', 'Depósito cancelado por el usuario en la billetera.', 'text-amber-400');
+      } else {
+        onAddLog('DEPOSIT_ERROR', `Error en depósito: ${msg}`, 'text-red-400');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -351,14 +379,13 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
       return;
     }
     if (!depositTxHash || depositTxHash.trim().length < 8) {
-      onAddLog('VERIFY_ERROR', 'Please enter a valid on-chain transaction hash or signature.', 'text-red-400');
+      onAddLog('VERIFY_ERROR', 'Por favor ingresa un hash o firma de transacción válida.', 'text-red-400');
       return;
     }
     const cVal = parseFloat(depositCookie) || 0;
-    const uVal = parseFloat(depositUsdc) || 0;
     setIsVerifyingTx(true);
     try {
-      onAddLog('VERIFY_RPC', `Verifying deposit tx ${depositTxHash.slice(0, 8)}... via Cookie Chain RPC (Zero-Trust)...`, 'text-amber-400');
+      onAddLog('VERIFY_RPC', `Verificando depósito ${depositTxHash.slice(0, 8)}... vía RPC de Cookie Chain (Zero-Trust)...`, 'text-amber-400');
       const res = await fetch(apiUrl('/api/v1/atomic/verify-deposit'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -366,14 +393,14 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
           tx_hash: depositTxHash.trim(),
           user_address: connectedAddress,
           amount_cookie: cVal,
-          amount_usdc: uVal
+          amount_usdc: 0.0
         })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Verification failed');
+      if (!res.ok) throw new Error(data.detail || 'Fallo en la verificación on-chain');
 
       setLastActionReceipt(data);
-      onAddLog('VERIFY_SUCCESS', `Verified on-chain! Minted ${data.shares_minted} cCOOKIE-LP shares (Tx: ${depositTxHash.slice(0, 8)}...)`, 'text-emerald-400');
+      onAddLog('VERIFY_SUCCESS', `¡Verificado on-chain! Acreditadas ${data.shares_minted} acciones cCOOKIE-LP (Tx: ${depositTxHash.slice(0, 8)}...)`, 'text-emerald-400');
       setDepositTxHash('');
       fetchTelemetry();
       fetchUserPosition(connectedAddress);
@@ -873,7 +900,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
                         : 'bg-white hover:bg-gray-50 text-[#0b1f3a]/60'
                     }`}
                   >
-                    📥 Depositar Capital Dual
+                    📥 Depositar $COOKIE (1 Clic)
                   </button>
                   <button
                     onClick={() => setActiveTab('withdraw')}
@@ -895,7 +922,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
               {activeTab === 'deposit' ? (
                 <div className="space-y-4">
                   <p className="text-xs font-medium text-[#0b1f3a]/75 leading-relaxed">
-                    Provee capital a la bóveda atómica de Cookie Chain. El motor utiliza los fondos exclusivamente para arbitrar spreads atómicos, incrementando el NAV de tus acciones de forma compuesta.
+                    Deposita directamente en <strong>$COOKIE nativo</strong>. No requieres transferir ni puentear USDC: la Bóveda de Tesorería Multifirma custodia los fondos y el motor ejecuta los arbitrajes y conversiones internas de manera automática.
                   </p>
 
                   {/* 24h Anti-MEV Cooldown Badge */}
@@ -909,62 +936,94 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
                     </span>
                   </div>
 
-                  {/* Vault Treasury Address */}
-                  <div className="p-2.5 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between text-[11px] mono">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <span className="text-gray-500 font-sans">Vault Treasury:</span>
-                      <span className="font-bold text-[#0b1f3a] truncate">CookieColdVaultMultiSig111111111111111111111111</span>
+                  {/* Multi-Sig Treasury Address */}
+                  <div className="p-2.5 rounded-xl border-2 border-[#0b1f3a]/20 bg-[#f8fafc] flex flex-col gap-1.5 text-[11px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black text-[#0b1f3a] flex items-center gap-1">
+                        <span>🏛️</span>
+                        <span>Tesorería Multifirma 2-de-3 (Cookie Chain SVM):</span>
+                      </span>
+                      <a
+                        href={`https://cookiescan.io/address/${PROTOCOL_TREASURY_VAULT_ADDRESS}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-blue-600 hover:underline font-bold shrink-0"
+                      >
+                        Ver en cookiescan.io ↗
+                      </a>
                     </div>
-                    <a
-                      href="https://cookiescan.io/address/CookieColdVaultMultiSig111111111111111111111111"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[10px] text-blue-600 hover:underline font-bold shrink-0 ml-2"
-                    >
-                      cookiescan.io ↗
-                    </a>
+                    <div className="mono font-bold text-[#0b1f3a] break-all bg-white p-1.5 rounded-lg border border-[#0b1f3a]/15 text-[10px]">
+                      {PROTOCOL_TREASURY_VAULT_ADDRESS}
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
+                  {/* Single-Asset $COOKIE Input */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
                       <label className="text-[10px] font-black uppercase text-[#0b1f3a]/70">
-                        Monto $COOKIE:
+                        Monto en $COOKIE nativo:
                       </label>
+                      <div className="flex gap-1">
+                        {[0.25, 0.50, 0.75, 1.0].map((pct) => (
+                          <button
+                            key={pct}
+                            type="button"
+                            onClick={() => {
+                              const amt = balanceCookie > 0 ? (balanceCookie * pct).toFixed(2) : '50';
+                              setDepositCookie(amt);
+                            }}
+                            className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-gray-100 hover:bg-[#ffe0a8] text-[#0b1f3a] border border-[#0b1f3a]/20 transition-all cursor-pointer"
+                          >
+                            {pct === 1.0 ? 'MAX' : `${pct * 100}%`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="relative">
                       <input
                         type="number"
                         value={depositCookie}
                         onChange={(e) => setDepositCookie(e.target.value)}
-                        className="w-full neo-input px-3 py-2 text-xs font-bold text-[#0b1f3a] mono"
-                        placeholder="250"
+                        className="w-full neo-input px-3 py-2 text-sm font-bold text-[#0b1f3a] mono pr-20"
+                        placeholder="50"
+                        min="0"
+                        step="any"
                       />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-[#0b1f3a]/50 mono pointer-events-none">
+                        $COOKIE
+                      </span>
                     </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-[#0b1f3a]/70">
-                        Monto $USDC:
-                      </label>
-                      <input
-                        type="number"
-                        value={depositUsdc}
-                        onChange={(e) => setDepositUsdc(e.target.value)}
-                        className="w-full neo-input px-3 py-2 text-xs font-bold text-[#0b1f3a] mono"
-                        placeholder="10.85"
-                      />
+                    <div className="flex items-center justify-between text-[10px] text-[#0b1f3a]/60">
+                      <span>Valor estimado: ~${((parseFloat(depositCookie) || 0) * 0.0435).toFixed(2)} USD</span>
+                      <span>Balance disponible: {balanceCookie.toFixed(2)} COOKIE</span>
                     </div>
                   </div>
 
                   <button
                     onClick={handleDeposit}
                     disabled={isSubmitting}
-                    className="w-full py-3 rounded-xl bg-[#86efac] hover:bg-[#4ade80] text-[#0b1f3a] font-black text-xs border-2 border-[#0b1f3a] shadow-[0_3px_0_#0b1f3a] cursor-pointer disabled:opacity-50"
+                    className="w-full py-3 rounded-xl bg-[#86efac] hover:bg-[#4ade80] text-[#0b1f3a] font-black text-xs border-2 border-[#0b1f3a] shadow-[0_3px_0_#0b1f3a] cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {isSubmitting ? 'Procesando Depósito en SVM...' : '⚡ Depositar en Cookie Atomic Vault'}
+                    {isSubmitting ? (
+                      <>
+                        <span className="animate-spin inline-block">⏳</span>
+                        <span>Confirmando en Billetera (Phantom / Backpack)...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>⚡</span>
+                        <span>Depositar $COOKIE en Bóveda (Firma en Wallet)</span>
+                      </>
+                    )}
                   </button>
+                  <p className="text-[10px] text-center text-[#0b1f3a]/60">
+                    Firma real requerida en tu extensión de billetera. La transacción se transmite on-chain a la Tesorería.
+                  </p>
 
                   {/* Zero-Trust On-Chain Verification Option */}
                   <div className="pt-2 border-t border-[#0b1f3a]/10 space-y-2">
                     <div className="flex items-center justify-between text-[10px] font-bold text-[#0b1f3a]/70">
-                      <span>¿Ya transferiste on-chain? Acredita tu TX Hash:</span>
+                      <span>¿Transferiste manualmente desde CLI o Explorer? Acredita tu Tx:</span>
                       <span className="mono text-[9px] text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">ZERO-TRUST RPC</span>
                     </div>
                     <div className="flex gap-2">
