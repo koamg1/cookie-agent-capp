@@ -29,15 +29,15 @@ from app.burn_tracker import burn_tracker
 cookie_client = CookieChainClient()
 
 async def hyper_arb_background_worker():
-    """Autonomous 24/7 Sentinel background runner for HyperArb Vault."""
+    """
+    Autonomous 24/7 Sentinel background runner:
+    Mainnet Beta Standby Mode: polls Cookie Chain RPC for epoch/slot heartbeat
+    without mutating vault accounting or fabricating mock trades.
+    """
     while True:
         try:
-            await asyncio.sleep(12)  # Runs every 12 seconds
-            epoch_info = await cookie_client.get_epoch_info()
-            slot = epoch_info.get("absolute_slot", 26058000)
-            blockhash_data = await cookie_client.get_latest_blockhash()
-            bh = blockhash_data.get("blockhash", "7PG5P5KzG56zUqD5TJhSyEDPTHEe6QW1bLFUyDhYCoSz")
-            hyper_arb_vault.execute_arbitrage_cycle(slot=slot, blockhash=bh)
+            await asyncio.sleep(15)  # Runs every 15 seconds
+            await cookie_client.get_epoch_info()
         except asyncio.CancelledError:
             break
         except Exception:

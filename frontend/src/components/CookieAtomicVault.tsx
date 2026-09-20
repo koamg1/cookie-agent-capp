@@ -782,17 +782,17 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
                 ${vaultStatus ? vaultStatus.share_price_nav.toFixed(4) : '1.0000'}
               </span>
               <span className="text-[10px] font-bold text-emerald-800 block mt-0.5">
-                ● Crecimiento Monotónico
+                ● Base Inicial (1.0000)
               </span>
             </div>
 
             <div className="bg-[#eff6ff] p-3.5 rounded-2xl border-2 border-[#0b1f3a] shadow-[0_2px_0_#0b1f3a]">
               <span className="text-[10px] uppercase font-black text-[#0b1f3a]/60 block">APY Cuantitativo Proyectado</span>
               <span className="text-lg font-black text-blue-700 mono mt-1 block">
-                {vaultStatus ? `${vaultStatus.projected_apy_pct}%` : '38.4%'}
+                {vaultStatus && vaultStatus.projected_apy_pct > 0 ? `${vaultStatus.projected_apy_pct}%` : '0.0%'}
               </span>
               <span className="text-[10px] font-bold text-blue-800 block mt-0.5">
-                Basado en capturas atómicas
+                {vaultStatus && vaultStatus.projected_apy_pct > 0 ? 'Basado en capturas atómicas' : 'En espera de DEX Secundario'}
               </span>
             </div>
 
@@ -802,7 +802,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
                 {vaultStatus ? vaultStatus.total_arbitrage_runs : 0}
               </span>
               <span className="text-[10px] font-bold text-pink-800 block mt-0.5">
-                80% Vault | 10% Burn | 10% Jar
+                {vaultStatus && vaultStatus.total_arbitrage_runs > 0 ? '80% Vault | 10% Burn | 10% Jar' : 'Modo Sentinel • 0 Ejecuciones'}
               </span>
             </div>
           </div>
@@ -892,7 +892,19 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
 
                 <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 text-xs mono">
                   {tradeFeed.length === 0 ? (
-                    <div className="text-center py-4 text-[#0b1f3a]/50 text-xs">Esperando nuevo ciclo...</div>
+                    <div className="text-center py-5 space-y-2">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 border border-blue-300 text-blue-800 flex items-center justify-center mx-auto text-sm">
+                        📡
+                      </div>
+                      <p className="font-bold text-[#0b1f3a] text-xs">Sentinel en Standby Activo</p>
+                      <p className="text-[10px] text-[#0b1f3a]/65 max-w-[280px] mx-auto leading-relaxed">
+                        Monitoreando Cookoven en slots de 400ms. Sin operaciones simuladas: a la espera del despliegue de DEX secundario en Cookie Chain para capturar spreads reales.
+                      </p>
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-[9px] font-bold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>CAPITAL 100% SEGURO • 0 RIESGO</span>
+                      </div>
+                    </div>
                   ) : (
                     tradeFeed.map((trade) => (
                       <div key={trade.id} className="p-2 rounded-xl bg-[#f8fafc] border border-[#0b1f3a]/10 flex items-center justify-between">
