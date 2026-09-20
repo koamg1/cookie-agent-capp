@@ -11,7 +11,7 @@ import sqlite3
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 
-COOKIE_USD_PRICE = 0.0435  # Reference oracle price for COOKIE/USD
+COOKIE_USD_PRICE = 0.00008172  # Reference oracle price for COOKIE/USD (~$0.02 USD per 244.75 COOK)
 BURN_ADDRESS = "1nc1nerator11111111111111111111111111111111"
 
 # Database storage path for persistent state across process restarts

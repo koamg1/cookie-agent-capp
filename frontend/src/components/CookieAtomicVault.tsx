@@ -693,7 +693,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
                   </div>
                   <div>
                     <span className="text-[#0b1f3a]/60 block">Implied Price:</span>
-                    <span className="font-bold text-emerald-700">$0.0435 USD</span>
+                    <span className="font-bold text-emerald-700">$0.0000817 USD</span>
                   </div>
                   <div>
                     <span className="text-[#0b1f3a]/60 block">Reserves:</span>
@@ -701,7 +701,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
                   </div>
                   <div>
                     <span className="text-[#0b1f3a]/60 block">USDC Depth:</span>
-                    <span className="font-bold text-[#0b1f3a]">$8,057.96 USDC</span>
+                    <span className="font-bold text-[#0b1f3a]">$15.14 USDC</span>
                   </div>
                 </div>
               </div>
@@ -767,19 +767,19 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
           {/* Core Vault Metrics Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-[#fffbeb] p-3.5 rounded-2xl border-2 border-[#0b1f3a] shadow-[0_2px_0_#0b1f3a]">
-              <span className="text-[10px] uppercase font-black text-[#0b1f3a]/60 block">TVL (Capital Dual)</span>
+              <span className="text-[10px] uppercase font-black text-[#0b1f3a]/60 block">TVL On-Chain</span>
               <span className="text-lg font-black text-[#0b1f3a] mono mt-1 block">
-                ${vaultStatus ? vaultStatus.tvl_usd.toLocaleString() : '24,795.00'}
+                ${vaultStatus ? vaultStatus.tvl_usd.toFixed(2) : '0.02'} USD
               </span>
               <span className="text-[10px] font-bold text-amber-700 block mt-0.5">
-                {vaultStatus ? vaultStatus.total_cookie_reserve.toLocaleString() : '285k'} COOKIE + ${vaultStatus ? vaultStatus.total_usdc_reserve.toLocaleString() : '12.4k'}
+                {vaultStatus ? vaultStatus.total_cookie_reserve.toLocaleString() : '244.75'} COOKIE + $0.00 USDC
               </span>
             </div>
 
             <div className="bg-[#f0fdf4] p-3.5 rounded-2xl border-2 border-[#0b1f3a] shadow-[0_2px_0_#0b1f3a]">
               <span className="text-[10px] uppercase font-black text-[#0b1f3a]/60 block">NAV por Acción (cCOOKIE-LP)</span>
               <span className="text-lg font-black text-emerald-700 mono mt-1 block">
-                ${vaultStatus ? vaultStatus.share_price_nav.toFixed(4) : '1.1632'}
+                ${vaultStatus ? vaultStatus.share_price_nav.toFixed(4) : '1.0000'}
               </span>
               <span className="text-[10px] font-bold text-emerald-800 block mt-0.5">
                 ● Crecimiento Monotónico
@@ -799,7 +799,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
             <div className="bg-[#fdf2f8] p-3.5 rounded-2xl border-2 border-[#0b1f3a] shadow-[0_2px_0_#0b1f3a]">
               <span className="text-[10px] uppercase font-black text-[#0b1f3a]/60 block">Ciclos Atómicos Ejecutados</span>
               <span className="text-lg font-black text-pink-700 mono mt-1 block">
-                {vaultStatus ? vaultStatus.total_arbitrage_runs : '450'}+
+                {vaultStatus ? vaultStatus.total_arbitrage_runs : 0}
               </span>
               <span className="text-[10px] font-bold text-pink-800 block mt-0.5">
                 80% Vault | 10% Burn | 10% Jar
@@ -835,16 +835,24 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
                   <div className="space-y-3">
                     <div className="bg-[#f8fafc] p-3 rounded-xl border border-[#0b1f3a]/15 text-xs mono space-y-2">
                       <div className="flex justify-between">
+                        <span className="text-[#0b1f3a]/60">Depósito Custodiado:</span>
+                        <span className="font-bold text-[#0b1f3a]">{(userPos.current_cookie || 0).toFixed(2)} $COOKIE</span>
+                      </div>
+                      <div className="flex justify-between">
                         <span className="text-[#0b1f3a]/60">Acciones:</span>
                         <span className="font-bold text-[#0b1f3a]">{userPos.shares.toFixed(4)} cCOOKIE-LP</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#0b1f3a]/60">Valor Actual:</span>
-                        <span className="font-bold text-emerald-700">${userPos.current_value_usd.toFixed(2)} USD</span>
+                        <span className="font-bold text-emerald-700">
+                          ${(userPos.current_value_usd || 0) < 0.01 && (userPos.current_value_usd || 0) > 0 ? (userPos.current_value_usd || 0).toFixed(4) : (userPos.current_value_usd || 0).toFixed(2)} USD
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#0b1f3a]/60">Rendimiento Generado:</span>
-                        <span className="font-bold text-emerald-600">+${userPos.accrued_profit_usd.toFixed(2)}</span>
+                        <span className="font-bold text-emerald-600">
+                          +${(userPos.accrued_profit_usd || 0) < 0.01 && (userPos.accrued_profit_usd || 0) > 0 ? (userPos.accrued_profit_usd || 0).toFixed(4) : (userPos.accrued_profit_usd || 0).toFixed(2)}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#0b1f3a]/60">Baker Karma Boost:</span>
@@ -1009,7 +1017,12 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-[#0b1f3a]/60">
-                      <span>Valor estimado: ~${((parseFloat(depositCookie) || 0) * 0.0435).toFixed(2)} USD</span>
+                      <span>
+                        Valor estimado: ~${(() => {
+                          const v = (parseFloat(depositCookie) || 0) * 0.00008172;
+                          return v > 0 && v < 0.01 ? v.toFixed(4) : v.toFixed(2);
+                        })()} USD
+                      </span>
                       <span>Balance disponible: {balanceCookie.toFixed(2)} COOKIE</span>
                     </div>
                   </div>

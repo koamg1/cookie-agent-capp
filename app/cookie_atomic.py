@@ -24,7 +24,7 @@ import urllib.request
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 
-COOKIE_USD_REFERENCE_PRICE = 0.0435  # Oracle benchmark for $COOKIE
+COOKIE_USD_REFERENCE_PRICE = 0.00008172  # Authentic Cookie Chain SVM market price (~$0.02 USD per 244.75 COOK)
 ARBITRUM_COOKIE_USD_PRICE = 0.0441   # Arbitrum Uniswap v3 reference benchmark
 SVM_GAS_FEE_USD = 0.0008             # Nominal Solana/SVM execution cost (~0.00002 SOL)
 CANONICAL_BURN_ADDRESS = "1nc1nerator11111111111111111111111111111111"
@@ -410,8 +410,8 @@ class CookieAtomicEngine:
             "pool_address": "CookovenPool1111111111111111111111111111111",
             "target_program": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
             "reserve_cookie": 185240.50,
-            "reserve_usdc": 8057.96,
-            "implied_price_usd": 0.0435,
+            "reserve_usdc": 15.14,
+            "implied_price_usd": 0.00008172,
             "status": "ONLINE_ACTIVE",
             "slot_last_updated": 26105120
         }
@@ -716,18 +716,18 @@ class CookieAtomicEngine:
         warm_usdc = 0.0
         hot_usdc = 0.0
 
-        cold_reserve_usd = round(cold_cookie * COOKIE_USD_REFERENCE_PRICE, 2)
-        warm_reserve_usd = round(warm_cookie * COOKIE_USD_REFERENCE_PRICE, 2)
-        hot_reserve_usd = round(hot_cookie * COOKIE_USD_REFERENCE_PRICE, 2)
+        cold_reserve_usd = round(cold_cookie * COOKIE_USD_REFERENCE_PRICE, 4 if (cold_cookie * COOKIE_USD_REFERENCE_PRICE) < 0.05 else 2)
+        warm_reserve_usd = round(warm_cookie * COOKIE_USD_REFERENCE_PRICE, 4 if (warm_cookie * COOKIE_USD_REFERENCE_PRICE) < 0.05 else 2)
+        hot_reserve_usd = round(hot_cookie * COOKIE_USD_REFERENCE_PRICE, 4 if (hot_cookie * COOKIE_USD_REFERENCE_PRICE) < 0.05 else 2)
 
         total_cookie_reserve = round(cold_cookie + warm_cookie + hot_cookie, 4)
         total_usdc_reserve = 0.0
-        total_on_chain_assets_usd = round(cold_reserve_usd + warm_reserve_usd + hot_reserve_usd + PROTOCOL_RESERVE_BUFFER_USD, 2)
+        total_on_chain_assets_usd = round(cold_reserve_usd + warm_reserve_usd + hot_reserve_usd + PROTOCOL_RESERVE_BUFFER_USD, 4 if (cold_reserve_usd + warm_reserve_usd + hot_reserve_usd) < 0.05 else 2)
 
         if self.total_shares > 0:
             self.share_price_nav = max(1.0, round(total_on_chain_assets_usd / self.total_shares, 4))
-            total_liabilities_usd = round(self.total_shares * self.share_price_nav, 2)
-            solvency_ratio_pct = max(100.0, round((total_on_chain_assets_usd / max(0.01, total_liabilities_usd)) * 100.0, 2))
+            total_liabilities_usd = round(self.total_shares * self.share_price_nav, 4 if total_on_chain_assets_usd < 0.05 else 2)
+            solvency_ratio_pct = max(100.0, round((total_on_chain_assets_usd / max(0.0001, total_liabilities_usd)) * 100.0, 2))
         else:
             total_liabilities_usd = 0.0
             solvency_ratio_pct = 100.0
@@ -740,7 +740,7 @@ class CookieAtomicEngine:
             "total_cookie_reserve": total_cookie_reserve,
             "total_usdc_reserve": total_usdc_reserve,
             "total_liabilities_usd": total_liabilities_usd,
-            "net_surplus_usd": round(total_on_chain_assets_usd - total_liabilities_usd, 2),
+            "net_surplus_usd": round(total_on_chain_assets_usd - total_liabilities_usd, 4),
             "shares_issued": round(self.total_shares, 4),
             "share_price_nav": round(self.share_price_nav, 4),
             "virtual_offset": VIRTUAL_OFFSET,
@@ -829,12 +829,12 @@ class CookieAtomicEngine:
             "shares": round(pos.shares, 4),
             "share_token": "cCOOKIE-LP",
             "pool_share_pct": round(share_fraction * 100.0, 3),
-            "initial_deposit_usd": round(initial_val, 2),
-            "current_value_usd": round(current_value_usd, 2),
+            "initial_deposit_usd": round(initial_val, 4 if initial_val < 0.05 else 2),
+            "current_value_usd": round(current_value_usd, 4 if current_value_usd < 0.05 else 2),
             "current_cookie": round(current_cookie, 4),
             "current_usdc": round(current_usdc, 2),
-            "accrued_profit_usd": round(accrued, 2),
-            "baker_karma_boost": int(pos.shares * 5),
+            "accrued_profit_usd": round(accrued, 4 if accrued < 0.05 else 2),
+            "baker_karma_boost": int((pos.initial_deposited_cookie * 0.5) + (pos.shares * 5)),
             "cooldown_until": pos.cooldown_until,
             "in_cooldown": in_cooldown,
             "cooldown_remaining_seconds": remaining_cooldown

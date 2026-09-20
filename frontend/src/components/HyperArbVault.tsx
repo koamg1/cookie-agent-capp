@@ -342,7 +342,7 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
   };
 
   const nav = vaultInfo?.share_price_nav || 1.0;
-  const estDepositUsd = ((parseFloat(depositCookie) || 0) * 0.0435) + (parseFloat(depositUsdc) || 0);
+  const estDepositUsd = ((parseFloat(depositCookie) || 0) * 0.00008172) + (parseFloat(depositUsdc) || 0);
   const estShares = estDepositUsd / nav;
 
   return (
@@ -515,7 +515,7 @@ export const HyperArbVault: React.FC<HyperArbVaultProps> = ({
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-bold text-[#0b1f3a]">
                   <span>Leg 2: $USDC (Counterpart)</span>
-                  <span>Reference: 1 COOKIE ~ $0.0435</span>
+                  <span>Reference: 1 COOKIE ~ $0.00008172</span>
                 </div>
                 <div className="relative">
                   <input
