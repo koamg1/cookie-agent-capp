@@ -385,6 +385,11 @@ class CookieAtomicEngine:
                 self.total_usdc_deposited = sum(p.initial_deposited_usdc for p in self.user_positions.values())
                 total_assets_val = (self.total_cookie_deposited * COOKIE_USD_REFERENCE_PRICE) + self.total_usdc_deposited + self.cumulative_arb_profit_usd
                 self.share_price_nav = max(1.0, round(total_assets_val / self.total_shares, 4))
+            else:
+                self.total_shares = 0.0
+                self.total_cookie_deposited = 0.0
+                self.total_usdc_deposited = 0.0
+                self.share_price_nav = 1.0000
 
     def _save_metadata(self):
         with self._get_conn() as conn:
@@ -480,7 +485,7 @@ class CookieAtomicEngine:
             "total_cookie_reserve": round(por["total_cookie_reserve"], 2),
             "total_usdc_reserve": 0.0,
             "total_shares_minted": round(self.total_shares, 4),
-            "share_price_nav": round(self.share_price_nav, 4),
+            "share_price_nav": 1.0000 if self.total_shares <= 0 else round(self.share_price_nav, 4),
             "projected_apy_pct": 0.0 if discovery.total_pools_detected <= 1 else 38.4,
             "cumulative_arb_profit_usd": round(self.cumulative_arb_profit_usd, 4),
             "cumulative_burned_cookie": round(self.cumulative_burned_cookie, 2),
@@ -644,6 +649,11 @@ class CookieAtomicEngine:
             self.total_usdc_deposited = max(0.0, self.total_usdc_deposited - usdc_gross)
 
         self.total_shares = max(0.0, self.total_shares - shares)
+        if self.total_shares <= 0.0001:
+            self.total_shares = 0.0
+            self.total_cookie_deposited = 0.0
+            self.total_usdc_deposited = 0.0
+            self.share_price_nav = 1.0000
 
         pos.shares -= shares
         if pos.shares <= 0.0001:
