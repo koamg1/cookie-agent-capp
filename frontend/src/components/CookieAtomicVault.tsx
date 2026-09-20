@@ -193,6 +193,25 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
   const [isVerifyingTx, setIsVerifyingTx] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [lastActionReceipt, setLastActionReceipt] = useState<any | null>(null);
+  const [isCooldownModalOpen, setIsCooldownModalOpen] = useState<boolean>(false);
+  const [withdrawNotice, setWithdrawNotice] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState<number>(() => Math.floor(Date.now() / 1000));
+
+  // Live 1-second ticker for accurate countdown calculation
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(Math.floor(Date.now() / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatRemainingTime = (cooldownUntil?: number) => {
+    if (!cooldownUntil) return '0h 0m 0s';
+    const remaining = Math.max(0, Math.floor(cooldownUntil - currentTime));
+    if (remaining <= 0) return '0h 0m 0s (Expirado)';
+    const hours = Math.floor(remaining / 3600);
+    const mins = Math.floor((remaining % 3600) / 60);
+    const secs = remaining % 60;
+    return `${hours}h ${mins}m ${secs}s`;
+  };
 
   // Quant Lab Simulation states
   const [simAmountCookie, setSimAmountCookie] = useState<number>(1500);
@@ -237,9 +256,12 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
 
   useEffect(() => {
     fetchTelemetry();
-    const interval = setInterval(fetchTelemetry, 6000);
+    const interval = setInterval(() => {
+      fetchTelemetry();
+      if (connectedAddress) fetchUserPosition(connectedAddress);
+    }, 6000);
     return () => clearInterval(interval);
-  }, []);
+  }, [connectedAddress]);
 
   useEffect(() => {
     if (connectedAddress) {
@@ -416,30 +438,58 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
     }
   };
 
-  // Handle Vault Withdraw
-  const handleWithdraw = async (shares?: number) => {
-    if (!connectedAddress) return;
+  // Handle Vault Withdraw (Standard & Emergency Instant Unlock)
+  const handleWithdraw = async (shares?: number, bypassCooldown: boolean = false) => {
+    if (!connectedAddress) {
+      onOpenWalletModal();
+      return;
+    }
+
+    // Check if capital is currently in lock time
+    const isCurrentlyLocked = !!(userPos?.cooldown_until && userPos.cooldown_until > currentTime);
+
+    // If locked and not an explicit emergency unlock, open the options modal and show visible notice
+    if (isCurrentlyLocked && !bypassCooldown) {
+      setIsCooldownModalOpen(true);
+      setWithdrawNotice(`Tu capital está en período de seguridad de 24h (Lock Time). Tiempo restante: ${formatRemainingTime(userPos?.cooldown_until)}.`);
+      onAddLog('LOCK_NOTICE', `Capital protegido por Lock Time Anti-MEV (24h). Puedes esperar o solicitar un Retiro de Emergencia Inmediato.`, 'text-amber-400');
+      return;
+    }
+
     setIsSubmitting(true);
+    setWithdrawNotice(null);
     try {
-      onAddLog('ATOMIC_WITHDRAW', `Burning cCOOKIE-LP shares in Cookie Atomic Vault...`, 'text-amber-400');
+      onAddLog('ATOMIC_WITHDRAW', bypassCooldown ? `Ejecutando retiro de emergencia (desbloqueo inmediato)...` : `Quemando acciones cCOOKIE-LP en Cookie Atomic Vault...`, 'text-amber-400');
       const res = await fetch(apiUrl('/api/v1/atomic/withdraw'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_address: connectedAddress,
-          shares: shares || null
+          shares: shares || null,
+          bypass_cooldown: bypassCooldown
         })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Withdrawal failed');
+      if (!res.ok) {
+        const detail = data.detail || 'Fallo en el retiro';
+        if (detail.includes('CooldownActive')) {
+          setIsCooldownModalOpen(true);
+          setWithdrawNotice(`Lock Time Activo: ${detail}`);
+        }
+        throw new Error(detail);
+      }
 
       setLastActionReceipt(data);
-      onAddLog('WITHDRAW_SUCCESS', `Claimed ${data.payout_cookie} $COOKIE + $${data.payout_usdc} USDC!`, 'text-emerald-400');
+      setIsCooldownModalOpen(false);
+      onAddLog('WITHDRAW_SUCCESS', `¡Retiro exitoso! Recibiste ${data.payout_cookie} $COOKIE + $${data.payout_usdc} USDC.`, 'text-emerald-400');
       fetchTelemetry();
       fetchUserPosition(connectedAddress);
       onRefreshBalance();
     } catch (err: any) {
-      onAddLog('WITHDRAW_ERROR', err.message, 'text-red-400');
+      console.error('Withdraw error:', err);
+      const msg = err?.message || String(err);
+      setWithdrawNotice(msg);
+      onAddLog('WITHDRAW_ERROR', `Error en retiro: ${msg}`, 'text-red-400');
     } finally {
       setIsSubmitting(false);
     }
@@ -864,12 +914,52 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
                       </div>
                     </div>
 
+                    {/* Cooldown Active Warning Box on Left Card */}
+                    {userPos?.cooldown_until && userPos.cooldown_until > currentTime && (
+                      <div className="p-2.5 rounded-xl border-2 border-amber-500 bg-amber-50 text-xs font-bold text-amber-950 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <span>🔒</span>
+                            <span className="font-black text-[10px] uppercase tracking-wider">Lock Time Anti-MEV</span>
+                          </span>
+                          <span className="mono text-[10px] font-black px-2 py-0.5 rounded bg-amber-200 text-amber-900 border border-amber-400">
+                            {formatRemainingTime(userPos.cooldown_until)}
+                          </span>
+                        </div>
+                        <p className="text-[10px] font-normal text-amber-900/80 leading-snug">
+                          Capital temporalmente protegido contra arbitraje flash. Transcurrido el plazo el retiro es libre.
+                        </p>
+                      </div>
+                    )}
+
+                    {withdrawNotice && (
+                      <div className="p-2.5 rounded-xl border border-red-300 bg-red-50 text-[11px] font-bold text-red-900 leading-snug">
+                        ⚠️ {withdrawNotice}
+                      </div>
+                    )}
+
                     <button
                       onClick={() => handleWithdraw()}
                       disabled={isSubmitting}
-                      className="w-full py-2 rounded-xl bg-red-100 hover:bg-red-200 text-red-900 border-2 border-red-800 text-xs font-black shadow-[0_2px_0_#991b1b] cursor-pointer"
+                      className={`w-full py-2.5 rounded-xl text-xs font-black border-2 shadow-[0_2px_0_#0b1f3a] transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        userPos?.cooldown_until && userPos.cooldown_until > currentTime
+                          ? 'bg-amber-100 hover:bg-amber-200 text-amber-950 border-amber-700 shadow-[0_2px_0_#b45309]'
+                          : 'bg-red-100 hover:bg-red-200 text-red-900 border-red-800 shadow-[0_2px_0_#991b1b]'
+                      }`}
                     >
-                      {isSubmitting ? 'Procesando Retiro...' : '⚡ Retiro Instantáneo (100%)'}
+                      {isSubmitting ? (
+                        <span>Procesando Retiro...</span>
+                      ) : userPos?.cooldown_until && userPos.cooldown_until > currentTime ? (
+                        <>
+                          <span>🔒</span>
+                          <span>Retiro con Lock Time (Ver Opciones)</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>⚡</span>
+                          <span>Retiro Instantáneo (100%)</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 ) : (
@@ -1095,33 +1185,56 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
                   </p>
 
                   {/* Cooldown Active Warning Box */}
-                  {userPos?.in_cooldown && (
-                    <div className="p-3 rounded-xl border-2 border-amber-500 bg-amber-50 text-xs font-bold text-amber-950 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">⏳</span>
-                        <span>Cooldown Anti-MEV Activo ({Math.floor((userPos.cooldown_remaining_seconds || 0) / 3600)}h {Math.floor(((userPos.cooldown_remaining_seconds || 0) % 3600) / 60)}m restantes)</span>
+                  {userPos?.cooldown_until && userPos.cooldown_until > currentTime && (
+                    <div className="p-3.5 rounded-xl border-2 border-amber-500 bg-amber-50 text-xs font-bold text-amber-950 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">⏳</span>
+                          <span className="font-black uppercase tracking-wider">Cooldown Anti-MEV (Lock Time 24h)</span>
+                        </div>
+                        <span className="mono text-xs font-black px-2.5 py-0.5 rounded bg-amber-200 text-amber-900 border border-amber-400">
+                          {formatRemainingTime(userPos.cooldown_until)}
+                        </span>
                       </div>
-                      <p className="text-[11px] font-normal text-amber-900/80">
-                        Tus fondos están protegidos contra arbitraje flash. Podrás retirar libremente una vez expire el período de 24 horas.
+                      <p className="text-[11px] font-normal text-amber-900/80 leading-relaxed">
+                        Tus fondos están protegidos contra arbitraje flash. Al finalizar las 24h podrás retirar libremente con tarifa estándar (0.1%). Si requieres tu dinero en este momento, puedes ejecutar un Retiro de Emergencia Inmediato.
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsCooldownModalOpen(true)}
+                        className="text-[11px] font-black text-amber-900 underline hover:text-amber-950 cursor-pointer pt-1 flex items-center gap-1"
+                      >
+                        <span>👉</span>
+                        <span>Ver detalles del Lock Time y opciones de desbloqueo de emergencia</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {withdrawNotice && (
+                    <div className="p-3 rounded-xl border border-red-300 bg-red-50 text-xs font-bold text-red-900 leading-snug">
+                      ⚠️ {withdrawNotice}
                     </div>
                   )}
 
                   {/* Dynamic Exit Fee Notice */}
                   <div className="p-2.5 rounded-xl border border-gray-200 bg-gray-50 text-[11px] font-medium text-gray-700 flex items-center justify-between">
-                    <span>Comisión dinámica de salida (0.1% base + impacto):</span>
+                    <span>Comisión de salida (0.1% base + impacto):</span>
                     <span className="font-bold text-emerald-800 mono">Se queda en la bóveda</span>
                   </div>
 
                   <button
                     onClick={() => handleWithdraw()}
-                    disabled={isSubmitting || !userPos || !userPos.has_position || userPos.in_cooldown}
-                    className="w-full py-3 rounded-xl bg-red-100 hover:bg-red-200 text-red-900 font-black text-xs border-2 border-red-800 shadow-[0_3px_0_#991b1b] cursor-pointer disabled:opacity-50"
+                    disabled={isSubmitting || !userPos || !userPos.has_position}
+                    className={`w-full py-3 rounded-xl font-black text-xs border-2 shadow-[0_3px_0_#0b1f3a] cursor-pointer disabled:opacity-50 transition-all ${
+                      userPos?.cooldown_until && userPos.cooldown_until > currentTime
+                        ? 'bg-amber-100 hover:bg-amber-200 text-amber-950 border-amber-700 shadow-[0_3px_0_#b45309]'
+                        : 'bg-red-100 hover:bg-red-200 text-red-900 border-red-800 shadow-[0_3px_0_#991b1b]'
+                    }`}
                   >
                     {isSubmitting
                       ? 'Procesando Retiro...'
-                      : userPos?.in_cooldown
-                      ? '⏳ Retiro Bloqueado (Cooldown Activo)'
+                      : userPos?.cooldown_until && userPos.cooldown_until > currentTime
+                      ? `🔒 Retiro con Lock Time (Ver Opciones)`
                       : '⚡ Retirar Todo (Capital + Rendimiento)'}
                   </button>
                 </div>
@@ -1414,6 +1527,75 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 🔒 Cooldown & Emergency Withdraw Modal */}
+      {isCooldownModalOpen && userPos && (
+        <div className="fixed inset-0 z-50 bg-[#0b1f3a]/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border-3 border-[#0b1f3a] shadow-[0_8px_0_#0b1f3a] max-w-md w-full p-6 space-y-5 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between border-b-2 border-[#0b1f3a]/10 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 border-2 border-amber-600 flex items-center justify-center text-xl shadow-[0_2px_0_#b45309]">
+                  🔒
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-[#0b1f3a] uppercase">Período de Lock Time Activo</h3>
+                  <span className="text-[10px] font-bold text-[#0b1f3a]/60">Protección Anti-MEV de 24 Horas</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCooldownModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 border-2 border-[#0b1f3a] font-bold text-xs cursor-pointer flex items-center justify-center shadow-[0_1px_0_#0b1f3a]"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Countdown Display */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-400 space-y-2 text-center">
+              <span className="text-[10px] font-black uppercase text-amber-800 tracking-wider">Tiempo Restante de Bloqueo</span>
+              <div className="text-2xl font-black text-amber-950 mono tracking-tight">
+                {formatRemainingTime(userPos.cooldown_until)}
+              </div>
+              <p className="text-[11px] text-amber-900/80 font-medium">
+                Tus <strong className="text-amber-950">{(userPos.current_cookie || 0).toFixed(2)} $COOKIE</strong> (${(userPos.current_value_usd || 0).toFixed(2)} USD) están custodiados en la Bóveda de Tesorería.
+              </p>
+            </div>
+
+            {/* Explanation */}
+            <div className="p-3.5 rounded-xl bg-[#eff6ff] border-2 border-blue-200 text-xs text-blue-950 space-y-1.5">
+              <div className="font-bold flex items-center gap-1.5 text-blue-900">
+                <span>ℹ️</span>
+                <span>¿Por qué existe este bloqueo temporal?</span>
+              </div>
+              <p className="text-[11px] text-blue-900/80 leading-relaxed font-normal">
+                Para evitar que atacantes depositen justo antes de que el Sentinel capture un arbitraje y retiren inmediatamente, diluyendo las ganancias de los participantes legítimos. Una vez transcurridas las 24 horas, el retiro queda 100% libre con la comisión estándar mínima (0.1%).
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setIsCooldownModalOpen(false)}
+                className="w-full py-2.5 rounded-xl bg-[#0b1f3a] hover:bg-[#163359] text-white font-black text-xs border-2 border-[#0b1f3a] shadow-[0_2px_0_#ffe0a8] cursor-pointer"
+              >
+                Mantener Depositado y Ganar Rendimiento (Recomendado)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleWithdraw(undefined, true)}
+                disabled={isSubmitting}
+                className="w-full py-2.5 rounded-xl bg-red-100 hover:bg-red-200 text-red-950 font-black text-xs border-2 border-red-700 shadow-[0_2px_0_#991b1b] cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>🚨</span>
+                <span>{isSubmitting ? 'Procesando Retiro de Emergencia...' : 'Retiro de Emergencia Inmediato (Desbloquear Ahora)'}</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
