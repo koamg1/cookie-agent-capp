@@ -601,14 +601,13 @@ class CookieAtomicEngine:
         total_assets = (self.total_cookie_deposited * COOKIE_USD_REFERENCE_PRICE) + self.total_usdc_deposited
         share_fraction = shares / max(0.0001, self.total_shares)
         
-        # Calculate gross capital owed to user
-        cookie_gross = max(self.total_cookie_deposited * share_fraction, pos.initial_deposited_cookie * (shares / max(0.0001, pos.shares)))
-        usdc_gross = self.total_usdc_deposited * share_fraction
-        gross_payout_usd = (cookie_gross * COOKIE_USD_REFERENCE_PRICE) + usdc_gross
-
         if bypass_cooldown:
             # 🚨 Emergency Withdrawal during 24h Lock Time:
-            # 20% capital penalty deducted and retained in Treasury reserves for remaining LP holders
+            # 20% capital penalty deducted directly from deposited capital
+            cookie_gross = pos.initial_deposited_cookie * (shares / max(0.0001, pos.shares))
+            usdc_gross = pos.initial_deposited_usdc * (shares / max(0.0001, pos.shares))
+            gross_payout_usd = (cookie_gross * COOKIE_USD_REFERENCE_PRICE) + usdc_gross
+
             penalty_rate = 0.20
             penalty_cookie = round(cookie_gross * penalty_rate, 4)
             penalty_usdc = round(usdc_gross * penalty_rate, 4)
@@ -618,9 +617,18 @@ class CookieAtomicEngine:
 
             cookie_payout = round(cookie_gross * (1.0 - penalty_rate), 4)
             usdc_payout = round(usdc_gross * (1.0 - penalty_rate), 2)
+
+            # Deduct the full capital exiting the pool from liabilities
+            self.total_cookie_deposited = max(0.0, self.total_cookie_deposited - cookie_gross)
+            self.total_usdc_deposited = max(0.0, self.total_usdc_deposited - usdc_gross)
+            self.cumulative_cookie_jar_usd += penalty_usd
         else:
             # Standard Withdrawal after 24h Cooldown:
             # Dynamic exit fee: 0.1% base + 1.5 * (Withdraw / TVL)^2 (retained in vault)
+            cookie_gross = self.total_cookie_deposited * share_fraction
+            usdc_gross = self.total_usdc_deposited * share_fraction
+            gross_payout_usd = (cookie_gross * COOKIE_USD_REFERENCE_PRICE) + usdc_gross
+
             penalty_rate = 0.0
             penalty_cookie = 0.0
             penalty_usdc = 0.0
@@ -631,9 +639,10 @@ class CookieAtomicEngine:
             cookie_payout = round(cookie_gross * (1.0 - exit_fee_rate), 4)
             usdc_payout = round(usdc_gross * (1.0 - exit_fee_rate), 2)
 
-        # Deduct payout from vault reserves
-        self.total_cookie_deposited = max(0.0, self.total_cookie_deposited - cookie_payout)
-        self.total_usdc_deposited = max(0.0, self.total_usdc_deposited - usdc_payout)
+            # Deduct user payout and fee from active vault capital
+            self.total_cookie_deposited = max(0.0, self.total_cookie_deposited - cookie_gross)
+            self.total_usdc_deposited = max(0.0, self.total_usdc_deposited - usdc_gross)
+
         self.total_shares = max(0.0, self.total_shares - shares)
 
         pos.shares -= shares
