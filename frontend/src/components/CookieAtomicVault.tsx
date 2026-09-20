@@ -531,10 +531,10 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-blue-950 flex items-center gap-1">
                 <span>🧊</span>
-                <span>Bóveda Fría (85%)</span>
+                <span>Bóveda Fría (Tesorería)</span>
               </span>
               <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-200 text-blue-900 border border-blue-400 mono">
-                {proofOfReserves?.tiers?.cold_storage?.telemetry_badge ?? 'SQUADS 3/5 • COLD STORAGE'}
+                {proofOfReserves?.tiers?.cold_storage?.telemetry_badge ?? 'MULTISIG 2/3 • COLD VAULT'}
               </span>
             </div>
             <div className="text-xs font-black text-blue-900 mono">
@@ -543,21 +543,26 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
             <div className="text-[10px] font-bold text-blue-800/90 mono flex items-center gap-1.5 flex-wrap">
               <span>🍪 {(proofOfReserves?.tiers?.cold_storage?.balance_cookie ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} COOK</span>
               <span className="text-blue-400">•</span>
-              <span>💵 ${(proofOfReserves?.tiers?.cold_storage?.balance_usdc ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC</span>
+              <span>💵 $0.00 USDC</span>
             </div>
             <div className="text-[9px] font-semibold text-blue-900/70 mono flex items-center gap-1 pt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
               <span>{proofOfReserves?.tiers?.cold_storage?.rpc_status ?? 'ONLINE (FINALIZED)'} • Timelock 24h</span>
             </div>
-            <a
-              href="https://cookiescan.io/address/CookieColdVaultMultiSig111111111111111111111111"
-              target="_blank"
-              rel="noreferrer"
-              className="text-[9px] font-bold text-blue-700 hover:underline flex items-center gap-1 mono pt-1"
-            >
-              <span>Ver en cookiescan.io</span>
-              <span>↗</span>
-            </a>
+            <div className="flex items-center justify-between pt-1 border-t border-blue-200 text-[9px] mono">
+              <span className="text-blue-900/60 truncate max-w-[120px]">
+                {proofOfReserves?.tiers?.cold_storage?.address || PROTOCOL_TREASURY_VAULT_ADDRESS}
+              </span>
+              <a
+                href={proofOfReserves?.tiers?.cold_storage?.cookiescan_url || `https://cookiescan.io/address/${PROTOCOL_TREASURY_VAULT_ADDRESS}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-bold text-blue-700 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>cookiescan.io</span>
+                <span>↗</span>
+              </a>
+            </div>
           </div>
 
           {/* Tier 2: Warm Buffer */}
@@ -565,7 +570,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-amber-950 flex items-center gap-1">
                 <span>🟡</span>
-                <span>Bóveda Tibia (10%)</span>
+                <span>Bóveda Tibia (Buffer 2/3)</span>
               </span>
               <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 border border-amber-400 mono">
                 {proofOfReserves?.tiers?.warm_buffer?.telemetry_badge ?? 'BUFFER 2/3 • DAILY RESERVE'}
@@ -577,21 +582,26 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
             <div className="text-[10px] font-bold text-amber-800/90 mono flex items-center gap-1.5 flex-wrap">
               <span>🍪 {(proofOfReserves?.tiers?.warm_buffer?.balance_cookie ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} COOK</span>
               <span className="text-amber-400">•</span>
-              <span>💵 ${(proofOfReserves?.tiers?.warm_buffer?.balance_usdc ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC</span>
+              <span>💵 $0.00 USDC</span>
             </div>
             <div className="text-[9px] font-semibold text-amber-900/70 mono flex items-center gap-1 pt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
               <span>{proofOfReserves?.tiers?.warm_buffer?.rpc_status ?? 'ONLINE (LIQUID)'} • Despacho Diario</span>
             </div>
-            <a
-              href="https://cookiescan.io/address/CookieWarmBufferReserve111111111111111111111111"
-              target="_blank"
-              rel="noreferrer"
-              className="text-[9px] font-bold text-amber-800 hover:underline flex items-center gap-1 mono pt-1"
-            >
-              <span>Ver en cookiescan.io</span>
-              <span>↗</span>
-            </a>
+            <div className="flex items-center justify-between pt-1 border-t border-amber-200 text-[9px] mono">
+              <span className="text-amber-900/60 truncate max-w-[120px]">
+                {proofOfReserves?.tiers?.warm_buffer?.address || 'GL6YF8RtyERd9WF59sefqBSbUG5BdEvqDTTZGQrPwPWQ'}
+              </span>
+              <a
+                href={proofOfReserves?.tiers?.warm_buffer?.cookiescan_url || 'https://cookiescan.io/address/GL6YF8RtyERd9WF59sefqBSbUG5BdEvqDTTZGQrPwPWQ'}
+                target="_blank"
+                rel="noreferrer"
+                className="font-bold text-amber-800 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>cookiescan.io</span>
+                <span>↗</span>
+              </a>
+            </div>
           </div>
 
           {/* Tier 3: Hot Bot */}
@@ -599,7 +609,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-emerald-950 flex items-center gap-1">
                 <span>🔥</span>
-                <span>Bóveda Caliente (5%)</span>
+                <span>Bóveda Caliente (Bot)</span>
               </span>
               <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-900 border border-emerald-400 mono">
                 {proofOfReserves?.tiers?.hot_trading_bot?.telemetry_badge ?? 'HOT BOT • MAX RISK 5%'}
@@ -611,21 +621,26 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
             <div className="text-[10px] font-bold text-emerald-800/90 mono flex items-center gap-1.5 flex-wrap">
               <span>🍪 {(proofOfReserves?.tiers?.hot_trading_bot?.balance_cookie ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} COOK</span>
               <span className="text-emerald-400">•</span>
-              <span>💵 ${(proofOfReserves?.tiers?.hot_trading_bot?.balance_usdc ?? 0.0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC</span>
+              <span>💵 $0.00 USDC</span>
             </div>
             <div className="text-[9px] font-semibold text-emerald-900/70 mono flex items-center gap-1 pt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>{proofOfReserves?.tiers?.hot_trading_bot?.rpc_status ?? 'ACTIVE (400ms)'} • Auto-Sweep 8h</span>
             </div>
-            <a
-              href="https://cookiescan.io/address/CookieHotBotExecutor111111111111111111111111"
-              target="_blank"
-              rel="noreferrer"
-              className="text-[9px] font-bold text-emerald-800 hover:underline flex items-center gap-1 mono pt-1"
-            >
-              <span>Ver en cookiescan.io</span>
-              <span>↗</span>
-            </a>
+            <div className="flex items-center justify-between pt-1 border-t border-emerald-200 text-[9px] mono">
+              <span className="text-emerald-900/60 truncate max-w-[120px]">
+                {proofOfReserves?.tiers?.hot_trading_bot?.address || 'FifRVvsjv5Q6Pj2gUAaU42eiRM5noUeu3EK1CxJFttHy'}
+              </span>
+              <a
+                href={proofOfReserves?.tiers?.hot_trading_bot?.cookiescan_url || 'https://cookiescan.io/address/FifRVvsjv5Q6Pj2gUAaU42eiRM5noUeu3EK1CxJFttHy'}
+                target="_blank"
+                rel="noreferrer"
+                className="font-bold text-emerald-800 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>cookiescan.io</span>
+                <span>↗</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>
