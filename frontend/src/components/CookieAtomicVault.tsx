@@ -193,6 +193,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
   const [isVerifyingTx, setIsVerifyingTx] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [lastActionReceipt, setLastActionReceipt] = useState<any | null>(null);
+  const [showReceiptModal, setShowReceiptModal] = useState<boolean>(false);
   const [isCooldownModalOpen, setIsCooldownModalOpen] = useState<boolean>(false);
   const [withdrawNotice, setWithdrawNotice] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(() => Math.floor(Date.now() / 1000));
@@ -379,6 +380,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
       if (!res.ok) throw new Error(data.detail || 'Fallo en la acreditación del depósito');
 
       setLastActionReceipt(data);
+      setShowReceiptModal(true);
       onAddLog('DEPOSIT_SUCCESS', `¡Depósito on-chain acreditado! Recibiste ${data.shares_minted} cCOOKIE-LP (NAV: $${data.share_price_nav}).`, 'text-emerald-400');
       fetchTelemetry();
       fetchUserPosition(connectedAddress);
@@ -426,6 +428,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
       if (!res.ok) throw new Error(data.detail || 'Fallo en la verificación on-chain');
 
       setLastActionReceipt(data);
+      setShowReceiptModal(true);
       onAddLog('VERIFY_SUCCESS', `¡Verificado on-chain! Acreditadas ${data.shares_minted} acciones cCOOKIE-LP (Tx: ${depositTxHash.slice(0, 8)}...)`, 'text-emerald-400');
       setDepositTxHash('');
       fetchTelemetry();
@@ -480,8 +483,13 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
       }
 
       setLastActionReceipt(data);
+      setShowReceiptModal(true);
       setIsCooldownModalOpen(false);
-      onAddLog('WITHDRAW_SUCCESS', `¡Retiro exitoso! Recibiste ${data.payout_cookie} $COOKIE + $${data.payout_usdc} USDC.`, 'text-emerald-400');
+      onAddLog('WITHDRAW_SUCCESS', bypassCooldown
+        ? `¡Retiro de emergencia exitoso! (-20% penalización aplicada) Recibiste ${data.payout_cookie || data.cookie_payout} $COOKIE on-chain.`
+        : `¡Retiro exitoso! Recibiste ${data.payout_cookie || data.cookie_payout} $COOKIE + $${data.payout_usdc || 0} USDC.`,
+        'text-emerald-400'
+      );
       fetchTelemetry();
       fetchUserPosition(connectedAddress);
       onRefreshBalance();
@@ -1197,7 +1205,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
                         </span>
                       </div>
                       <p className="text-[11px] font-normal text-amber-900/80 leading-relaxed">
-                        Tus fondos están protegidos contra arbitraje flash. Al finalizar las 24h podrás retirar libremente con tarifa estándar (0.1%). Si requieres tu dinero en este momento, puedes ejecutar un Retiro de Emergencia Inmediato.
+                        Tus fondos están protegidos contra arbitraje flash. Al finalizar las 24h podrás retirar libremente con tarifa estándar (0.1%). Si requieres retirar en este momento, puedes ejecutar un <strong>Retiro de Emergencia (se descontará el 20% del capital)</strong>.
                       </p>
                       <button
                         type="button"
@@ -1533,7 +1541,7 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
       {/* 🔒 Cooldown & Emergency Withdraw Modal */}
       {isCooldownModalOpen && userPos && (
         <div className="fixed inset-0 z-50 bg-[#0b1f3a]/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border-3 border-[#0b1f3a] shadow-[0_8px_0_#0b1f3a] max-w-md w-full p-6 space-y-5 animate-in fade-in zoom-in duration-150">
+          <div className="bg-white rounded-3xl border-3 border-[#0b1f3a] shadow-[0_8px_0_#0b1f3a] max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in duration-150">
             <div className="flex items-center justify-between border-b-2 border-[#0b1f3a]/10 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-amber-100 border-2 border-amber-600 flex items-center justify-center text-xl shadow-[0_2px_0_#b45309]">
@@ -1564,14 +1572,41 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
               </p>
             </div>
 
+            {/* 20% Emergency Penalty Notice Box */}
+            <div className="p-3.5 rounded-2xl bg-red-50 border-2 border-red-500 text-red-950 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🚨</span>
+                <span className="text-xs font-black uppercase tracking-wide text-red-900">
+                  Regla de Retiro de Emergencia (-20%)
+                </span>
+              </div>
+              <p className="text-[11px] text-red-900 leading-relaxed font-medium">
+                Si decides retirar de emergencia antes de que finalice el Lock Time de 24h, <strong>se te restará el 20% del capital</strong> como penalización por salida anticipada. Ese 20% permanece en la reserva del protocolo para recompensar a los depositantes. Recibirás de inmediato el <strong>80% restante</strong> transferido directamente a tu billetera.
+              </p>
+              <div className="p-2.5 rounded-xl bg-white/90 border border-red-200 space-y-1 font-mono text-[11px]">
+                <div className="flex justify-between text-gray-700">
+                  <span>Capital depositado:</span>
+                  <span className="font-bold">{(userPos.current_cookie || 0).toFixed(2)} $COOKIE</span>
+                </div>
+                <div className="flex justify-between text-red-600 font-bold">
+                  <span>Penalización por emergencia (20%):</span>
+                  <span>-{((userPos.current_cookie || 0) * 0.20).toFixed(2)} $COOKIE</span>
+                </div>
+                <div className="flex justify-between text-emerald-700 font-black border-t border-red-200 pt-1 text-xs">
+                  <span>Neto a recibir en tu billetera (80%):</span>
+                  <span>+{((userPos.current_cookie || 0) * 0.80).toFixed(2)} $COOKIE</span>
+                </div>
+              </div>
+            </div>
+
             {/* Explanation */}
-            <div className="p-3.5 rounded-xl bg-[#eff6ff] border-2 border-blue-200 text-xs text-blue-950 space-y-1.5">
+            <div className="p-3 rounded-xl bg-[#eff6ff] border-2 border-blue-200 text-xs text-blue-950 space-y-1">
               <div className="font-bold flex items-center gap-1.5 text-blue-900">
                 <span>ℹ️</span>
-                <span>¿Por qué existe este bloqueo temporal?</span>
+                <span>¿Por qué esperar las 24 horas?</span>
               </div>
               <p className="text-[11px] text-blue-900/80 leading-relaxed font-normal">
-                Para evitar que atacantes depositen justo antes de que el Sentinel capture un arbitraje y retiren inmediatamente, diluyendo las ganancias de los participantes legítimos. Una vez transcurridas las 24 horas, el retiro queda 100% libre con la comisión estándar mínima (0.1%).
+                Al cumplir las 24 horas, el retiro queda 100% libre sin penalización (únicamente comisión estándar mínima del 0.1%).
               </p>
             </div>
 
@@ -1582,19 +1617,128 @@ export const CookieAtomicVault: React.FC<CookieAtomicVaultProps> = ({
                 onClick={() => setIsCooldownModalOpen(false)}
                 className="w-full py-2.5 rounded-xl bg-[#0b1f3a] hover:bg-[#163359] text-white font-black text-xs border-2 border-[#0b1f3a] shadow-[0_2px_0_#ffe0a8] cursor-pointer"
               >
-                Mantener Depositado y Ganar Rendimiento (Recomendado)
+                Mantener Depositado (0% penalización)
               </button>
 
               <button
                 type="button"
                 onClick={() => handleWithdraw(undefined, true)}
                 disabled={isSubmitting}
-                className="w-full py-2.5 rounded-xl bg-red-100 hover:bg-red-200 text-red-950 font-black text-xs border-2 border-red-700 shadow-[0_2px_0_#991b1b] cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-xl bg-red-100 hover:bg-red-200 text-red-950 font-black text-xs border-2 border-red-700 shadow-[0_2px_0_#991b1b] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <span>🚨</span>
-                <span>{isSubmitting ? 'Procesando Retiro de Emergencia...' : 'Retiro de Emergencia Inmediato (Desbloquear Ahora)'}</span>
+                <span>{isSubmitting ? 'Transfiriendo fondos on-chain...' : 'Retiro de Emergencia (-20% penalización, recibir 80% ahora)'}</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🧾 Transaction Receipt Modal */}
+      {showReceiptModal && lastActionReceipt && (
+        <div className="fixed inset-0 z-50 bg-[#0b1f3a]/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border-3 border-[#0b1f3a] shadow-[0_8px_0_#0b1f3a] max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between border-b-2 border-[#0b1f3a]/10 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-10 h-10 rounded-2xl border-2 flex items-center justify-center text-xl ${
+                  lastActionReceipt.is_emergency 
+                    ? 'bg-amber-100 border-amber-600 text-amber-900 shadow-[0_2px_0_#b45309]' 
+                    : 'bg-emerald-100 border-emerald-600 text-emerald-900 shadow-[0_2px_0_#065f46]'
+                }`}>
+                  {lastActionReceipt.is_emergency ? '🚨' : '✅'}
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-[#0b1f3a] uppercase">
+                    {lastActionReceipt.is_emergency 
+                      ? 'Retiro de Emergencia Confirmado' 
+                      : (lastActionReceipt.action === 'ATOMIC_VAULT_WITHDRAW' ? 'Retiro Confirmado' : 'Depósito Confirmado')}
+                  </h3>
+                  <span className="text-[10px] font-bold text-[#0b1f3a]/60">
+                    Cookie Chain SVM Mainnet &bull; Transacción On-Chain
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReceiptModal(false)}
+                className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 border-2 border-[#0b1f3a] font-bold text-xs cursor-pointer flex items-center justify-center shadow-[0_1px_0_#0b1f3a]"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Financial Breakdown */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] border-2 border-[#0b1f3a]/15 space-y-2.5">
+              {lastActionReceipt.is_emergency ? (
+                <>
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Se aplicó la penalización del 20% por retiro anticipado.</span>
+                  </div>
+                  <div className="space-y-1.5 text-xs mono">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Capital Bruto:</span>
+                      <span className="font-bold">{lastActionReceipt.cookie_gross || lastActionReceipt.shares_burned} $COOKIE</span>
+                    </div>
+                    <div className="flex justify-between text-red-600 font-bold">
+                      <span>Penalización del 20% (Reserva Tesorería):</span>
+                      <span>-{lastActionReceipt.penalty_cookie || ((lastActionReceipt.payout_cookie || 0) * 0.25).toFixed(2)} $COOKIE</span>
+                    </div>
+                    <div className="flex justify-between text-emerald-700 font-black text-sm border-t border-gray-300 pt-1.5">
+                      <span>Neto Transferido a tu Cartera:</span>
+                      <span>+{lastActionReceipt.payout_cookie || lastActionReceipt.cookie_payout} $COOKIE</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-1.5 text-xs mono">
+                  <div className="flex justify-between text-emerald-700 font-black text-sm">
+                    <span>Monto Transferido a tu Cartera:</span>
+                    <span>+{lastActionReceipt.payout_cookie || lastActionReceipt.cookie_payout} $COOKIE</span>
+                  </div>
+                  {lastActionReceipt.exit_fee_usd !== undefined && (
+                    <div className="flex justify-between text-gray-500 text-[11px]">
+                      <span>Comisión de salida (0.1%):</span>
+                      <span>${lastActionReceipt.exit_fee_usd} USD</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* On-Chain Verification Box */}
+            <div className="p-3.5 rounded-xl bg-[#0b1f3a] text-white space-y-2 text-xs">
+              <div className="flex items-center justify-between text-[11px] text-emerald-400 font-bold">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  CONFIRMADA EN COOKIE CHAIN SVM
+                </span>
+                {lastActionReceipt.slot && (
+                  <span className="text-gray-400">Slot #{lastActionReceipt.slot}</span>
+                )}
+              </div>
+              <div className="text-[11px] font-mono text-gray-300 truncate bg-white/5 p-2 rounded-lg border border-white/10">
+                TX: {lastActionReceipt.tx_signature}
+              </div>
+              {lastActionReceipt.cookiescan_url && (
+                <a
+                  href={lastActionReceipt.cookiescan_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-center py-2 px-3 rounded-lg bg-[#ffe0a8] hover:bg-[#fed782] text-[#0b1f3a] font-black text-xs border border-[#0b1f3a] shadow-[0_2px_0_#fff] cursor-pointer transition"
+                >
+                  🔍 Ver Transacción en Cookiescan Explorer ↗
+                </a>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowReceiptModal(false)}
+              className="w-full py-2.5 rounded-xl bg-[#0b1f3a] hover:bg-[#163359] text-white font-black text-xs border-2 border-[#0b1f3a] shadow-[0_2px_0_#ffe0a8] cursor-pointer"
+            >
+              Entendido / Cerrar
+            </button>
           </div>
         </div>
       )}

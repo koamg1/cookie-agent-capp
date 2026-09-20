@@ -21,8 +21,11 @@ import asyncio
 import subprocess
 import json
 import urllib.request
+import logging
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger("cookie_atomic")
 
 COOKIE_USD_REFERENCE_PRICE = 0.00008172  # Authentic Cookie Chain SVM market price (~$0.02 USD per 244.75 COOK)
 ARBITRUM_COOKIE_USD_PRICE = 0.0441   # Arbitrum Uniswap v3 reference benchmark
@@ -597,20 +600,38 @@ class CookieAtomicEngine:
 
         total_assets = (self.total_cookie_deposited * COOKIE_USD_REFERENCE_PRICE) + self.total_usdc_deposited
         share_fraction = shares / max(0.0001, self.total_shares)
-        cookie_gross = self.total_cookie_deposited * share_fraction
+        
+        # Calculate gross capital owed to user
+        cookie_gross = max(self.total_cookie_deposited * share_fraction, pos.initial_deposited_cookie * (shares / max(0.0001, pos.shares)))
         usdc_gross = self.total_usdc_deposited * share_fraction
         gross_payout_usd = (cookie_gross * COOKIE_USD_REFERENCE_PRICE) + usdc_gross
 
-        # Dynamic exit fee: 0.1% base + 1.5 * (Withdraw / TVL)^2
-        # Fee stays inside the vault reserves to reward remaining depositors
-        exit_fee_rate = 0.001 + (1.5 * ((gross_payout_usd / max(1.0, total_assets)) ** 2))
-        exit_fee_rate = min(0.05, exit_fee_rate)  # Max 5% safety cap
-        exit_fee_usd = round(gross_payout_usd * exit_fee_rate, 2)
+        if bypass_cooldown:
+            # 🚨 Emergency Withdrawal during 24h Lock Time:
+            # 20% capital penalty deducted and retained in Treasury reserves for remaining LP holders
+            penalty_rate = 0.20
+            penalty_cookie = round(cookie_gross * penalty_rate, 4)
+            penalty_usdc = round(usdc_gross * penalty_rate, 4)
+            penalty_usd = round(gross_payout_usd * penalty_rate, 2)
+            exit_fee_rate = penalty_rate
+            exit_fee_usd = penalty_usd
 
-        cookie_payout = cookie_gross * (1.0 - exit_fee_rate)
-        usdc_payout = usdc_gross * (1.0 - exit_fee_rate)
+            cookie_payout = round(cookie_gross * (1.0 - penalty_rate), 4)
+            usdc_payout = round(usdc_gross * (1.0 - penalty_rate), 2)
+        else:
+            # Standard Withdrawal after 24h Cooldown:
+            # Dynamic exit fee: 0.1% base + 1.5 * (Withdraw / TVL)^2 (retained in vault)
+            penalty_rate = 0.0
+            penalty_cookie = 0.0
+            penalty_usdc = 0.0
+            exit_fee_rate = 0.001 + (1.5 * ((gross_payout_usd / max(1.0, total_assets)) ** 2))
+            exit_fee_rate = min(0.05, exit_fee_rate)  # Max 5% safety cap
+            exit_fee_usd = round(gross_payout_usd * exit_fee_rate, 2)
 
-        # Deduct user payout from vault reserves
+            cookie_payout = round(cookie_gross * (1.0 - exit_fee_rate), 4)
+            usdc_payout = round(usdc_gross * (1.0 - exit_fee_rate), 2)
+
+        # Deduct payout from vault reserves
         self.total_cookie_deposited = max(0.0, self.total_cookie_deposited - cookie_payout)
         self.total_usdc_deposited = max(0.0, self.total_usdc_deposited - usdc_payout)
         self.total_shares = max(0.0, self.total_shares - shares)
@@ -619,6 +640,11 @@ class CookieAtomicEngine:
         if pos.shares <= 0.0001:
             pos.shares = 0.0
             pos.cooldown_until = 0.0
+            pos.initial_deposited_cookie = 0.0
+            pos.initial_deposited_usdc = 0.0
+        else:
+            pos.initial_deposited_cookie = max(0.0, pos.initial_deposited_cookie - cookie_gross)
+            pos.initial_deposited_usdc = max(0.0, pos.initial_deposited_usdc - usdc_gross)
 
         with self._get_conn() as conn:
             conn.execute("""
@@ -631,14 +657,53 @@ class CookieAtomicEngine:
 
         self._save_metadata()
 
+        # On-Chain Treasury Dispatch (Direct native $COOKIE transfer on Cookie Chain SVM)
         tx_sig = f"ATOMIC-WITHDRAW-{int(time.time())}-{abs(hash(user_address)) % 100000:05d}"
+        cookiescan_url = f"https://cookiescan.io/tx/{tx_sig}"
+
+        if cookie_payout > 0.0001:
+            try:
+                script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts", "dispatch_treasury_payout.js")
+                if os.path.exists(script_path):
+                    memo = (
+                        f"[Emergency Withdraw] 20% penalty applied (-{penalty_cookie:.2f} COOKIE)"
+                        if bypass_cooldown else
+                        f"[Atomic Withdraw] Burned {shares:.2f} cCOOKIE-LP"
+                    )
+                    proc = subprocess.run(
+                        ["node", script_path, "--to", user_address, "--amount", str(round(cookie_payout, 4)), "--memo", memo],
+                        capture_output=True,
+                        text=True,
+                        timeout=25
+                    )
+                    if proc.returncode == 0:
+                        dispatch_res = json.loads(proc.stdout)
+                        if dispatch_res.get("success") and dispatch_res.get("tx_signature"):
+                            tx_sig = dispatch_res["tx_signature"]
+                            cookiescan_url = dispatch_res.get("cookiescan_url", f"https://cookiescan.io/tx/{tx_sig}")
+                            slot = dispatch_res.get("slot", slot)
+                    else:
+                        logger.warning(f"Treasury dispatch stderr: {proc.stderr}")
+            except Exception as e:
+                logger.warning(f"Treasury dispatch exception: {e}")
+
         total_payout_usd = round((cookie_payout * COOKIE_USD_REFERENCE_PRICE) + usdc_payout, 2)
-        on_chain_memo = f"[Cookie Atomic Withdraw] {user_address[:6]}..{user_address[-4:]} Burned:{shares:.2f} cCOOKIE-LP (ExitFee: ${exit_fee_usd})"
+        on_chain_memo = (
+            f"[Cookie Atomic Emergency Withdraw] {user_address[:6]}..{user_address[-4:]} "
+            f"Gross:{cookie_gross:.2f} COOKIE -20% Penalty:{penalty_cookie:.2f} Net:{cookie_payout:.2f}"
+            if bypass_cooldown else
+            f"[Cookie Atomic Withdraw] {user_address[:6]}..{user_address[-4:]} Burned:{shares:.2f} cCOOKIE-LP (Fee: ${exit_fee_usd})"
+        )
         return {
             "status": "confirmed",
             "action": "ATOMIC_VAULT_WITHDRAW",
+            "is_emergency": bypass_cooldown,
             "user_address": user_address,
             "shares_burned": round(shares, 4),
+            "cookie_gross": round(cookie_gross, 4),
+            "usdc_gross": round(usdc_gross, 2),
+            "penalty_cookie": round(penalty_cookie, 4) if bypass_cooldown else 0.0,
+            "penalty_rate_pct": 20.0 if bypass_cooldown else round(exit_fee_rate * 100.0, 3),
             "payout_cookie": round(cookie_payout, 4),
             "payout_usdc": round(usdc_payout, 2),
             "cookie_payout": round(cookie_payout, 4),
@@ -649,6 +714,7 @@ class CookieAtomicEngine:
             "total_payout_usd": total_payout_usd,
             "remaining_shares": round(pos.shares, 4),
             "tx_signature": tx_sig,
+            "cookiescan_url": cookiescan_url,
             "slot": slot,
             "blockhash": blockhash,
             "on_chain_memo": on_chain_memo
