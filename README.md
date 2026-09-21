@@ -1,7 +1,7 @@
 # 🍪 CookieAgent Gateway & Sentinel cApp
 
 <p align="center">
-  <img src="static/cookie_logo.png" alt="CookieAgent Gateway & Sentinel" width="220" />
+  <img src="static/agents/cyber_cookie_bitten.png" alt="CookieAgent Gateway & Sentinel" width="220" />
 </p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-amber.svg)](https://opensource.org/licenses/MIT)
