@@ -358,7 +358,7 @@ const CookieBurnOvenComponent: React.FC<CookieBurnOvenProps> = ({
 
         {/* Description */}
         <p className={`text-xs font-medium leading-relaxed ${isDark ? 'text-slate-300' : 'text-[#0b1f3a]/80'}`}>
-          10% of arbitrage spread captures and voluntary user burns are routed directly to the canonical burn program (<code className={`text-[11px] mono font-bold ${isDark ? 'text-cyan-400 bg-cyan-950/50 px-1 py-0.5 rounded border border-cyan-800' : 'text-[#0b1f3a]'}`}>1nc1nerator...</code>) on Cookie Chain, permanently reducing circulating supply.
+          Voluntary user burns are routed directly to the canonical burn program (<code className={`text-[11px] mono font-bold ${isDark ? 'text-cyan-400 bg-cyan-950/50 px-1 py-0.5 rounded border border-cyan-800' : 'text-[#0b1f3a]'}`}>1nc1nerator...</code>) on Cookie Chain, permanently reducing circulating supply.
         </p>
       </div>
 

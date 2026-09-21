@@ -455,16 +455,16 @@ const CookieAtomicVaultComponent: React.FC<CookieAtomicVaultProps> = ({
               <span className="text-xl">⚡</span>
               <div>
                 <h4 className="text-xs font-black uppercase text-purple-400">
-                  Flash Arbitrage Liquidity Pool
+                  Atomic Agent — Standby
                 </h4>
                 <p className={`text-[11px] font-bold ${mutedText}`}>
-                  cCOOKIE-LP Share Staking & Tactical Operations
+                  cCOOKIE-LP Share Custody &amp; Payout Security
                 </p>
               </div>
             </div>
 
             <p className="text-xs leading-relaxed opacity-90">
-              User liquidity deposits, share certificate redemptions, and automated DEX sniper operations are hosted exclusively in the dedicated <strong>Atomic Agent</strong>.
+              User liquidity deposits and share certificate redemptions are held in the dedicated <strong>Atomic Agent</strong>, currently in standby &mdash; no live arbitrage runs until a second liquid Cookie Chain DEX exists.
             </p>
 
             {/* Quick Status Breakdown */}

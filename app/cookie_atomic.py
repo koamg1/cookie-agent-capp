@@ -616,7 +616,7 @@ class CookieAtomicEngine:
             }
         ]
 
-        sniper_status = "Cookie Atomic Sniper Activo | 1 Pool Detectado (Cookoven) | A la espera de despliegue de DEX secundario"
+        sniper_status = "Cookie Atomic Sniper: Standby | 1 Pool Detected (Cookoven) | Awaiting secondary DEX deployment"
 
         return PoolDiscoveryInfo(
             primary_pool=cookoven_pool,

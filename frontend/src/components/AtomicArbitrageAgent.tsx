@@ -415,7 +415,7 @@ const AtomicArbitrageAgentComponent: React.FC<AtomicArbitrageAgentProps> = ({
                 </span>
               </div>
               <p className={`text-xs font-bold mt-1 ${mutedText}`}>
-                Autonomous algorithmic agent monitoring on-chain liquidity pools across block slots. Executes single-transaction atomic arbitrage with zero-slippage adverse reversion.
+                Autonomous algorithmic agent monitoring on-chain liquidity pools across block slots. Designed to execute single-transaction atomic arbitrage with zero-slippage adverse reversion once a second liquid DEX exists on Cookie Chain &mdash; currently in standby.
               </p>
             </div>
           </div>
@@ -705,7 +705,7 @@ const AtomicArbitrageAgentComponent: React.FC<AtomicArbitrageAgentProps> = ({
                 <span className="text-xl">🎯</span>
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wider">
-                    SVM DEX Discovery & Active Sniper Telemetry
+                    SVM DEX Discovery & Standby Sniper Telemetry
                   </h3>
                   <p className={`text-[11px] font-bold ${mutedText}`}>
                     Autonomous probe polling on-chain program accounts across SVM block slots
@@ -726,7 +726,7 @@ const AtomicArbitrageAgentComponent: React.FC<AtomicArbitrageAgentProps> = ({
             }`}>
               <div className="flex items-center gap-2">
                 <span className="text-base">🛡️</span>
-                <span>{discovery?.sniper_status || 'Cookie Atomic Sniper Active | 1 Pool Detected (Cookoven) | Awaiting secondary DEX deployment'}</span>
+                <span>{discovery?.sniper_status || 'Cookie Atomic Sniper: Standby | 1 Pool Detected (Cookoven) | Awaiting secondary DEX deployment'}</span>
               </div>
               <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 mono shrink-0">
                 STANDBY

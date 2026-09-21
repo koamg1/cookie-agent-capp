@@ -952,16 +952,6 @@ async def vault_feed(limit: int = 15):
     """Real-time trade telemetry of the 24/7 Sentinel Runner."""
     return hyper_arb_vault.get_feed(limit=limit)
 
-@app.post("/api/v1/vault/trigger-arb")
-async def vault_trigger_arb():
-    """Manual trigger for an immediate SVM arbitrage cycle."""
-    epoch_info = await cookie_client.get_epoch_info()
-    slot = epoch_info.get("absolute_slot", 26058000)
-    blockhash_data = await cookie_client.get_latest_blockhash()
-    bh = blockhash_data.get("blockhash", "7PG5P5KzG56zUqD5TJhSyEDPTHEe6QW1bLFUyDhYCoSz")
-    rec = hyper_arb_vault.execute_arbitrage_cycle(slot=slot, blockhash=bh)
-    return rec.model_dump()
-
 # --- Cookie Atomic Engine Endpoints (Mainnet Beta) ---
 
 class AtomicSimulateRequest(BaseModel):
