@@ -80,7 +80,7 @@ timeline
         Verifiable Burn Engine : 100% On-Chain RPC Sync
         Baker Karma Scoring : On-Chain Passport Cert
         Proof of Reserves : Cold Storage Solvency Telemetry
-        14 MCP Tools : cookie-mcp Autonomous Bridge
+        18 MCP Tools : cookie-mcp Autonomous Bridge
     section Phase 2 : Current Milestone
         Multi-Node Signer : k-of-n treasury payouts
         Server-Side SIWS Auth : per-address verification
@@ -97,7 +97,7 @@ timeline
 - [x] **Zero-Simulation On-Chain Burn Verification**: Elimination of synthetic logs; 100% authentic transaction verification via `https://rpc.cookiescan.io`.
 - [x] **Baker Karma & Leaderboard**: Anti-cheat mathematical score weighting real burns and vault holdings.
 - [x] **Cryptographic Proof of Reserves**: Real-time solvency tracking matching on-chain cold vault balances to minted shares (`cCOOKIE-LP`).
-- [x] **14 Model Context Protocol (`cookie-mcp`) Tools**: Comprehensive toolset for autonomous agents to query state, inspect blocks, and simulate execution.
+- [x] **18 Model Context Protocol (`cookie-mcp`) Tools**: Comprehensive toolset for autonomous agents to query state, inspect blocks, and simulate execution.
 
 ### Phase 2: Custody Hardening & Cookie Chain Liquidity *(In Progress)*
 - [ ] **Multi-Node Signer**: extend treasury payouts from the current single isolated signer to a k-of-n approval across independent hosts, so no single machine can move funds.
@@ -124,7 +124,7 @@ timeline
 | `GET` | `/api/v1/atomic/status` | Vault TVL, NAV price & Standby Sentinel state |
 | `GET` | `/api/v1/atomic/proof-of-reserves` | Live on-chain Cold Vault solvency breakdown |
 | `GET` | `/api/v1/airdrop/karma/{address}` | Verified Baker Karma score & tier ranking |
-| `GET` | `/api/v1/mcp/manifest` | Model Context Protocol JSON schema (14 tools) |
+| `GET` | `/api/v1/mcp/manifest` | Model Context Protocol JSON schema (18 tools) |
 
 ### Interactive Swagger UI
 Explore and execute live requests directly in your browser:

@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-amber.svg)](https://opensource.org/licenses/MIT)
 [![Network: Cookie Chain (SVM)](https://img.shields.io/badge/Network-Cookie%20Chain%20(SVM)-orange)](https://docs.cookiechain.wtf)
-[![Tests: 46/46 Passed](https://img.shields.io/badge/Tests-46%2F46%20Passed-brightgreen)](tests/test_cookie_atomic.py)
+[![Tests: 44/46 Passed](https://img.shields.io/badge/Tests-44%2F46%20Passed%20(2%20skip%20w%2Fo%20live%20RPC)-brightgreen)](tests/test_cookie_atomic.py)
 [![Frontend: React 18 + Vite](https://img.shields.io/badge/Frontend-React%2018%20%2B%20Vite-blue)](https://vitejs.dev)
 [![Wallets: 9 SVM Wallets](https://img.shields.io/badge/Wallets-9%20SVM%20Supported-purple)](https://github.com/wallet-standard/wallet-standard)
 [![MCP: 14 Tools](https://img.shields.io/badge/MCP-14%20Tools%20Active-emerald)](/api/v1/mcp/manifest)
@@ -32,7 +32,7 @@
 The **CookieAgent Gateway & Sentinel** addresses key infrastructure and onboarding challenges in the Cookie Chain SVM ecosystem:
 
 1. **Universal SVM Onboarding**: Supports **9 Web3 wallets** (Nightly, Phantom, Backpack, OKX, Solflare, Magic Eden, Coinbase Wallet, Brave, and In-Browser Session Keys) using the official **Solana Wallet Standard** and cryptographically grounded **Sign-In with Solana (SIWS)**.
-2. **Autonomous AI Agent Bridge (`cookie-mcp`)**: Native bridge exposing **14 Model Context Protocol (MCP) tool endpoints** for autonomous agents (Claude, Codex, PydanticAI, LangChain) to query balances, fetch real-time SVM block telemetry, read the live COOK price, inspect vault positions and Proof-of-Reserves, and broadcast on-chain execution proofs.
+2. **Autonomous AI Agent Bridge (`cookie-mcp`)**: Native bridge exposing **18 Model Context Protocol (MCP) tool endpoints** for autonomous agents (Claude, Codex, PydanticAI, LangChain) to query balances, fetch real-time SVM block telemetry, read the live COOK price, inspect vault positions and Proof-of-Reserves, and broadcast on-chain execution proofs.
 3. **⚡ COOK Price Monitor & Security-First Vault**: Shows COOK's **live USD price** straight from its Solana market (DexScreener). Cookie Chain has no COOK/USDC market yet, so **no cross-chain arbitrage is claimed** — the vault sits in transparent standby with on-chain-verified custody (see Security below).
 4. **Verifiable On-Chain Telemetry**: Dispatches authentic on-chain SPL Memo transactions directly to the Cookie Chain SVM runtime (`https://rpc.cookiescan.io`), with instantly verifiable transaction hashes on [CookieScan](https://cookiescan.io).
 5. **Interactive Deflationary Burn Oven**: Routes burned tokens to the canonical Solana Incinerator address (`1nc1nerator11111111111111111111111111111111`) and tracks cumulative burn amounts in real-time.
@@ -174,7 +174,7 @@ The Gateway exposes standard REST endpoints and 11 Model Context Protocol (MCP) 
 | `POST` | `/api/v1/vault/withdraw` | Two-phase withdraw via the isolated signer (pay → confirm → burn shares) |
 | `POST` | `/api/v1/agent/ping` | Autonomous agent pulse test for live telemetry display |
 | `GET` | `/api/v1/mcp/manifest` | Model Context Protocol JSON manifest declaring all 14 tool schemas |
-| `POST` | `/api/v1/mcp/execute` | Universal execution endpoint for all 14 MCP tools |
+| `POST` | `/api/v1/mcp/execute` | Universal execution endpoint for all 18 MCP tools |
 
 ### Model Context Protocol (MCP) Tools
 The MCP manifest (`/api/v1/mcp/manifest`) provides LLM-ready definitions for:
@@ -227,23 +227,28 @@ uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
 
 ## 🧪 Automated Testing
 
-The project includes an extensive test suite verifying all 11 MCP tools, REST endpoints, and the HyperArb Vault simulation engine:
+The project includes an extensive test suite verifying all 18 MCP tools, REST endpoints, and the Cookie Atomic vault engine:
 
 ```bash
 python -m pytest -v
 ```
 
-### Test Suite Results (46/46 Passed — 100% Green)
+### Test Suite Results (44/46 Passed, 2 Skipped)
 
-All 46 tests pass, covering the REST API, the 14 MCP tools, burn tracking, the atomic
-engine math, and the security invariants added during the hardening pass:
+44 of 46 tests pass in a network-restricted environment; the remaining 2 make a live
+RPC call (Solana Mainnet blockhash proxy, and a Cookie Chain `simulateTransaction`
+probe) and skip gracefully with an explicit reason when that network access isn't
+available, rather than failing or faking a result. All 46 pass on a host with real
+RPC access (e.g. the deployed VPS). Covers the REST API, the 18 MCP tools, burn
+tracking, the atomic engine math, and the security invariants added during the
+hardening pass:
 
 * **Deposit zero-trust**: a fabricated / non-existent deposit tx is rejected (no shares minted from thin air).
 * **Withdraw two-phase**: a signer failure does **not** burn shares; a payout above the auto cap is queued for manual approval with shares intact.
 * **Honest telemetry**: standby engine returns `STANDBY_NO_LIQUIDITY` (no fabricated profit / NAV), Proof-of-Reserves reflects real solvency.
 
 ```bash
-python -m pytest -q      # 46 passed
+python -m pytest -q      # 44 passed, 2 skipped (skips need live RPC access)
 ```
 
 ---

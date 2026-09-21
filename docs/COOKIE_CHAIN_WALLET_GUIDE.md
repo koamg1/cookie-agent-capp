@@ -86,4 +86,4 @@ The complete production implementation is available in the CookieAgent cApp repo
 * **Universal Adapter**: `frontend/src/utils/solana.ts`
 * **Wallet Modal**: `frontend/src/components/WalletModal.tsx`
 * **SVG Vector Logos**: `frontend/src/components/WalletIcons.tsx`
-* **Live Deployment**: [https://cookie-agent-capp.vercel.app/](https://cookie-agent-capp.vercel.app/)
+* **Live Deployment**: `<YOUR_PUBLIC_URL>` (Docker Compose + Cloudflare Tunnel -- see docs/BOUNTY_SUBMISSION.md; this project no longer ships a Vercel config, the prior link here was stale)

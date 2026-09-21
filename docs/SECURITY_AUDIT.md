@@ -5,6 +5,16 @@ Alcance: backend FastAPI (`app/`), scripts de despacho (`scripts/`), frontend co
 Método: lectura estática completa de los módulos de dinero + suite de tests (43/43 en verde).
 Estado del árbol: sin commitear.
 
+> **Estado de remediación (leer antes que nada):** este documento es el hallazgo
+> *original*, en presente, tal como se encontró. **C1 y C2 (críticos) están
+> cerrados** desde entonces -- verificación real de depósitos on-chain, retiro en
+> dos fases y un firmador aislado que impone política y nunca expone la llave de
+> tesoro a la API pública. El detalle de cada fix, con qué commit/archivo lo cierra
+> y qué queda pendiente (Fase 3 SIWS server-side, firmador multi-nodo), está en
+> `docs/ROADMAP_HARDENING.md` bajo las secciones "Progreso". Este archivo se deja
+> intacto como registro histórico del proceso de auditoría, no como el estado
+> actual del código.
+
 > Resumen ejecutivo: la contabilidad del vault (shares) está **desacoplada de la
 > verificación on-chain** y el pago sale de una **keypair de tesoro real**. Hoy
 > está desarmado (depósitos cerrados por flag, no existe el archivo de keypair),
