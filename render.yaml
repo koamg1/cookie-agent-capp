@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: cookie-agent-capp
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: main
+    healthCheckPath: /health
+    envVars:
+      - key: COOKIE_RPC_URL
+        value: https://rpc.cookiescan.io
+      - key: COOKIE_DAS_API
+        value: https://api.cookiescan.io
+      - key: PORT
+        value: 8080
+      - key: HOST
+        value: 0.0.0.0

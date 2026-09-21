@@ -29,6 +29,8 @@
 * 📖 **User Guide & Roadmap**: [docs/USER_GUIDE_AND_ROADMAP.md](docs/USER_GUIDE_AND_ROADMAP.md)
 * 🔒 **Security Audit & Hardening**: [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) · [docs/ROADMAP_HARDENING.md](docs/ROADMAP_HARDENING.md)
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/koamg1/cookie-agent-capp)
+
 ---
 
 ## 📸 Screenshots
