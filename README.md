@@ -19,13 +19,12 @@
 
 ## 🌐 Live Demo & Endpoints
 
-> Self-hosted on a VPS (Docker + Cloudflare Tunnel). After `docker compose up`, replace
-> `<YOUR_PUBLIC_URL>` below with your public URL.
+> **Production Deployment (Render)**: Fully synchronized with Cookie Chain SVM, 18 MCP tools, and live telemetry.
 
-* 🚀 **Live Web App**: `<YOUR_PUBLIC_URL>`
-* 📚 **Swagger API Docs**: `<YOUR_PUBLIC_URL>/docs`
-* 🤖 **MCP Manifest**: `<YOUR_PUBLIC_URL>/api/v1/mcp/manifest`
-* 💓 **Health Check**: `<YOUR_PUBLIC_URL>/health`
+* 🚀 **Live Web App**: [https://cookie-agent-capp.onrender.com](https://cookie-agent-capp.onrender.com)
+* 📚 **Swagger API Docs**: [https://cookie-agent-capp.onrender.com/docs](https://cookie-agent-capp.onrender.com/docs)
+* 🤖 **MCP Manifest**: [https://cookie-agent-capp.onrender.com/api/v1/mcp/manifest](https://cookie-agent-capp.onrender.com/api/v1/mcp/manifest)
+* 💓 **Health Check**: [https://cookie-agent-capp.onrender.com/health](https://cookie-agent-capp.onrender.com/health)
 * 📖 **User Guide & Roadmap**: [docs/USER_GUIDE_AND_ROADMAP.md](docs/USER_GUIDE_AND_ROADMAP.md)
 * 🔒 **Security Audit & Hardening**: [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) · [docs/ROADMAP_HARDENING.md](docs/ROADMAP_HARDENING.md)
 

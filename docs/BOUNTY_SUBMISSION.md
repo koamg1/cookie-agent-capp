@@ -9,10 +9,10 @@ Rellena los `<placeholders>` antes de enviar. Todo el texto de posts está en in
 
 Requisitos del bounty "Create an App on Cookie Chain" (Superteam):
 
-- [ ] **App funcionando en Cookie Chain SVM** — sí (gateway + burns + karma + PoR + 18 MCP tools).
-- [ ] **Nightly wallet soportada** — sí (adaptador de 9 wallets, Nightly incluida).
-- [ ] **URL pública desplegada** — pendiente: `docker compose up --build -d` en el VPS + túnel Cloudflare → `<YOUR_PUBLIC_URL>`.
-- [ ] **Repo público en GitHub** — pendiente: `git push` a un repo público.
+- [x] **App funcionando en Cookie Chain SVM** — sí (gateway + burns + karma + PoR + 18 MCP tools).
+- [x] **Nightly wallet soportada** — sí (adaptador de 9 wallets, Nightly incluida).
+- [x] **URL pública desplegada** — https://cookie-agent-capp.onrender.com
+- [x] **Repo público en GitHub** — https://github.com/koamg1/cookie-agent-capp
 - [ ] **Hilo en X** — borrador abajo (sección 2).
 - [ ] **Compartir en el Telegram de la comunidad Cookie Chain** — mensaje abajo (sección 3).
 - [ ] **Video demo** — el que estás editando; súbelo y enlázalo en el hilo y el README.
@@ -32,8 +32,8 @@ Antes de hacer push (verificación anti-fugas):
 🍪 Building on Cookie Chain (SVM): CookieAgent Gateway & Sentinel — an autonomous-agent
 gateway + verifiable on-chain burns + a transparent, security-first vault.
 
-Live: <YOUR_PUBLIC_URL>
-Code: <YOUR_GITHUB_URL>
+Live: https://cookie-agent-capp.onrender.com
+Code: https://github.com/koamg1/cookie-agent-capp
 Demo: <YOUR_VIDEO_URL>
 🧵
 
@@ -71,7 +71,7 @@ Built for Cookie Chain. Feedback welcome 🍪
 > 🍪 Just shipped **CookieAgent Gateway & Sentinel** for the Cookie Chain app bounty.
 > Agent gateway + verifiable $COOKIE burns + Baker Karma + 18 MCP tools + a security-first
 > vault (on-chain-verified deposits, isolated signer, no fake yield or arbitrage — honest standby).
-> Live: <YOUR_PUBLIC_URL> · Code: <YOUR_GITHUB_URL> · Demo: <YOUR_VIDEO_URL>
+> Live: https://cookie-agent-capp.onrender.com · Code: https://github.com/koamg1/cookie-agent-capp · Demo: <YOUR_VIDEO_URL>
 > Nightly-ready. Would love feedback from the community 🙏
 
 ---
