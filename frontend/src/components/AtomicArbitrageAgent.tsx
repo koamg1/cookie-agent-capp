@@ -22,7 +22,6 @@ interface VaultStatus {
   runner_status: string;
   target_block_speed: string;
   pools_detected: number;
-  cross_chain_spread_pct: number;
 }
 
 interface UserPosition {

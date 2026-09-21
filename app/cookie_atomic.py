@@ -782,7 +782,6 @@ class CookieAtomicEngine:
         por = self.get_proof_of_reserves()
         tvl = por["total_on_chain_assets_usd"]
         discovery = self.get_pool_discovery()
-        cross_chain = self.get_cross_chain_differential()
 
         return {
             "protocol": "Cookie Atomic Engine (Mainnet Beta)",
@@ -807,8 +806,7 @@ class CookieAtomicEngine:
             ),
             "runner_status": "Sentinel Vault on Standby | 1 Pool Detected (Cookoven $15 TVL) | 0.00% Real APY",
             "target_block_speed": "400ms (SVM Slot)",
-            "pools_detected": discovery.total_pools_detected,
-            "cross_chain_spread_pct": cross_chain["spread_pct"]
+            "pools_detected": discovery.total_pools_detected
         }
 
     # --- Dual-Leg Capital Management & 3-Tier Security ---
