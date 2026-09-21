@@ -417,7 +417,7 @@ export const DocsRoadmapModal: React.FC<DocsRoadmapModalProps> = ({
                 <div className="flex items-center justify-between">
                   <h5 className="font-black text-base sm:text-lg flex items-center gap-2">
                     <span>🤖</span>
-                    <span>cookie-mcp Protocol (14 Tools)</span>
+                    <span>cookie-mcp Protocol (18 Tools)</span>
                   </h5>
                   <a
                     href="/api/v1/mcp/manifest"

@@ -1,11 +1,15 @@
 # 🍪 CookieAgent Gateway & Sentinel cApp
 
+<p align="center">
+  <img src="static/cookie_logo.png" alt="CookieAgent Gateway & Sentinel" width="220" />
+</p>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-amber.svg)](https://opensource.org/licenses/MIT)
 [![Network: Cookie Chain (SVM)](https://img.shields.io/badge/Network-Cookie%20Chain%20(SVM)-orange)](https://docs.cookiechain.wtf)
 [![Tests: 44/46 Passed](https://img.shields.io/badge/Tests-44%2F46%20Passed%20(2%20skip%20w%2Fo%20live%20RPC)-brightgreen)](tests/test_cookie_atomic.py)
 [![Frontend: React 18 + Vite](https://img.shields.io/badge/Frontend-React%2018%20%2B%20Vite-blue)](https://vitejs.dev)
 [![Wallets: 9 SVM Wallets](https://img.shields.io/badge/Wallets-9%20SVM%20Supported-purple)](https://github.com/wallet-standard/wallet-standard)
-[![MCP: 14 Tools](https://img.shields.io/badge/MCP-14%20Tools%20Active-emerald)](/api/v1/mcp/manifest)
+[![MCP: 18 Tools](https://img.shields.io/badge/MCP-18%20Tools%20Active-emerald)](/api/v1/mcp/manifest)
 [![Docker Ready](https://img.shields.io/badge/Docker-Ready%20(<80MB)-teal)](https://docker.com)
 [![Superteam Earn Bounty](https://img.shields.io/badge/Superteam%20Earn-Bounty%20Track-gold)](https://earn.superteam.fun)
 
@@ -24,6 +28,31 @@
 * 💓 **Health Check**: `<YOUR_PUBLIC_URL>/health`
 * 📖 **User Guide & Roadmap**: [docs/USER_GUIDE_AND_ROADMAP.md](docs/USER_GUIDE_AND_ROADMAP.md)
 * 🔒 **Security Audit & Hardening**: [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) · [docs/ROADMAP_HARDENING.md](docs/ROADMAP_HARDENING.md)
+
+---
+
+## 📸 Screenshots
+
+<!--
+  TODO before submitting: run `docker compose up --build -d`, open the app, and drop
+  4 PNGs into docs/screenshots/ with these exact names (each ~1280px wide is plenty):
+    - docs/screenshots/fleet.png       -> the Sentinel Fleet page (live vs. dimmed/spec agents)
+    - docs/screenshots/vault.png       -> Cookie Atomic Vault (Proof-of-Reserves cards)
+    - docs/screenshots/burn.png        -> Cookie Burn Oven (burn + Baker Karma leaderboard)
+    - docs/screenshots/mcp-manifest.png -> either the Docs/Roadmap modal or GET /api/v1/mcp/manifest in the browser
+  These 4 render automatically below once the files exist -- no other edit needed.
+-->
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/fleet.png" alt="Sentinel Fleet — live agents vs. dimmed roadmap agents" /><br/><sub align="center">Sentinel Fleet — 6 live agents, 44 dimmed roadmap specs</sub></td>
+    <td width="50%"><img src="docs/screenshots/vault.png" alt="Cookie Atomic Vault — Proof-of-Reserves" /><br/><sub align="center">Cookie Atomic Vault — 3-tier Proof-of-Reserves</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/burn.png" alt="Cookie Burn Oven — verifiable burns & Baker Karma" /><br/><sub align="center">Cookie Burn Oven — verifiable burns & Baker Karma leaderboard</sub></td>
+    <td width="50%"><img src="docs/screenshots/mcp-manifest.png" alt="cookie-mcp — 18-tool manifest for AI agents" /><br/><sub align="center">cookie-mcp — 18-tool manifest for AI agents</sub></td>
+  </tr>
+</table>
 
 ---
 
@@ -58,7 +87,7 @@ flowchart TD
     subgraph BACKEND["FastAPI Gateway Engine (Python 3.11 / 3.13)"]
         ROUTER["API Router (/api/v1)"]
         FLEET_REG["50-Agent Sentinel Registry"]
-        MCP_GATEWAY["cookie-mcp Protocol Controller (14 Tools)"]
+        MCP_GATEWAY["cookie-mcp Protocol Controller (18 Tools)"]
         RPC_CLIENT["Cookie Chain RPC Client"]
         VAULT_ENGINE["Cookie Atomic Engine & PoR Audit"]
         STATIC_SRV["Static Asset Server (Vite Bundles)"]
@@ -173,7 +202,7 @@ The Gateway exposes standard REST endpoints and 11 Model Context Protocol (MCP) 
 | `POST` | `/api/v1/vault/deposit` | Disabled in production — deposits are credited only via on-chain-verified `/api/v1/atomic/verify-deposit` |
 | `POST` | `/api/v1/vault/withdraw` | Two-phase withdraw via the isolated signer (pay → confirm → burn shares) |
 | `POST` | `/api/v1/agent/ping` | Autonomous agent pulse test for live telemetry display |
-| `GET` | `/api/v1/mcp/manifest` | Model Context Protocol JSON manifest declaring all 14 tool schemas |
+| `GET` | `/api/v1/mcp/manifest` | Model Context Protocol JSON manifest declaring all 18 tool schemas |
 | `POST` | `/api/v1/mcp/execute` | Universal execution endpoint for all 18 MCP tools |
 
 ### Model Context Protocol (MCP) Tools
