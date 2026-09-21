@@ -26,6 +26,7 @@ interface ProofOfReserves {
   status: string;
   solvency_ratio_pct: number;
   is_solvent: boolean;
+  reserves_rpc_verified?: boolean;
   live_slot: number;
   rpc_latency_ms: number;
   tiers?: {
@@ -228,9 +229,15 @@ const CookieAtomicVaultComponent: React.FC<CookieAtomicVaultProps> = ({
           <span className="text-xl font-black text-emerald-400 mono mt-1 block">
             {proofOfReserves?.solvency_ratio_pct ?? 100.0}%
           </span>
-          <span className="text-[10px] font-bold text-emerald-500 block mt-1">
-            ● 1:1 Asset-to-Liability Backing
-          </span>
+          {proofOfReserves && proofOfReserves.reserves_rpc_verified === false ? (
+            <span className="text-[10px] font-bold text-amber-500 block mt-1">
+              ⚠ RPC unreachable — reserves not confirmed live
+            </span>
+          ) : (
+            <span className="text-[10px] font-bold text-emerald-500 block mt-1">
+              ● 1:1 Asset-to-Liability Backing
+            </span>
+          )}
         </div>
 
         <div className={`p-4 rounded-2xl border-2 transition-all ${cardBg}`}>

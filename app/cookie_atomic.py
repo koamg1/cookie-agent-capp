@@ -22,7 +22,7 @@ import subprocess
 import json
 import urllib.request
 import logging
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List, Optional, Set, Tuple
 from pydantic import BaseModel, Field
 
 from app.signer_client import request_payout as signer_request_payout
@@ -376,17 +376,22 @@ class CookieAtomicEngine:
         self.user_positions: Dict[str, UserPosition] = {}
         self.recent_executions: List[AtomicExecutionRecord] = []
         self._withdrawing_addresses: Set[str] = set()
-        self._balance_cache: Dict[str, Tuple[float, float]] = {}
+        self._balance_cache: Dict[str, Tuple[float, float, bool]] = {}
 
         self._init_db()
         self._load_state()
 
-    def _fetch_rpc_balance(self, address: str, fallback: float = 0.0) -> float:
-        """Fetch actual on-chain native $COOKIE balance with 15-second TTL cache to prevent event-loop stalls."""
+    def _fetch_rpc_balance(self, address: str, fallback: float = 0.0) -> Tuple[float, bool]:
+        """
+        Fetch actual on-chain native $COOKIE balance with 15-second TTL cache to
+        prevent event-loop stalls. Returns (balance, rpc_ok) -- callers must
+        check rpc_ok before presenting the balance as a confirmed on-chain read,
+        since `fallback` is only a safe default, not a real reading.
+        """
         now = time.time()
         cached = self._balance_cache.get(address)
         if cached and (now - cached[1]) < 15.0:
-            return cached[0]
+            return cached[0], cached[2]
 
         try:
             req = urllib.request.Request(
@@ -399,12 +404,12 @@ class CookieAtomicEngine:
                 val = data.get("result", {}).get("value")
                 if val is not None:
                     bal = round(val / 1e9, 4)
-                    self._balance_cache[address] = (bal, now)
-                    return bal
+                    self._balance_cache[address] = (bal, now, True)
+                    return bal, True
         except Exception:
             pass
-        self._balance_cache[address] = (fallback, now)
-        return fallback
+        self._balance_cache[address] = (fallback, now, False)
+        return fallback, False
 
     def _verify_native_deposit_onchain(self, tx_hash: str, user_address: str, deposit_address: Optional[str] = None):
         """
@@ -1205,9 +1210,10 @@ class CookieAtomicEngine:
         # Audit M3: on RPC failure fall back to 0.0, never to liabilities.
         # Using self.total_cookie_deposited as a reserve fallback fabricated a fake
         # 100% solvency whenever the RPC was unreachable.
-        cold_cookie = self._fetch_rpc_balance(COLD_VAULT_ADDRESS, fallback=0.0)
-        warm_cookie = self._fetch_rpc_balance(WARM_VAULT_ADDRESS, fallback=0.0)
-        hot_cookie = self._fetch_rpc_balance(HOT_VAULT_ADDRESS, fallback=0.0)
+        cold_cookie, cold_ok = self._fetch_rpc_balance(COLD_VAULT_ADDRESS, fallback=0.0)
+        warm_cookie, warm_ok = self._fetch_rpc_balance(WARM_VAULT_ADDRESS, fallback=0.0)
+        hot_cookie, hot_ok = self._fetch_rpc_balance(HOT_VAULT_ADDRESS, fallback=0.0)
+        all_reserves_rpc_ok = cold_ok and warm_ok and hot_ok
 
         # Honest Single-Asset $COOKIE: 0.00 USDC in custody
         cold_usdc = 0.0
@@ -1245,7 +1251,7 @@ class CookieAtomicEngine:
                 "address": COLD_VAULT_ADDRESS,
                 "timelock_hours": 24,
                 "telemetry_badge": "COLD VAULT • OFFLINE CUSTODY",
-                "rpc_status": "ONLINE (FINALIZED)",
+                "rpc_status": "ONLINE (FINALIZED)" if cold_ok else "UNREACHABLE (fallback 0.0 shown)",
                 "cookiescan_url": f"https://cookiescan.io/address/{COLD_VAULT_ADDRESS}"
             },
             "warm_buffer": {
@@ -1257,7 +1263,7 @@ class CookieAtomicEngine:
                 "address": WARM_VAULT_ADDRESS,
                 "timelock_hours": 0,
                 "telemetry_badge": "WARM BUFFER • DAILY RESERVE",
-                "rpc_status": "ONLINE (LIQUID)",
+                "rpc_status": "ONLINE (LIQUID)" if warm_ok else "UNREACHABLE (fallback 0.0 shown)",
                 "cookiescan_url": f"https://cookiescan.io/address/{WARM_VAULT_ADDRESS}"
             },
             "hot_trading_bot": {
@@ -1269,7 +1275,7 @@ class CookieAtomicEngine:
                 "address": HOT_VAULT_ADDRESS,
                 "max_risk_cap_pct": 5.0,
                 "telemetry_badge": "HOT BOT • MAX RISK 5%",
-                "rpc_status": "ACTIVE (400ms)",
+                "rpc_status": "ACTIVE (400ms)" if hot_ok else "UNREACHABLE (fallback 0.0 shown)",
                 "cookiescan_url": f"https://cookiescan.io/address/{HOT_VAULT_ADDRESS}"
             }
         }
@@ -1278,6 +1284,11 @@ class CookieAtomicEngine:
             "status": solvency_status,
             "solvency_ratio_pct": solvency_ratio_pct,
             "is_solvent": solvency_ratio_pct >= 100.0,
+            # Honesty fix: distinct from `is_solvent` (a math result over whatever
+            # balances we have). This flag says whether those balances were
+            # actually confirmed on-chain just now, vs. a safe 0.0 fallback used
+            # because Cookie Chain RPC was unreachable.
+            "reserves_rpc_verified": all_reserves_rpc_ok,
             "total_on_chain_assets_usd": total_on_chain_assets_usd,
             "total_cookie_reserve": total_cookie_reserve,
             "total_usdc_reserve": total_usdc_reserve,
@@ -1314,7 +1325,14 @@ class CookieAtomicEngine:
             "por_health_check": {
                 "oracle_latency_ms": latency_ms,
                 "attestation_method": "native_rpc_balance_read",
-                "reserve_audit": "PASSED_ON_CHAIN_RPC" if solvency_ratio_pct >= 100.0 else "UNDERCOLLATERALIZED"
+                # Honesty fix: this previously said "PASSED_ON_CHAIN_RPC" purely
+                # from the solvency ratio (trivially 100% at zero liabilities),
+                # even on a call where every underlying RPC balance read failed.
+                # It must reflect whether the RPC reads actually succeeded.
+                "reserve_audit": (
+                    "PASSED_ON_CHAIN_RPC" if all_reserves_rpc_ok
+                    else "RPC_UNREACHABLE (balances shown are 0.0 fallback, not confirmed reads)"
+                ) if solvency_ratio_pct >= 100.0 else "UNDERCOLLATERALIZED"
             }
         }
 

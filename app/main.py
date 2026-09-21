@@ -148,10 +148,19 @@ async def health_check():
     t0 = time.perf_counter()
     node_health = await cookie_client.get_health()
     total_ms = (time.perf_counter() - t0) * 1000.0
+    # Honesty fix: this gateway process (FastAPI itself) is indeed up if it can
+    # answer at all, so "status" reflects THIS service's liveness -- but it must
+    # not be confused with the upstream Cookie Chain RPC node's own health,
+    # which is reported honestly (and separately) in cookie_chain_rpc.status
+    # ("ok"/"active"/"offline"). Previously this always said "healthy" even
+    # when cookie_chain_rpc.status was "offline".
+    rpc_status = node_health.get("status") if isinstance(node_health, dict) else None
     return {
         "status": "healthy",
         "service": "cookie-agent-capp",
+        "note": "status reflects this gateway process only, not the Cookie Chain RPC node -- see cookie_chain_rpc.status",
         "cookie_chain_rpc": node_health,
+        "cookie_chain_rpc_reachable": rpc_status in ("ok", "active"),
         "gateway_latency_ms": round(total_ms, 2),
         "timestamp": time.time()
     }
@@ -173,9 +182,15 @@ async def network_stats():
         if isinstance(bh_res, dict):
             bh_val = bh_res.get("value", {}).get("blockhash", "unavailable")
 
-    # Live TPS calculation
-    tps = 8.5
-    perf_samples = perf_res.get("result", [])
+    # Live TPS calculation. Honesty fix: previously defaulted to a hardcoded
+    # 8.5 TPS whenever the performance-samples RPC call failed, which is a
+    # truthy value -- it silently defeated the frontend's own `stats?.live_tps
+    # ? ... : 'Synchronizing...'` fallback and displayed a fabricated number
+    # as if it were live. Now it stays None (falsy) on failure so the UI
+    # honestly shows "Synchronizing..." instead of an invented TPS.
+    tps = None
+    perf_ok = isinstance(perf_res, dict) and "result" in perf_res
+    perf_samples = perf_res.get("result", []) if perf_ok else []
     if isinstance(perf_samples, list) and len(perf_samples) > 0:
         s0 = perf_samples[0]
         num_tx = s0.get("numTransactions", 0)
@@ -183,12 +198,20 @@ async def network_stats():
         if period > 0:
             tps = round(num_tx / period, 2)
 
-    epoch_data = epoch_res.get("result", {})
-    epoch_num = epoch_data.get("epoch", 60)
-    slot_index = epoch_data.get("slotIndex", 0)
-    slots_in_epoch = epoch_data.get("slotsInEpoch", 432000)
-    tx_count = epoch_data.get("transactionCount", 0)
-    epoch_progress = round((slot_index / slots_in_epoch) * 100, 2) if slots_in_epoch > 0 else 0.0
+    # Same honesty fix for epoch info: a hardcoded epoch:60 fallback was also
+    # truthy and defeated the frontend's `stats?.epoch ? ... : 'Synchronizing...'`
+    # check, permanently showing a stale "Epoch #60 (0.0%)" whenever the RPC
+    # call failed. Leave these None/unset on failure instead.
+    epoch_ok = isinstance(epoch_res, dict) and "result" in epoch_res and isinstance(epoch_res.get("result"), dict)
+    epoch_data = epoch_res.get("result", {}) if epoch_ok else {}
+    epoch_num = epoch_data.get("epoch") if epoch_ok else None
+    slots_in_epoch = epoch_data.get("slotsInEpoch") if epoch_ok else None
+    tx_count = epoch_data.get("transactionCount") if epoch_ok else None
+    epoch_progress = None
+    if epoch_ok:
+        slot_index = epoch_data.get("slotIndex", 0)
+        if slots_in_epoch:
+            epoch_progress = round((slot_index / slots_in_epoch) * 100, 2)
 
     return {
         "network": "Cookie Chain (SVM)",

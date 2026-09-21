@@ -100,7 +100,18 @@ export const App: React.FC = () => {
       const res = await fetch(apiUrl(`/api/v1/wallet/${address}/balance`));
       if (res.ok) {
         const data = await res.json();
-        setBalanceCookie(Number(data.balance_cookie || 0));
+        // Honesty fix: on an RPC failure the backend returns balance_cookie:
+        // 0.0 alongside an `error` field, as a safe default value -- not a
+        // confirmed on-chain reading. Silently showing that as the user's
+        // real balance could mislead someone into thinking their wallet is
+        // empty when we simply couldn't reach Cookie Chain. Only update the
+        // displayed balance on a genuine successful read; keep the last known
+        // value and log a warning otherwise.
+        if (data && data.error) {
+          console.warn("Balance unavailable (RPC error), keeping last known balance:", data.error);
+        } else {
+          setBalanceCookie(Number(data.balance_cookie || 0));
+        }
       }
     } catch (err) {
       console.warn("Balance fetch error:", err);
