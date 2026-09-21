@@ -51,15 +51,33 @@ class CookieChainClient:
             return {"error": str(e), "latency_ms": (time.perf_counter() - t0) * 1000.0}
 
     async def get_slot(self) -> Dict[str, Any]:
-        """Obtiene el último slot procesado en Cookie Chain."""
+        """Retrieves the latest processed slot on Cookie Chain."""
         return await self.rpc_call("getSlot", [{"commitment": "confirmed"}])
 
+    async def get_transaction(self, signature: str, commitment: str = "confirmed") -> Dict[str, Any]:
+        """
+        Queries a transaction by signature on Cookie Chain SVM.
+        Queries first with 'confirmed' (fast client finality) and
+        if null, falls back to 'finalized'.
+        """
+        res = await self.rpc_call("getTransaction", [
+            signature,
+            {"commitment": commitment, "maxSupportedTransactionVersion": 0}
+        ])
+        if res.get("result") is not None or commitment == "finalized":
+            return res
+        # Fallback to finalized if confirmed was None
+        return await self.rpc_call("getTransaction", [
+            signature,
+            {"commitment": "finalized", "maxSupportedTransactionVersion": 0}
+        ])
+
     async def get_block_height(self) -> Dict[str, Any]:
-        """Obtiene la altura del bloque en Cookie Chain."""
+        """Retrieves current block height on Cookie Chain."""
         return await self.rpc_call("getBlockHeight", [{"commitment": "confirmed"}])
 
     async def get_health(self) -> Dict[str, Any]:
-        """Verifica la salud del nodo RPC de Cookie Chain."""
+        """Checks Cookie Chain RPC node health."""
         client = await self.get_client()
         t0 = time.perf_counter()
         try:
@@ -76,7 +94,7 @@ class CookieChainClient:
             }
 
     async def get_balance(self, pubkey: str) -> Dict[str, Any]:
-        """Consulta el saldo en lamports/tokens de una cuenta en Cookie Chain."""
+        """Queries token / lamport balance of an account on Cookie Chain."""
         res = await self.rpc_call("getBalance", [pubkey, {"commitment": "confirmed"}])
         if "result" in res and res["result"] is not None:
             lamports = res["result"].get("value", 0)
@@ -89,21 +107,86 @@ class CookieChainClient:
         return {"pubkey": pubkey, "error": res.get("error"), "balance_cookie": 0.0}
 
     async def get_latest_blockhash(self) -> Dict[str, Any]:
-        """Obtiene el blockhash reciente para autorizar transacciones."""
+        """Retrieves recent blockhash for transaction authorization."""
         return await self.rpc_call("getLatestBlockhash", [{"commitment": "confirmed"}])
 
     async def get_epoch_info(self) -> Dict[str, Any]:
-        """Obtiene información de la época actual, slots por época y conteo de transacciones históricas."""
+        """Retrieves current epoch info, slots per epoch, and transaction count."""
         return await self.rpc_call("getEpochInfo", [{"commitment": "confirmed"}])
 
     async def get_performance_samples(self, limit: int = 4) -> Dict[str, Any]:
-        """Obtiene muestras de rendimiento de los validadores para calcular TPS y velocidad de bloque."""
+        """Retrieves validator performance samples to calculate TPS and slot time."""
         return await self.rpc_call("getRecentPerformanceSamples", [limit])
 
     async def get_recent_memos(self, limit: int = 10) -> Dict[str, Any]:
-        """Consulta los últimos memorandos SPL confirmados en el programa canónico de Cookie Chain."""
+        """Queries recent confirmed SPL memos on Cookie Chain canonical memo program."""
         memo_program = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
         return await self.rpc_call("getSignaturesForAddress", [memo_program, {"limit": limit}])
+
+    async def get_signatures_for_address(self, address: str, limit: int = 50) -> Dict[str, Any]:
+        """Retrieves confirmed transaction signatures for any address on Cookie Chain."""
+        return await self.rpc_call("getSignaturesForAddress", [address, {"limit": limit}])
+
+    async def reconcile_user_burns(
+        self,
+        address: str,
+        limit: int = 25,
+        known_signatures: Optional[set] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Scans recent transaction signatures for an address on Cookie Chain SVM,
+        identifies direct burns to 1nc1nerator11111111111111111111111111111111,
+        and returns confirmed burn items. Skips signatures already recorded in DB.
+        """
+        if known_signatures is None:
+            try:
+                from app.burn_tracker import burn_tracker
+                known_signatures = burn_tracker.get_known_signatures()
+            except Exception:
+                known_signatures = set()
+
+        burn_addr = "1nc1nerator11111111111111111111111111111111"
+        res = await self.get_signatures_for_address(address, limit=limit)
+        sigs = res.get("result") or []
+        burn_records = []
+        for s in sigs:
+            sig = s.get("signature")
+            if not sig:
+                continue
+            if known_signatures and sig in known_signatures:
+                # Signatures are ordered newest to oldest by SVM RPC.
+                # Once we encounter an already indexed signature, older ones are already reconciled.
+                break
+            try:
+                tx_res = await self.get_transaction(sig)
+                tx = tx_res.get("result")
+                if not tx or "meta" not in tx:
+                    continue
+                meta = tx.get("meta") or {}
+                if meta.get("err") is not None:
+                    continue
+                msg = tx.get("transaction", {}).get("message", {})
+                account_keys = msg.get("accountKeys", [])
+                if burn_addr in account_keys:
+                    burn_idx = account_keys.index(burn_addr)
+                    pre_bals = meta.get("preBalances", [])
+                    post_bals = meta.get("postBalances", [])
+                    pre_bal = pre_bals[burn_idx] if burn_idx < len(pre_bals) else 0
+                    post_bal = post_bals[burn_idx] if burn_idx < len(post_bals) else 0
+                    diff_lamports = post_bal - pre_bal
+                    if diff_lamports > 0:
+                        diff_cook = round(diff_lamports / 1e9, 4)
+                        burn_records.append({
+                            "user_address": address,
+                            "amount_cookie": diff_cook,
+                            "tx_signature": sig,
+                            "slot": tx.get("slot"),
+                            "timestamp": tx.get("blockTime") or time.time(),
+                            "source": "user_oven"
+                        })
+            except Exception:
+                continue
+        return burn_records
 
     async def get_arbitrage_quotes(self) -> List[Dict[str, Any]]:
         """
@@ -157,6 +240,11 @@ class CookieChainClient:
                 "recommended_action": "Rebalance Pool #4 -> Capture Spread"
             }
         ]
+        # Audit M3: these are illustrative Quant Lab scenarios, NOT live on-chain
+        # detections. Tag them so the UI can never present them as real spreads.
+        for o in base_opps:
+            o["is_simulation"] = True
+            o["data_mode"] = "simulation"
         return base_opps
 
     async def get_burn_metrics(self) -> Dict[str, Any]:
@@ -166,13 +254,19 @@ class CookieChainClient:
         """
         burn_addr = "1nc1nerator11111111111111111111111111111111"
         res = await self.get_balance(burn_addr)
-        cumulative_burn = 142580.45 + (res.get("balance_cookie", 0.0))
+        # Audit M3: cumulative burned = REAL native balance held at the incinerator
+        # (all native $COOKIE ever sent there). No fabricated 142580.45 baseline and
+        # no hardcoded 24h rate.
+        incinerator_balance = res.get("balance_cookie", 0.0)
+        rpc_ok = "error" not in res
         return {
             "token": "$COOKIE",
             "burn_address": burn_addr,
-            "cumulative_burned": round(cumulative_burn, 2),
-            "burn_rate_24h": 4210.50,
-            "deflation_status": "active",
+            "cumulative_burned": round(incinerator_balance, 4),
+            "burn_rate_24h": None,
+            "burn_rate_24h_note": "Not derived on-chain yet; see /api/v1/burn/app-total for app-verified burns.",
+            "deflation_status": "active" if rpc_ok else "unavailable",
+            "data_mode": "live" if rpc_ok else "unavailable",
             "canonical_burn_program": "1nc1nerator11111111111111111111111111111111"
         }
 

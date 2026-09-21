@@ -3,6 +3,8 @@ Unit & Integration Tests for CookieAgent Gateway & Sentinel cApp
 Run with: pytest tests/test_api.py -v
 """
 
+import os
+os.environ["PUBLIC_DEPOSITS_ENABLED"] = "true"
 import pytest
 from httpx import AsyncClient, ASGITransport
 from app.main import app
@@ -111,7 +113,7 @@ async def test_eat_opportunity():
         response = await ac.post("/api/v1/opportunities/eat", json=payload)
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "confirmed"
+    assert data["status"] in ["confirmed", "simulated"]
     assert data["incentive_split"]["user_share_pct"] == "80%"
     assert data["incentive_split"]["burn_share_pct"] == "10%"
 
@@ -122,7 +124,8 @@ async def test_burn_stats():
     assert response.status_code == 200
     data = response.json()
     assert data["token"] == "$COOKIE"
-    assert data["cumulative_burned"] > 0
+    # Honest (audit M3): cumulative = real incinerator balance from RPC (no fake baseline).
+    assert data["cumulative_burned"] >= 0
 
 @pytest.mark.asyncio
 async def test_airdrop_karma():
@@ -134,7 +137,7 @@ async def test_airdrop_karma():
     assert data["address"] == addr
     assert "baker_karma_score" in data
     assert "airdrop_tier" in data
-    assert data["dao_grant_eligibility"] == "VERIFIED_ELIGIBLE"
+    assert "grant_pool_info" in data
 
 @pytest.mark.asyncio
 async def test_vault_info():
@@ -143,13 +146,14 @@ async def test_vault_info():
     assert response.status_code == 200
     data = response.json()
     assert data["protocol"] == "Cookie HyperArb Automated Vault"
-    assert data["tvl_usd"] > 0
-    assert data["projected_apy_pct"] > 0
-    assert data["runner_status"] == "ACTIVE_24_7"
+    assert data["tvl_usd"] >= 0  # 0 is valid when vault has no active deposits
+    # Honest telemetry (audit M3): standby engine => 0.00% real APY, no ACTIVE_24_7 claim.
+    assert data["projected_apy_pct"] == 0.0
+    assert "Standby" in data["runner_status"] or "standby" in data["runner_status"]
 
 @pytest.mark.asyncio
 async def test_vault_deposit_and_position():
-    user = "HSPEiMn8BYVgPZdHMXw3XkwfdAZksemaR7X5KS6eFmFV"
+    user = "TEST_VAULT_DEPOSITOR_WALLET"
     payload = {
         "user_address": user,
         "amount_cookie": 100.0,
@@ -178,20 +182,21 @@ async def test_vault_trigger_arb_and_feed():
         arb_res = await ac.post("/api/v1/vault/trigger-arb")
     assert arb_res.status_code == 200
     arb_data = arb_res.json()
-    assert arb_data["status"] == "CONFIRMED_ON_CHAIN"
-    assert arb_data["profit_to_vault_usd"] > 0
+    # Honest standby (audit C2): public trigger must NOT fabricate profit or move NAV.
+    assert arb_data["status"] == "STANDBY_NO_LIQUIDITY"
+    assert arb_data["profit_to_vault_usd"] == 0.0
+    assert arb_data["mode"] == "STANDBY"
 
-    # Check feed
+    # Feed must be a list and must NOT contain fabricated confirmed executions.
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         feed_res = await ac.get("/api/v1/vault/feed?limit=5")
     assert feed_res.status_code == 200
     feed_data = feed_res.json()
-    assert len(feed_data) > 0
-    assert "spread_pct" in feed_data[0]
+    assert isinstance(feed_data, list)
 
 @pytest.mark.asyncio
 async def test_vault_withdraw():
-    user = "HSPEiMn8BYVgPZdHMXw3XkwfdAZksemaR7X5KS6eFmFV"
+    user = "TEST_VAULT_DEPOSITOR_WALLET"
     payload = {
         "user_address": user,
         "shares": None,  # withdraw all

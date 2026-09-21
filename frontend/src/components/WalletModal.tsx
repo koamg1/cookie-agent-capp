@@ -166,7 +166,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                   Connecting to {selectedWallet}...
                 </h4>
                 <p className="text-xs font-medium text-[#0b1f3a]/70 mt-1 max-w-xs leading-relaxed">
-                  Please approve connection and the <strong>verification signature (SIWS)</strong> in your wallet window.
+                  Please approve connection in your wallet window.
                 </p>
               </div>
             </div>

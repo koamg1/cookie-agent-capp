@@ -136,7 +136,7 @@ SUPPORTED_TOOLS = [
     ),
     MCPToolDefinition(
         name="cookie_atomic_get_spreads",
-        description="Query live arbitrage spreads across Cookie Chain AMMs and the Arbitrum ↔ Cookie Chain cross-chain price differential via Hyperlane.",
+        description="Query live arbitrage spreads across Cookie Chain AMMs and the Solana Mainnet (Jupiter / Raydium) ↔ Cookie Chain cross-chain price differential.",
         inputSchema={
             "type": "object",
             "properties": {},
@@ -161,6 +161,18 @@ SUPPORTED_TOOLS = [
                 "amount_cookie": {"type": "number", "description": "Input $COOKIE capital amount to simulate", "default": 1000.0},
                 "simulated_spread_pct": {"type": "number", "description": "Gross spread percentage to simulate", "default": 1.85},
                 "slippage_tolerance_pct": {"type": "number", "description": "Slippage protection tolerance percentage", "default": 0.50}
+            },
+            "required": []
+        }
+    ),
+    MCPToolDefinition(
+        name="cookie_atomic_simulate_cross_chain_rebalance",
+        description="Simulate the Single-Asset $COOKIE deposit auto-rebalancing protocol across Cookie Chain SVM and Solana Mainnet (Jupiter / Raydium) (50/50 dual-leg inventory split, low SVM friction, and net spread profit).",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "amount_cookie": {"type": "number", "description": "Single-asset $COOKIE deposited into vault", "default": 1000.0},
+                "rebalance_ratio_cookie_chain": {"type": "number", "description": "Inventory fraction assigned to Cookie Chain (0.0 to 1.0)", "default": 0.50}
             },
             "required": []
         }

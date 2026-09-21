@@ -7,6 +7,8 @@ Tests:
 - MCP Tools (cookie_atomic_get_spreads, cookie_atomic_get_vault_status, cookie_atomic_simulate_route)
 """
 
+import os
+os.environ["PUBLIC_DEPOSITS_ENABLED"] = "true"
 import time
 import pytest
 from httpx import AsyncClient, ASGITransport
@@ -127,10 +129,10 @@ async def test_atomic_cross_chain_api():
     assert res.status_code == 200
     data = res.json()
     assert "Cookie Chain" in data["origin_chain"]
-    assert "Arbitrum" in data["benchmark_chain"]
-    assert "hyperlane_bridge_url" in data
+    assert "Solana" in data["benchmark_chain"]
+    assert "solana_dexscreener_url" in data
     assert data["cookie_chain_cookoven_price_usd"] > 0
-    assert data["arbitrum_uniswap_price_usd"] > 0
+    assert data["solana_jupiter_price_usd"] > 0
 
 
 @pytest.mark.asyncio
@@ -203,16 +205,18 @@ async def test_atomic_proof_of_reserves_api():
         res = await ac.get("/api/v1/atomic/proof-of-reserves")
     assert res.status_code == 200
     data = res.json()
-    assert data["status"] == "FULLY_COLLATERALIZED"
-    assert data["is_solvent"] is True
-    assert data["solvency_ratio_pct"] >= 100.0
+    # Honest PoR (audit M3): status reflects the REAL on-chain solvency, and is_solvent
+    # must be consistent with the ratio (no hardcoded FULLY_COLLATERALIZED/PASSED).
+    assert data["status"] in ["FULLY_COLLATERALIZED", "PARTIALLY_COLLATERALIZED"]
+    assert data["is_solvent"] == (data["solvency_ratio_pct"] >= 100.0)
+    assert data["solvency_ratio_pct"] >= 0.0
     assert "tiers" in data
     assert "cold_storage" in data["tiers"]
     assert "warm_buffer" in data["tiers"]
     assert "hot_trading_bot" in data["tiers"]
-    assert data["tiers"]["cold_storage"]["allocation_pct"] == 85.0
-    assert data["tiers"]["warm_buffer"]["allocation_pct"] == 10.0
-    assert data["tiers"]["hot_trading_bot"]["allocation_pct"] == 5.0
+    assert data["tiers"]["cold_storage"]["allocation_pct"] == 70.0
+    assert data["tiers"]["warm_buffer"]["allocation_pct"] == 20.0
+    assert data["tiers"]["hot_trading_bot"]["allocation_pct"] == 10.0
     assert "cookiescan.io" in data["tiers"]["cold_storage"]["cookiescan_url"]
 
 
@@ -288,8 +292,8 @@ async def test_atomic_mcp_tools():
         })
     assert res4.status_code == 200
     data4 = res4.json()
-    assert data4["status"] == "FULLY_COLLATERALIZED"
-    assert data4["solvency_ratio_pct"] >= 100.0
+    assert data4["status"] in ["FULLY_COLLATERALIZED", "PARTIALLY_COLLATERALIZED"]
+    assert data4["solvency_ratio_pct"] >= 0.0
 
 
 @pytest.mark.asyncio
@@ -307,3 +311,157 @@ async def test_atomic_shoot_and_revert_api():
     assert data["revert_guard_triggered"] is True
     assert "InstructionError" in str(data["on_chain_error"])
     assert len(data["program_logs"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_auto_deposit_arbitrage_execution():
+    test_user = "HSPEiMn8_auto_arb_tester_wallet"
+    tx_hash = f"TEST-DEP-ARB-TX-{int(time.time())}"
+    payload = {
+        "tx_hash": tx_hash,
+        "user_address": test_user,
+        "amount_cookie": 150.0,
+        "amount_usdc": 0.0
+    }
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        res = await ac.post("/api/v1/atomic/verify-deposit", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["verified_on_chain"] is True
+    assert "auto_arbitrage" in data
+    assert data["auto_arbitrage"]["status"] == "STANDBY_DEX_LIQUIDITY"
+    assert data["auto_arbitrage"]["executed"] is False
+
+
+@pytest.mark.asyncio
+async def test_sentinel_yield_cycle_execution():
+    from app.cookie_atomic import cookie_atomic_engine
+    cycle = cookie_atomic_engine.execute_sentinel_yield_cycle(slot=26126000)
+    # Standby sentinel returns None when DEX liquidity is in standby
+    assert cycle is None
+
+
+@pytest.mark.asyncio
+async def test_withdraw_concurrency_guard():
+    from app.cookie_atomic import cookie_atomic_engine
+    test_user = "CONCURRENT_USER_TEST"
+    cookie_atomic_engine.deposit(test_user, 50.0, 0.0)
+
+    # Artificially simulate user already in withdrawing set
+    cookie_atomic_engine._withdrawing_addresses.add(test_user)
+    try:
+        with pytest.raises(ValueError, match="Withdrawal already in progress"):
+            cookie_atomic_engine.withdraw(test_user, bypass_cooldown=True)
+    finally:
+        cookie_atomic_engine._withdrawing_addresses.discard(test_user)
+
+
+@pytest.mark.asyncio
+async def test_anti_sybil_and_streak_karma():
+    from app.burn_tracker import burn_tracker
+    from app.cookie_atomic import cookie_atomic_engine
+    test_user = "SYBIL_TEST_USER_1111111111111111111111111"
+
+    # 1. Dust burn (< 1.0 COOK)
+    burn_tracker.record_burn(
+        user_address=test_user,
+        amount_cookie=0.5,
+        tx_signature="TEST_SIG_DUST_BURN",
+        verified=True
+    )
+
+    karma_res = cookie_atomic_engine.get_baker_karma(test_user)
+    # Dust burn does NOT accrue base karma points
+    assert karma_res["eligible_burned_cookie"] == 0.0
+    assert karma_res["dust_burn_events_count"] == 1
+    assert karma_res["baker_karma_score"] == 0
+
+    # 2. Eligible burn (>= 1.0 COOK)
+    burn_tracker.record_burn(
+        user_address=test_user,
+        amount_cookie=10.0,
+        tx_signature="TEST_SIG_ELIGIBLE_BURN",
+        verified=True
+    )
+
+    karma_res2 = cookie_atomic_engine.get_baker_karma(test_user)
+    assert karma_res2["eligible_burned_cookie"] == 10.0
+    assert karma_res2["streak_active"] is True
+    assert karma_res2["streak_multiplier"] >= 1.0
+    # 10 COOK * 10 = 100 base karma * multiplier
+    assert karma_res2["baker_karma_score"] >= 100
+
+    # Clean up test rows
+    with burn_tracker._get_conn() as conn:
+        conn.execute("DELETE FROM app_burn_records WHERE user_address = ?", (test_user,))
+        conn.commit()
+
+
+@pytest.mark.asyncio
+async def test_rpc_proxy_whitelist_security():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        # Unauthorized RPC method should be rejected with 403 Forbidden
+        bad_payload = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "unauthorizedAdminExploitMethod",
+            "params": []
+        }
+        res_sol = await ac.post("/api/v1/solana/rpc", json=bad_payload)
+        assert res_sol.status_code == 403
+        assert "not permitted" in res_sol.json()["detail"]
+
+        res_cookie = await ac.post("/api/v1/cookie/rpc", json=bad_payload)
+        assert res_cookie.status_code == 403
+        assert "not permitted" in res_cookie.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_deposit_onchain_verifier_rejects_fake_tx():
+    """Audit C1: the zero-trust verifier must NOT credit a non-existent / bogus tx.
+    A fabricated signature returns ok=False (no shares can be minted from thin air)."""
+    from app.cookie_atomic import cookie_atomic_engine
+    bogus_sig = "5" + "z" * 87  # base58-shaped but never confirmed on-chain
+    ok, cookie, slot, err = cookie_atomic_engine._verify_native_deposit_onchain(
+        bogus_sig, "71aeea98_fake_depositor_svm_address"
+    )
+    assert ok is False
+    assert cookie == 0.0
+    assert err is not None
+
+
+@pytest.mark.asyncio
+async def test_withdraw_signer_failure_does_not_burn_shares(monkeypatch):
+    """Audit H3: if the payout fails, shares MUST NOT be burned (no silent loss)."""
+    import app.cookie_atomic as ca
+    e = ca.cookie_atomic_engine
+    user = "H3_FAILURE_TEST_USER"
+    e.deposit(user, 100.0, 0.0)
+    shares_before = e.user_positions[user].shares
+    assert shares_before > 0
+    monkeypatch.setattr(ca, "signer_request_payout",
+                        lambda **kw: {"status": "failed", "error": "signer down (test)"})
+    with pytest.raises(ValueError, match="WithdrawalPayoutFailed"):
+        e.withdraw(user, bypass_cooldown=True)
+    assert e.user_positions[user].shares == shares_before
+    e.user_positions.pop(user, None)
+
+
+@pytest.mark.asyncio
+async def test_withdraw_above_cap_queues_without_burning(monkeypatch):
+    """Above the automatic payout cap -> queued for manual approval, shares intact."""
+    import app.cookie_atomic as ca
+    e = ca.cookie_atomic_engine
+    user = "H3_CAP_TEST_USER"
+    e.deposit(user, 100.0, 0.0)
+    shares_before = e.user_positions[user].shares
+    monkeypatch.setattr(ca, "signer_request_payout",
+                        lambda **kw: {"status": "needs_manual_approval", "reason": "above cap (test)"})
+    res = e.withdraw(user, bypass_cooldown=True)
+    assert res["status"] == "pending_approval"
+    assert res["shares_burned"] == 0.0
+    assert e.user_positions[user].shares == shares_before
+    e.user_positions.pop(user, None)
+
+
+

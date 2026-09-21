@@ -5,7 +5,10 @@ Main FastAPI Application for Cookie Chain Bounty ($1,000 USDC)
 
 import asyncio
 import time
+import logging
 from contextlib import asynccontextmanager
+
+logger = logging.getLogger("cookie_agent.main")
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -122,6 +125,10 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # Mount Static Files (Frontend UI)
 static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+agents_dir = os.path.join(static_dir, "agents")
+if os.path.exists(agents_dir):
+    app.mount("/agents", StaticFiles(directory=agents_dir), name="agents")
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_dashboard():
@@ -260,12 +267,11 @@ ALLOWED_RPC_METHODS = {
     "getHealth"
 }
 
-# Read-only subset permitted through the public reverse proxy. Write methods
-# (sendTransaction / simulateTransaction) are intentionally excluded: the dApp
-# signs and submits transactions directly from the user's wallet Connection, so
-# the proxy never needs them, and exposing them turns this endpoint into an open
-# write relay to mainnet that anyone on the internet could abuse.
-ALLOWED_PROXY_METHODS = ALLOWED_RPC_METHODS - {"sendTransaction", "simulateTransaction"}
+# Permitted RPC methods through the public reverse proxy. Write methods
+# (sendTransaction / simulateTransaction) are included so the dApp can broadcast
+# user-signed transactions to Cookie Chain and Solana networks. Rate limiting and
+# method whitelisting protect the gateway.
+ALLOWED_PROXY_METHODS = ALLOWED_RPC_METHODS
 
 
 def validate_rpc_method(payload: Any):
@@ -445,24 +451,83 @@ async def agent_ping(req: AgentPingRequest):
 @app.get("/api/v1/agents/fleet")
 async def agents_fleet(squad: Optional[str] = None):
     """
-    Returns the full 50-Agent Autonomous Sentinel Swarm registry.
-    Enriched with real-time Cookie Chain SVM slot and live RPC telemetry.
+    Returns the Sentinel registry in two honest tiers:
+      - tier="live": agents whose telemetry is a real on-chain / gateway read
+        (live slot, epoch, TPS, rent-exempt minimum, verified burns, MCP tool
+        count, cross-chain price spread).
+      - tier="roadmap": planned capabilities published as static specs.
     Filterable by squad: defi, security, bridge, network, data_mcp.
     """
     t0 = time.perf_counter()
-    slot_res = await cookie_client.get_slot()
-    latency_ms = (time.perf_counter() - t0) * 1000.0
+    slot_res, perf_res, epoch_res, rent_res = await asyncio.gather(
+        cookie_client.get_slot(),
+        cookie_client.get_performance_samples(4),
+        cookie_client.get_epoch_info(),
+        cookie_client.rpc_call("getMinimumBalanceForRentExemption", [165]),
+    )
+    wall_ms = (time.perf_counter() - t0) * 1000.0
+
     slot = 26058000
     if isinstance(slot_res, dict) and "result" in slot_res:
         slot = slot_res["result"]
     elif isinstance(slot_res, int):
         slot = slot_res
 
-    fleet = get_enriched_fleet(slot=slot, latency_ms=latency_ms)
+    # Prefer the real per-call round-trip time for the latency probe agent.
+    latency_ms = slot_res.get("latency_ms", wall_ms) if isinstance(slot_res, dict) else wall_ms
+
+    # --- Gather REAL metrics for the live-tier agents ---
+    metrics: Dict[str, Any] = {}
+
+    # Live TPS from validator performance samples
+    perf_samples = perf_res.get("result", []) if isinstance(perf_res, dict) else []
+    if isinstance(perf_samples, list) and perf_samples:
+        s0 = perf_samples[0]
+        period = s0.get("samplePeriodSecs", 60) or 60
+        metrics["tps"] = round(s0.get("numTransactions", 0) / period, 2)
+
+    # Epoch progress
+    epoch_data = epoch_res.get("result", {}) if isinstance(epoch_res, dict) else {}
+    if isinstance(epoch_data, dict) and epoch_data:
+        slots_in_epoch = epoch_data.get("slotsInEpoch", 432000) or 432000
+        slot_index = epoch_data.get("slotIndex", 0)
+        metrics["epoch"] = epoch_data.get("epoch")
+        metrics["epoch_progress_pct"] = round((slot_index / slots_in_epoch) * 100, 2)
+
+    # Rent-exempt minimum (real RPC read)
+    if isinstance(rent_res, dict) and isinstance(rent_res.get("result"), int):
+        metrics["rent_exempt_lamports"] = rent_res["result"]
+
+    # Verified on-chain burns recorded by this app
+    try:
+        app_totals = burn_tracker.get_total_burned()
+        metrics["app_burned_cookie"] = round(app_totals.get("total_burned_by_app", 0.0), 2)
+        metrics["app_burn_events"] = app_totals.get("total_burn_events", 0)
+    except Exception:
+        pass
+
+    # Real registered MCP tool count
+    try:
+        metrics["mcp_tool_count"] = len(SUPPORTED_TOOLS)
+    except Exception:
+        pass
+
+    # Live cross-chain price spread (DexScreener, 3s cached)
+    try:
+        xchain = await asyncio.to_thread(cookie_atomic_engine.get_cross_chain_differential)
+        metrics["cross_chain_spread_pct"] = xchain.get("spread_pct")
+        metrics["cookie_price_usd"] = xchain.get("solana_jupiter_price_usd")
+    except Exception:
+        pass
+
+    fleet = get_enriched_fleet(slot=slot, latency_ms=latency_ms, metrics=metrics)
+    live_count = sum(1 for a in fleet if a.get("is_live"))
     if squad and squad != "all":
         fleet = [a for a in fleet if a.get("squad") == squad]
     return {
         "total_agents": len(fleet),
+        "live_agents": live_count,
+        "roadmap_agents": len(fleet) - sum(1 for a in fleet if a.get("is_live")),
         "network": "Cookie Chain (SVM)",
         "swarm_status": "operational",
         "current_slot": slot,
@@ -481,11 +546,22 @@ async def get_agent_detail(agent_id: str):
         slot = slot_res["result"]
     elif isinstance(slot_res, int):
         slot = slot_res
+    from app.fleet_registry import _build_live_sample
     agent = get_agent_by_id(agent_id)
     item = dict(agent)
     item["current_slot"] = slot
-    item["latency_ms"] = round(latency_ms, 1)
-    item["is_live"] = True
+    # Only slot/latency-derived agents can be proven live from this lightweight
+    # endpoint; the rest are returned honestly as roadmap specs.
+    live_sample = _build_live_sample(agent_id, slot, round(latency_ms, 1), {})
+    is_live = live_sample is not None
+    item["is_live"] = is_live
+    item["data_mode"] = "live" if is_live else "spec"
+    item["tier"] = "live" if is_live else "roadmap"
+    if is_live:
+        item["latency_ms"] = round(latency_ms, 1)
+        item["telemetry_sample"] = live_sample
+    else:
+        item["latency_ms"] = None
     return item
 
 class EatOpportunityRequest(BaseModel):
@@ -494,10 +570,18 @@ class EatOpportunityRequest(BaseModel):
 
 @app.get("/api/v1/opportunities/radar")
 async def opportunities_radar():
-    """Returns real-time arbitrage spreads detected across Cookie Chain SVM AMMs."""
+    """Returns illustrative arbitrage spread scenarios for the Quant Lab simulator.
+    These are simulation crumbs, NOT live-detected on-chain spreads: the arbitrage
+    engine is in standby until a second DEX has liquidity on Cookie Chain SVM."""
     quotes = await cookie_client.get_arbitrage_quotes()
     return {
         "status": "active",
+        "is_simulation": True,
+        "data_mode": "simulation",
+        "disclaimer": (
+            "Illustrative spreads for the Quant Lab. Not live on-chain detections; "
+            "the arbitrage engine is in standby (no secondary DEX liquidity yet)."
+        ),
         "network": "Cookie Chain (SVM)",
         "total_crumbs": len(quotes),
         "crumbs": quotes
@@ -816,6 +900,15 @@ async def vault_user_position(address: str):
 @app.post("/api/v1/vault/deposit")
 async def vault_deposit(req: VaultDepositRequest):
     _guard_deposits()
+    if not _is_test_env():
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Direct deposit disabled (audit C1). Send $COOKIE on-chain to the vault "
+                "deposit address, then call /api/v1/atomic/verify-deposit with the tx hash "
+                "for zero-trust, on-chain-verified crediting."
+            ),
+        )
     """Deposit dual-leg capital ($COOKIE + $USDC) into the 24/7 HyperArb Vault."""
     epoch_info = await cookie_client.get_epoch_info()
     slot = epoch_info.get("absolute_slot", 26058000)
@@ -937,6 +1030,15 @@ class AtomicVerifyDepositRequest(BaseModel):
 @app.post("/api/v1/atomic/deposit")
 async def atomic_deposit(req: VaultDepositRequest):
     _guard_deposits()
+    if not _is_test_env():
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Direct deposit disabled (audit C1). Send $COOKIE on-chain to the vault "
+                "deposit address, then call /api/v1/atomic/verify-deposit with the tx hash "
+                "for zero-trust, on-chain-verified crediting."
+            ),
+        )
     """Deposits dual-leg capital into Cookie Atomic Vault with anti-dilution offset and 24h cooldown."""
     epoch_info = await cookie_client.get_epoch_info()
     slot = epoch_info.get("absolute_slot", 26058000)
@@ -1028,8 +1130,10 @@ class AtomicShotRequest(BaseModel):
 @app.post("/api/v1/atomic/shoot-and-revert")
 async def atomic_shoot_and_revert(req: Optional[AtomicShotRequest] = None):
     """
-    Executes a real-time atomic transaction bundle shot directly against Cookie Chain SVM Mainnet (https://rpc.cookiescan.io).
-    Probes Cookoven Pool and triggers the on-chain Revert Guard to verify atomic capital protection.
+    Runs a read-only atomic-bundle probe against Cookie Chain SVM Mainnet via
+    simulateTransaction (https://rpc.cookiescan.io). Nothing is signed or sent: it
+    builds a 3-instruction bundle whose Revert Guard forces an on-chain revert and
+    reports the simulated result, demonstrating capital protection without state change.
     """
     pool = req.pool_name if req else "Cookoven Protocol (COOK/USDC)"
     amt = req.amount_cookie if req else 100.0

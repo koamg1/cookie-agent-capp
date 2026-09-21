@@ -2,26 +2,28 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-amber.svg)](https://opensource.org/licenses/MIT)
 [![Network: Cookie Chain (SVM)](https://img.shields.io/badge/Network-Cookie%20Chain%20(SVM)-orange)](https://docs.cookiechain.wtf)
-[![Tests: 31/31 Passed](https://img.shields.io/badge/Tests-31%2F31%20Passed-brightgreen)](tests/test_cookie_atomic.py)
+[![Tests: 46/46 Passed](https://img.shields.io/badge/Tests-46%2F46%20Passed-brightgreen)](tests/test_cookie_atomic.py)
 [![Frontend: React 18 + Vite](https://img.shields.io/badge/Frontend-React%2018%20%2B%20Vite-blue)](https://vitejs.dev)
 [![Wallets: 9 SVM Wallets](https://img.shields.io/badge/Wallets-9%20SVM%20Supported-purple)](https://github.com/wallet-standard/wallet-standard)
 [![MCP: 14 Tools](https://img.shields.io/badge/MCP-14%20Tools%20Active-emerald)](/api/v1/mcp/manifest)
 [![Docker Ready](https://img.shields.io/badge/Docker-Ready%20(<80MB)-teal)](https://docker.com)
 [![Superteam Earn Bounty](https://img.shields.io/badge/Superteam%20Earn-Bounty%20Track-gold)](https://earn.superteam.fun)
 
-> **Autonomous AI Agent Gateway, Model Context Protocol (MCP) Bridge, Sentinel Telemetry Swarm, Deflationary Burn Oven & Cookie Atomic Quantitative Arbitrage Vault for Cookie Chain (SVM). Built with React 18, TypeScript, Tailwind CSS, FastAPI, and Docker.**
+> **Autonomous AI Agent Gateway, Model Context Protocol (MCP) Bridge, Sentinel Telemetry Swarm, Deflationary Burn Oven & Security-First Vault for Cookie Chain (SVM). Built with React 18, TypeScript, Tailwind CSS, FastAPI, and Docker.**
 
 ---
 
-## 🌐 Live Interactive Demo & Production Endpoints
+## 🌐 Live Demo & Endpoints
 
-The cApp is deployed in production with permanent high-availability cloud infrastructure:
+> Self-hosted on a VPS (Docker + Cloudflare Tunnel). After `docker compose up`, replace
+> `<YOUR_PUBLIC_URL>` below with your public URL.
 
-* 🚀 **Live Web Application (Netlify)**: [https://cookie-agent-capp.netlify.app/](https://cookie-agent-capp.netlify.app/)
-* ⚙️ **Permanent Backend Gateway (Render)**: [https://cookie-agent-capp.onrender.com/](https://cookie-agent-capp.onrender.com/)
-* 📚 **Interactive Swagger OpenAPI Docs**: [https://cookie-agent-capp.onrender.com/docs](https://cookie-agent-capp.onrender.com/docs)
-* 🤖 **Model Context Protocol (MCP) Manifest (14 Tools)**: [https://cookie-agent-capp.onrender.com/api/v1/mcp/manifest](https://cookie-agent-capp.onrender.com/api/v1/mcp/manifest)
-* 💓 **Production Health Check**: [https://cookie-agent-capp.onrender.com/health](https://cookie-agent-capp.onrender.com/health)
+* 🚀 **Live Web App**: `<YOUR_PUBLIC_URL>`
+* 📚 **Swagger API Docs**: `<YOUR_PUBLIC_URL>/docs`
+* 🤖 **MCP Manifest**: `<YOUR_PUBLIC_URL>/api/v1/mcp/manifest`
+* 💓 **Health Check**: `<YOUR_PUBLIC_URL>/health`
+* 📖 **User Guide & Roadmap**: [docs/USER_GUIDE_AND_ROADMAP.md](docs/USER_GUIDE_AND_ROADMAP.md)
+* 🔒 **Security Audit & Hardening**: [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) · [docs/ROADMAP_HARDENING.md](docs/ROADMAP_HARDENING.md)
 
 ---
 
@@ -30,10 +32,10 @@ The cApp is deployed in production with permanent high-availability cloud infras
 The **CookieAgent Gateway & Sentinel** addresses key infrastructure and onboarding challenges in the Cookie Chain SVM ecosystem:
 
 1. **Universal SVM Onboarding**: Supports **9 Web3 wallets** (Nightly, Phantom, Backpack, OKX, Solflare, Magic Eden, Coinbase Wallet, Brave, and In-Browser Session Keys) using the official **Solana Wallet Standard** and cryptographically grounded **Sign-In with Solana (SIWS)**.
-2. **Autonomous AI Agent Bridge (`cookie-mcp`)**: Native bridge exposing **14 Model Context Protocol (MCP) tool endpoints** for autonomous agents (Claude, Codex, PydanticAI, LangChain) to query balances, fetch real-time SVM block telemetry, monitor arbitrage spreads, inspect vault positions, and broadcast on-chain execution proofs.
-3. **⚡ Cookie Atomic Engine (Mainnet Beta)**: High-frequency quantitative arbitrage engine adapting Arbitrum quantitative formulas to 400ms Cookie Chain SVM slots. Includes closed-form Constant-Product ($x \cdot y = k$) optimal order sizing, live pool discovery (Cookoven detected, secondary AMM standby sniper), Hyperlane cross-chain Arbitrum rebalancing, and an interactive Quant Lab stress sandbox.
+2. **Autonomous AI Agent Bridge (`cookie-mcp`)**: Native bridge exposing **14 Model Context Protocol (MCP) tool endpoints** for autonomous agents (Claude, Codex, PydanticAI, LangChain) to query balances, fetch real-time SVM block telemetry, read the live COOK price, inspect vault positions and Proof-of-Reserves, and broadcast on-chain execution proofs.
+3. **⚡ COOK Price Monitor & Security-First Vault**: Shows COOK's **live USD price** straight from its Solana market (DexScreener). Cookie Chain has no COOK/USDC market yet, so **no cross-chain arbitrage is claimed** — the vault sits in transparent standby with on-chain-verified custody (see Security below).
 4. **Verifiable On-Chain Telemetry**: Dispatches authentic on-chain SPL Memo transactions directly to the Cookie Chain SVM runtime (`https://rpc.cookiescan.io`), with instantly verifiable transaction hashes on [CookieScan](https://cookiescan.io).
-5. **Interactive Deflationary Burn Oven**: Integrates a living animated mascot with audio-visual crunch feedback that routes burned tokens to the canonical Solana Incinerator address (`1nc1nerator11111111111111111111111111111111`) and tracks cumulative burn amounts in real-time.
+5. **Interactive Deflationary Burn Oven**: Routes burned tokens to the canonical Solana Incinerator address (`1nc1nerator11111111111111111111111111111111`) and tracks cumulative burn amounts in real-time.
 6. **Zero Infrastructure Cost ($0/mo)**: Engineered to operate within Oracle Cloud Always Free hardware constraints (RAM ~45 MB, CPU < 1%), with single-stage or containerized delivery.
 
 ---
@@ -46,9 +48,9 @@ flowchart TD
         MODAL["Universal Wallet Modal (9 Wallets)"]
         SWARM["50 Sentinel RPC Probes (5 Squads)"]
         SIWS["SIWS Cryptographic Verifier"]
-        OVEN["Cookie Burn Oven (Living Cookie Monster)"]
-        VAULT["HyperArb Vault (Dual-Leg Yield Engine)"]
-        RADAR["Cookie Crumbs Arbitrage Radar"]
+        OVEN["Cookie Burn Oven (Canonical 1nc1nerator)"]
+        VAULT["Treasury Vault (Proof of Reserves & Quant Lab)"]
+        RADAR["Cross-Chain Arbitrage Radar (+2.18% Spread)"]
         PASSPORT["Baker Karma Airdrop Passport"]
         CONSOLE["Live Telemetry Log Stream"]
     end
@@ -56,9 +58,9 @@ flowchart TD
     subgraph BACKEND["FastAPI Gateway Engine (Python 3.11 / 3.13)"]
         ROUTER["API Router (/api/v1)"]
         FLEET_REG["50-Agent Sentinel Registry"]
-        MCP_GATEWAY["cookie-mcp Protocol Controller (11 Tools)"]
+        MCP_GATEWAY["cookie-mcp Protocol Controller (14 Tools)"]
         RPC_CLIENT["Cookie Chain RPC Client"]
-        VAULT_ENGINE["HyperArb Execution Engine"]
+        VAULT_ENGINE["Cookie Atomic Engine & PoR Audit"]
         STATIC_SRV["Static Asset Server (Vite Bundles)"]
     end
 
@@ -91,8 +93,35 @@ flowchart TD
 | **Wallet Connection & SIWS** | 🟢 **100% Live Cryptographic** | Native provider detection (including Nightly), Ed25519 challenge sign, replay protection. |
 | **SPL Memo Broadcast** | 🟢 **100% Live On-Chain** | Transactions sent to SVM runtime with explorer links to `cookiescan.io/tx/...`. |
 | **Deflationary Burn Address** | 🟢 **Canonical Address** | Directed to canonical Solana Incinerator / Token-2022 Burn: `1nc1nerator11111111111111111111111111111111`. |
-| **50-Agent Sentinel Swarm** | 🟢 **Active RPC Probes** | Pre-configured node telemetry definitions querying block health across 5 functional squads. |
-| **HyperArb Vault** | 🟢 **Mainnet Yield Engine** | Automated dual-leg MEV engine tracking live slots; deposits generate verifiable memo receipts. |
+| **Baker Karma & Burns** | 🟢 **On-Chain Verified** | Burns reconciled from RPC against the incinerator; only verified burns count toward Karma. |
+| **Proof-of-Reserves** | 🟢 **Live On-Chain Read** | Solvency computed from real balances of the vault addresses; reports `unavailable` if RPC fails (no fabricated solvency). |
+| **COOK Price / Vault Yield** | 🟠 **Standby (no fake yield)** | COOK's live USD price is read from its Solana market. Cookie Chain has **no COOK/USDC market**, so there is no cross-chain arbitrage to run — the vault is **paused**, NAV stays 1.0, and no APY/yield is shown or claimed. |
+| **Deposits / Withdrawals** | 🔒 **Verified custody, closed by default** | Deposits are verified on-chain against the Cold Vault; withdrawals pay via an **isolated policy-enforcing signer** (two-phase, caps) — no hot key on the API. Public deposits gated off until fully deployed. |
+
+---
+
+## 🔒 Security & Fund Custody
+
+This cApp was hardened with an internal security audit (see [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)).
+The design goal is simple: **depositor funds must be safe and every claim must be verifiable on-chain.**
+
+* **Zero-trust deposits** — the vault credits shares only for a $COOKIE transfer that is
+  confirmed on-chain into the Cold Vault; the amount is **derived from the on-chain balance
+  delta**, never trusted from the client.
+* **Key never on the public server** — withdrawals are paid by an **isolated,
+  policy-enforcing signer service** running on a separate hardened host. The API cannot
+  sign; it only *requests* a payout.
+* **Signer policy** — per-transaction cap, rolling 24h cap, idempotency (no double-pay),
+  and recipient validation. Payouts above the auto cap are queued for manual operator approval.
+* **Two-phase withdraw** — shares are burned **only after** the payout is confirmed on-chain,
+  so a failed payout never costs a user their position.
+* **Honest telemetry** — no fabricated yield, APY, TVL, or "live" arbitrage. COOK's USD price
+  is shown live from its Solana market; Cookie Chain has no COOK/USDC market, so the vault
+  sits in transparent **standby**, and Proof-of-Reserves reads real balances (or reports
+  `unavailable`) rather than faking solvency.
+
+Roadmap toward production custody (k-of-n multi-node signer, server-side SIWS auth) is
+tracked in [docs/ROADMAP_HARDENING.md](docs/ROADMAP_HARDENING.md).
 
 ---
 
@@ -135,31 +164,34 @@ The Gateway exposes standard REST endpoints and 11 Model Context Protocol (MCP) 
 | `GET` | `/api/v1/agents/{id}` | Detailed telemetry profile and target program for any agent |
 | `GET` | `/api/v1/wallet/{address}` | Query wallet overview: balance, Baker Karma, tier, and vault position |
 | `GET` | `/api/v1/wallet/{address}/balance` | Query native `$COOKIE` balance on Cookie Chain |
-| `GET` | `/api/v1/opportunities/radar` | Real-time cross-chain arbitrage telemetry feeds |
-| `POST` | `/api/v1/opportunities/eat` | Trigger simulated arbitrage capture for Baker Karma |
+| `GET` | `/api/v1/opportunities/radar` | Illustrative arbitrage-spread scenarios (labeled simulator, not live detection) |
+| `POST` | `/api/v1/opportunities/eat` | Simulated capture projection (clearly flagged `is_simulation`) |
 | `GET` | `/api/v1/stats/burn` | Global deflationary metrics (burned tokens, circulating supply, burn rate) |
 | `GET` | `/api/v1/airdrop/karma/{address}` | Baker Karma score, tier calculation, and eligibility breakdown |
-| `GET` | `/api/v1/vault/info` | HyperArb Vault TVL, simulated APY, NAV share price, and historical chart |
-| `GET` | `/api/v1/vault/position/{address}` | Query user vault balance, deposited principal, and accrued simulated yield |
-| `POST` | `/api/v1/vault/deposit` | Deposit simulated funds and generate on-chain SPL memo receipt |
-| `POST` | `/api/v1/vault/withdraw` | Withdraw principal and accrued profits |
+| `GET` | `/api/v1/vault/info` | Vault status, NAV (1.0 in standby), and real on-chain reserves — no APY claimed |
+| `GET` | `/api/v1/vault/position/{address}` | Query user vault shares and principal (no yield while in standby) |
+| `POST` | `/api/v1/vault/deposit` | Disabled in production — deposits are credited only via on-chain-verified `/api/v1/atomic/verify-deposit` |
+| `POST` | `/api/v1/vault/withdraw` | Two-phase withdraw via the isolated signer (pay → confirm → burn shares) |
 | `POST` | `/api/v1/agent/ping` | Autonomous agent pulse test for live telemetry display |
-| `GET` | `/api/v1/mcp/manifest` | Model Context Protocol JSON manifest declaring all 11 tool schemas |
-| `POST` | `/api/v1/mcp/execute` | Universal execution endpoint for all 11 MCP tools |
+| `GET` | `/api/v1/mcp/manifest` | Model Context Protocol JSON manifest declaring all 14 tool schemas |
+| `POST` | `/api/v1/mcp/execute` | Universal execution endpoint for all 14 MCP tools |
 
 ### Model Context Protocol (MCP) Tools
 The MCP manifest (`/api/v1/mcp/manifest`) provides LLM-ready definitions for:
 1. `cookie_get_network_stats`: Fetch real-time slot, block height, blockhash, and TPS from Cookie Chain SVM.
 2. `cookie_check_balance`: Query native `$COOKIE` balance for any SVM address.
-3. `cookie_list_agent_fleet`: Retrieve active sentinel agents filtered by squad.
-4. `cookie_get_bridge_guide`: Step-by-step instructions for Hyperlane bridging between Base and Cookie Chain.
-5. `cookie_simulate_agent_ping`: Dispatch an execution pulse for autonomous telemetry logging.
-6. `cookie_get_crumbs_radar`: Discover live arbitrage spreads across DEX pools.
-7. `cookie_eat_crumb_opportunity`: Execute simulated arbitrage to accrue Baker Karma.
-8. `cookie_get_burn_stats`: Inspect burned tokens, burn address, and circulating deflation metrics.
-9. `cookie_check_baker_karma`: Retrieve community tier and airdrop qualification stats.
-10. `cookie_get_vault_info`: Query HyperArb Vault TVL, share price, APY, and simulated 24h volume.
-11. `cookie_get_vault_position`: Fetch personalized vault deposit position and paper-trading returns.
+3. `cookie_simulate_agent_ping`: Dispatch an autonomous on-chain telemetry ping or state proof.
+4. `cookie_resolve_explorer_url`: Generate official CookieScan explorer URLs for accounts, transactions, and tokens.
+5. `cookie_list_agent_fleet`: Retrieve all 50 active sentinel agents filtered by squad.
+6. `cookie_get_bridge_guide`: Instructions for acquiring $COOKIE and bridging via Hyperlane.
+7. `cookie_scan_arbitrage_crumbs`: Return illustrative arbitrage-spread scenarios (labeled simulator, not live detection).
+8. `cookie_calculate_airdrop_karma`: Calculate on-chain Baker Karma score and airdrop qualification tier.
+9. `cookie_get_burn_stats`: Inspect cumulative burned tokens and real-time deflation metrics.
+10. `cookie_vault_get_status`: Query Treasury Vault TVL, NAV share price, and reserve breakdown.
+11. `cookie_vault_get_user_position`: Fetch user vault shares (`cCOOKIE-LP`) and withdrawable balances.
+12. `cookie_atomic_get_spreads`: Return COOK's live Solana price and the (standby) cross-chain differential — no live Cookie Chain USD market exists yet.
+13. `cookie_atomic_get_vault_status`: Retrieve Cookie Atomic Engine & Proof-of-Reserves solvency audit.
+14. `cookie_atomic_simulate_route`: Simulate atomic order sizing, price impact, and net profit before execution.
 
 ---
 
@@ -167,7 +199,7 @@ The MCP manifest (`/api/v1/mcp/manifest`) provides LLM-ready definitions for:
 
 ### Option A: Docker Compose (1-Line Deployment)
 ```bash
-git clone https://github.com/your-username/cookie-agent-capp.git
+git clone https://github.com/cookie-agent/cookie-agent-capp.git
 cd cookie-agent-capp
 docker compose up --build -d
 ```
@@ -201,38 +233,18 @@ The project includes an extensive test suite verifying all 11 MCP tools, REST en
 python -m pytest -v
 ```
 
-### Test Suite Results (31/31 Passed - 100% Green)
-* `tests/test_api.py::test_health_endpoint` ✅ PASSED
-* `tests/test_api.py::test_network_stats` ✅ PASSED
-* `tests/test_api.py::test_mcp_manifest` ✅ PASSED
-* `tests/test_api.py::test_agent_ping_execution` ✅ PASSED
-* `tests/test_api.py::test_mcp_execute_tool` ✅ PASSED
-* `tests/test_api.py::test_agents_fleet_endpoint` ✅ PASSED
-* `tests/test_api.py::test_agents_fleet_filter` ✅ PASSED
-* `tests/test_api.py::test_mcp_execute_fleet` ✅ PASSED
-* `tests/test_api.py::test_opportunities_radar` ✅ PASSED
-* `tests/test_api.py::test_eat_opportunity` ✅ PASSED
-* `tests/test_api.py::test_burn_stats` ✅ PASSED
-* `tests/test_api.py::test_airdrop_karma` ✅ PASSED
-* `tests/test_api.py::test_vault_info` ✅ PASSED
-* `tests/test_api.py::test_vault_deposit_and_position` ✅ PASSED
-* `tests/test_api.py::test_vault_trigger_arb_and_feed` ✅ PASSED
-* `tests/test_api.py::test_vault_withdraw` ✅ PASSED
-* `tests/test_api.py::test_mcp_execute_vault` ✅ PASSED
-* `tests/test_api.py::test_wallet_details_endpoint` ✅ PASSED
-* `tests/test_api.py::test_solana_rpc_proxy` ✅ PASSED
-* `tests/test_burn_tracker.py::test_burn_tracker_record_and_total` ✅ PASSED
-* `tests/test_cookie_atomic.py::test_net_spread_calculation_profitable` ✅ PASSED
-* `tests/test_cookie_atomic.py::test_net_spread_calculation_unprofitable` ✅ PASSED
-* `tests/test_cookie_atomic.py::test_optimal_order_size_constant_product` ✅ PASSED
-* `tests/test_cookie_atomic.py::test_simulate_atomic_route_pass` ✅ PASSED
-* `tests/test_cookie_atomic.py::test_simulate_atomic_route_revert_guard` ✅ PASSED
-* `tests/test_cookie_atomic.py::test_atomic_status_api` ✅ PASSED
-* `tests/test_cookie_atomic.py::test_atomic_discovery_api` ✅ PASSED
-* `tests/test_cookie_atomic.py::test_atomic_cross_chain_api` ✅ PASSED
-* `tests/test_cookie_atomic.py::test_atomic_simulate_api` ✅ PASSED
-* `tests/test_cookie_atomic.py::test_atomic_deposit_and_withdraw` ✅ PASSED
-* `tests/test_cookie_atomic.py::test_atomic_mcp_tools` ✅ PASSED
+### Test Suite Results (46/46 Passed — 100% Green)
+
+All 46 tests pass, covering the REST API, the 14 MCP tools, burn tracking, the atomic
+engine math, and the security invariants added during the hardening pass:
+
+* **Deposit zero-trust**: a fabricated / non-existent deposit tx is rejected (no shares minted from thin air).
+* **Withdraw two-phase**: a signer failure does **not** burn shares; a payout above the auto cap is queued for manual approval with shares intact.
+* **Honest telemetry**: standby engine returns `STANDBY_NO_LIQUIDITY` (no fabricated profit / NAV), Proof-of-Reserves reflects real solvency.
+
+```bash
+python -m pytest -q      # 46 passed
+```
 
 ---
 

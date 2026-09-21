@@ -9,7 +9,7 @@ const path = require('path');
 const solana = require('../frontend/node_modules/@solana/web3.js');
 
 const RPC_ENDPOINT = process.env.COOKIE_RPC_URL || 'https://rpc.cookiescan.io';
-const DEFAULT_KEYPAIR_PATH = process.env.TREASURY_KEYPAIR_PATH || 'E:\\COOKIE_CHAIN_VAULT_TREASURY\\treasury_vault_keypair.json';
+const DEFAULT_KEYPAIR_PATH = process.env.TREASURY_KEYPAIR_PATH || path.join(__dirname, '..', 'config', 'treasury_vault_keypair.json');
 
 async function dispatchPayout(recipientAddress, amountCookie, memoText = "") {
     if (!recipientAddress) {

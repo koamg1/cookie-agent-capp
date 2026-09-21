@@ -9,6 +9,8 @@ export type WalletType =
   | 'Brave Wallet'
   | 'Session Key';
 
+export type NavTab = 'fleet' | 'arbitrage' | 'atomic' | 'vault' | 'burn';
+
 export interface WalletOption {
   id: string;
   name: WalletType;

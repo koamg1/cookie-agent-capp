@@ -7,7 +7,15 @@ Defines the fleet of 50 specialized on-chain AI agents across 5 strategic squads
 4. Network & SVM RPC Infrastructure (10 agents)
 5. Data Intelligence & MCP Ecosystem (10 agents)
 
-All 50 agents audit genuine canonical Solana & Cookie Chain SVM programs on-chain.
+Each agent targets a genuine canonical Solana / Cookie Chain SVM program address.
+
+DATA HONESTY NOTE:
+Only a subset of agents currently expose LIVE on-chain telemetry (those whose
+metric maps directly to a real RPC read this gateway performs — live slot and
+measured RPC latency). The rest are published as static capability specs
+(their telemetry_sample strings are illustrative, not live measurements) and
+are flagged data_mode="spec" / is_live=False so the UI never presents them as
+live readings. See LIVE_AGENT_IDS below.
 """
 
 from typing import List, Dict, Any
@@ -20,11 +28,11 @@ AGENTS_FLEET: List[Dict[str, Any]] = [
         "name": "Alpha-Arbitrage Sniper",
         "squad": "defi",
         "squad_label": "DeFi & Liquidity",
-        "role": "Monitors cross-DEX price discrepancies across Cookie SVM AMMs.",
+        "role": "Tracks $COOK spot price on Solana (DexScreener). No native Cookie Chain USD pair exists yet, so no cross-chain arbitrage is claimed.",
         "status": "active",
         "uptime": "99.98%",
         "target_program": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-        "telemetry_sample": "arb:scan | spread:0.42% | pairs:8 | status:optimal"
+        "telemetry_sample": "price:monitor | cook_usd:DexScreener | cookie_chain_usd_pair:none | mode:roadmap"
     },
     {
         "id": "defi_02_liquidity_sentinel",
@@ -79,7 +87,7 @@ AGENTS_FLEET: List[Dict[str, Any]] = [
         "status": "active",
         "uptime": "99.89%",
         "target_program": "Stake11111111111111111111111111111111111111",
-        "telemetry_sample": "harvest:pending | gas_eval:low | est_apy:38.4%"
+        "telemetry_sample": "harvest:planned | gas_eval:low | apy:not_promised | mode:roadmap"
     },
     {
         "id": "defi_07_fee_burner",
@@ -575,22 +583,85 @@ AGENTS_FLEET: List[Dict[str, Any]] = [
     }
 ]
 
+# Agents whose telemetry is a genuine live read this gateway actually performs.
+# Each maps to a concrete metric (see _build_live_sample). Everything else is a
+# static capability spec published under the "roadmap" tier.
+LIVE_AGENT_IDS = {
+    "net_01_slot_finality",       # live confirmed slot + epoch (getSlot / getEpochInfo)
+    "net_03_rpc_latency_prober",  # measured RPC round-trip latency
+    "net_06_mempool_congestion",  # live TPS (getRecentPerformanceSamples)
+    "net_09_rent_auditor",        # rent-exempt lamports (getMinimumBalanceForRentExemption)
+    "defi_07_fee_burner",         # verified on-chain $COOKIE burns (burn_tracker)
+    "mcp_01_tool_dispatcher",     # real registered MCP tool count
+}
+
+
 def get_agents_fleet() -> List[Dict[str, Any]]:
     return AGENTS_FLEET
 
-def get_enriched_fleet(slot: int = 26058000, latency_ms: float = 14.5) -> List[Dict[str, Any]]:
-    """Enriches the static registry with real-time live SVM block slot and RPC latency telemetry."""
+
+def _build_live_sample(agent_id: str, slot: int, latency: float, m: Dict[str, Any]):
+    """
+    Returns a telemetry string built from REAL metrics, or None if the required
+    metric for this agent is unavailable (in which case the agent degrades to a
+    static spec rather than fabricating a live reading).
+    """
+    if agent_id == "net_01_slot_finality":
+        epoch = m.get("epoch")
+        pct = m.get("epoch_progress_pct")
+        base = f"slot:finality | confirmed_slot:{slot} | commitment:confirmed"
+        return base + (f" | epoch:{epoch} ({pct}%)" if epoch is not None else "")
+    if agent_id == "net_03_rpc_latency_prober":
+        status = "healthy" if latency < 400 else ("elevated" if latency < 1000 else "degraded")
+        return f"rpc:probe | ping:{latency}ms | status:{status} | http:200"
+    if agent_id == "net_06_mempool_congestion":
+        tps = m.get("tps")
+        return None if tps is None else f"mempool:load | live_tps:{tps} | src:getRecentPerformanceSamples"
+    if agent_id == "net_09_rent_auditor":
+        rent = m.get("rent_exempt_lamports")
+        return None if rent is None else f"rent:exempt | 165B:{rent} lamports | src:getMinimumBalanceForRentExemption"
+    if agent_id == "defi_07_fee_burner":
+        burned = m.get("app_burned_cookie")
+        events = m.get("app_burn_events")
+        return None if burned is None else f"burn:verified | app_burned:{burned} COOKIE | events:{events} | on_chain:true"
+    if agent_id == "mcp_01_tool_dispatcher":
+        tools = m.get("mcp_tool_count")
+        return None if tools is None else f"mcp:dispatch | registered_tools:{tools} | schema:2024-11-05 | live:true"
+    return None
+
+
+def get_enriched_fleet(
+    slot: int = 26058000,
+    latency_ms: float = 14.5,
+    metrics: Dict[str, Any] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Splits the registry into two honest tiers:
+      - tier="live": is_live=True, telemetry_sample rebuilt from REAL metrics
+        gathered by the gateway (LIVE_AGENT_IDS whose metric is available).
+      - tier="roadmap": is_live=False, illustrative spec left untouched — the UI
+        presents these as planned capabilities, never as live readings.
+    """
+    m = metrics or {}
+    latency = round(latency_ms, 1)
     enriched = []
     for agent in AGENTS_FLEET:
         item = dict(agent)
         item["current_slot"] = slot
-        item["latency_ms"] = round(latency_ms, 1)
-        item["is_live"] = True
-        base_sample = agent.get("telemetry_sample", "")
-        if "slot:" in base_sample:
-            item["telemetry_sample"] = re.sub(r"slot:\d+", f"slot:{slot}", base_sample)
+
+        live_sample = None
+        if agent["id"] in LIVE_AGENT_IDS:
+            live_sample = _build_live_sample(agent["id"], slot, latency, m)
+
+        is_live = live_sample is not None
+        item["is_live"] = is_live
+        item["data_mode"] = "live" if is_live else "spec"
+        item["tier"] = "live" if is_live else "roadmap"
+        if is_live:
+            item["latency_ms"] = latency
+            item["telemetry_sample"] = live_sample
         else:
-            item["telemetry_sample"] = f"slot:{slot} | {base_sample}"
+            item["latency_ms"] = None
         enriched.append(item)
     return enriched
 

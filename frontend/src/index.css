@@ -222,3 +222,236 @@ body {
   top: 52%; left: 52%;
   animation: crumbBurst4 0.36s ease-out infinite 0.05s;
 }
+
+/* --- Underworld Cyber-Industrial Effects (Tuberías, Circuitos & Agentes) --- */
+@keyframes pipeFlow {
+  0% { stroke-dashoffset: 60; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.animate-pipe-flow {
+  stroke-dasharray: 8 6;
+  animation: pipeFlow 1.2s linear infinite;
+}
+
+.animate-pipe-flow-fast {
+  stroke-dasharray: 6 4;
+  animation: pipeFlow 0.65s linear infinite;
+}
+
+@keyframes neonGlow {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+.animate-neon-cyan {
+  animation: neonGlow 2.5s ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(0, 210, 255, 0.4);
+}
+
+@keyframes magmaGlow {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+.animate-magma-glow {
+  animation: magmaGlow 1.8s ease-in-out infinite;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.5);
+}
+
+@keyframes matrixFlicker {
+  0%, 100% { opacity: 0.95; }
+  23% { opacity: 0.82; }
+  24% { opacity: 0.98; }
+  68% { opacity: 0.88; }
+  70% { opacity: 1; }
+}
+
+.animate-matrix-flicker {
+  animation: matrixFlicker 4s ease-in-out infinite;
+}
+
+.bg-hazard-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(245, 158, 11, 0.9),
+    rgba(245, 158, 11, 0.9) 10px,
+    rgba(15, 23, 42, 0.95) 10px,
+    rgba(15, 23, 42, 0.95) 20px
+  );
+}
+
+.bg-circuit-grid {
+  background-image: 
+    linear-gradient(to right, rgba(0, 210, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 210, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+@keyframes cyberBreathe {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-cyber-breathe {
+  animation: cyberBreathe 3.5s ease-in-out infinite;
+}
+
+@keyframes cyberPulseGlow {
+  0%, 100% { opacity: 0.88; }
+  50% { opacity: 1; }
+}
+
+.animate-cyber-pulse {
+  animation: cyberPulseGlow 3s ease-in-out infinite;
+  box-shadow: 0 0 14px rgba(0, 210, 255, 0.35);
+}
+
+/* --- Jupiter Smooth Motion Engine (Curvas de animación ultra suaves & 60 FPS GPU) --- */
+.sidebar-smooth {
+  transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: width;
+}
+
+.item-smooth {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes jupiterFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-tab-enter {
+  animation: jupiterFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* GPU-friendly subtle breathing instead of expensive CPU drop-shadow filters */
+@keyframes cookieGlowSpin {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+.animate-cookie-logo {
+  animation: cookieGlowSpin 4s ease-in-out infinite;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* High-performance rendering containment for 50-agent swarm grid */
+.agent-card-contain {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 160px;
+}
+
+/* --- Atmospheric Delicate Background Falling Cookies (60 FPS GPU) --- */
+@keyframes cookieFall {
+  0% {
+    transform: translate3d(0, -60px, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(16px, 50vh, 0) rotate(180deg);
+  }
+  100% {
+    transform: translate3d(-8px, 105vh, 0) rotate(360deg);
+  }
+}
+
+@keyframes cookieFallAlt {
+  0% {
+    transform: translate3d(0, -60px, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-16px, 50vh, 0) rotate(-180deg);
+  }
+  100% {
+    transform: translate3d(10px, 105vh, 0) rotate(-360deg);
+  }
+}
+
+.animate-cookie-fall-1 {
+  animation: cookieFall linear infinite;
+}
+
+.animate-cookie-fall-2 {
+  animation: cookieFallAlt linear infinite;
+}
+
+@media (max-width: 768px) {
+  .animate-cookie-fall-1,
+  .animate-cookie-fall-2 {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-cookie-fall-1,
+  .animate-cookie-fall-2 {
+    animation: none !important;
+    display: none !important;
+  }
+}
+
+/* Scoped Dark Mode for CookieAtomicVault */
+.dark-vault {
+  color: #f1f5f9;
+}
+.dark-vault .bg-white {
+  background-color: #070e1e !important;
+  color: #f1f5f9 !important;
+}
+.dark-vault .border-\[\#0b1f3a\] {
+  border-color: rgba(6, 182, 212, 0.4) !important;
+}
+.dark-vault .text-\[\#0b1f3a\] {
+  color: #f1f5f9 !important;
+}
+.dark-vault .text-\[\#0b1f3a\]\/70,
+.dark-vault .text-\[\#0b1f3a\]\/80,
+.dark-vault .text-\[\#0b1f3a\]\/60 {
+  color: #94a3b8 !important;
+}
+.dark-vault .bg-\[\#eff6ff\],
+.dark-vault .bg-\[\#f8fafc\] {
+  background-color: #091326 !important;
+  border-color: rgba(6, 182, 212, 0.25) !important;
+}
+.dark-vault .bg-\[\#ffe0a8\] {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+  border-color: rgba(245, 158, 11, 0.6) !important;
+  color: #fbbf24 !important;
+}
+.dark-vault .shadow-\[0_3px_0_\#0b1f3a\],
+.dark-vault .shadow-\[0_2px_0_\#0b1f3a\],
+.dark-vault .shadow-\[0_4px_0_\#0b1f3a\] {
+  box-shadow: 0 3px 0 rgba(6, 182, 212, 0.45) !important;
+}
+.dark-vault .neo-input {
+  background-color: #050a16 !important;
+  border-color: rgba(6, 182, 212, 0.4) !important;
+  color: #67e8f9 !important;
+}
+
+

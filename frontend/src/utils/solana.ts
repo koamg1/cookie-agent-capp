@@ -31,7 +31,7 @@ export function getNightlyProvider() {
     if (window.nightly.standardWallet) return window.nightly.standardWallet;
     return window.nightly;
   }
-  if (window.solana && window.solana.isNightly) return window.solana;
+  if (window.solana && (window.solana.isNightly || (window.solana as any).nightly)) return window.solana;
   return null;
 }
 
@@ -156,64 +156,105 @@ export function extractSignatureHex(raw: any): string {
     return raw;
   }
 
-  throw new Error("Formato de firma no reconocido por la billetera.");
+  throw new Error("Signature format not recognized by wallet.");
+}
+
+export function serializeSignedTx(signedTx: any, fallbackTx: solanaWeb3.Transaction): Uint8Array {
+  if (signedTx instanceof Uint8Array) {
+    return signedTx;
+  }
+  if (signedTx?.signedTransaction instanceof Uint8Array) {
+    return signedTx.signedTransaction;
+  }
+  if (Array.isArray(signedTx) && signedTx.length > 0) {
+    const item = signedTx[0];
+    if (item instanceof Uint8Array) return item;
+    if (item?.signedTransaction instanceof Uint8Array) return item.signedTransaction;
+    if (typeof item?.serialize === 'function') return item.serialize();
+  }
+  if (signedTx && typeof signedTx.serialize === 'function') {
+    return signedTx.serialize();
+  }
+  if (fallbackTx && typeof fallbackTx.serialize === 'function') {
+    return fallbackTx.serialize();
+  }
+  throw new Error("Unable to serialize signed transaction from wallet provider.");
 }
 
 export async function getWalletAddress(type: WalletType, provider: any): Promise<string> {
   if (type === 'Session Key') {
     if (!provider || !provider.publicKey) {
-      throw new Error("Session key no inicializada.");
+      throw new Error("Session key not initialized.");
     }
     const addr = provider.publicKey.toString();
-    if (!isValidUserAddress(addr)) throw new Error("Error generando Session Key.");
+    if (!isValidUserAddress(addr)) throw new Error("Error generating Session Key.");
     return addr;
   }
 
   if (!provider) {
-    throw new Error(`Proveedor no disponible para ${type}. Asegúrate de tener la extensión instalada.`);
+    throw new Error(`Provider not available for ${type}. Please ensure the extension is installed.`);
   }
 
   let candidate: string | null = null;
 
-  // 1. Try Solana Wallet Standard connect
-  if (provider.features && provider.features['standard:connect']) {
+  // 1. TOP PRIORITY: Solana Wallet Standard connect (standard:connect)
+  // Essential for Nightly, Backpack and all modern SVM standard wallets.
+  // Calling standard:connect natively triggers the extension window so user can choose account!
+  const stdConnect = provider.features?.['standard:connect'];
+  if (stdConnect && typeof stdConnect.connect === 'function') {
     try {
-      const res = await provider.features['standard:connect'].connect();
-      const addr = res?.accounts?.[0]?.address;
-      if (isValidUserAddress(addr)) candidate = addr;
-    } catch (err) {
+      console.info(`[Wallet] Connecting ${type} via standard:connect...`);
+      const res = await stdConnect.connect();
+      const accounts = res?.accounts || provider.accounts;
+      if (accounts && accounts.length > 0) {
+        const validAcc = accounts.find((a: any) => isValidUserAddress(a.address)) || accounts[0];
+        if (validAcc?.address) {
+          candidate = validAcc.address;
+        }
+      }
+    } catch (err: any) {
       console.warn(`standard:connect warning for ${type}:`, err);
+      const msg = String(err?.message || err);
+      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected') || msg.includes('denied')) {
+        throw new Error(`Connection cancelled in ${type}.`);
+      }
     }
   }
 
-  // 2. Try standard connect()
+  // 2. Fallback: Legacy Solana provider connect() (Phantom, Solflare, etc.)
   if (!candidate && typeof provider.connect === 'function') {
     try {
+      console.info(`[Wallet] Connecting ${type} via legacy connect()...`);
       const res = await provider.connect({ onlyIfTrusted: false });
-      const addr = res?.publicKey?.toString() || provider.publicKey?.toString() || (res?.accounts && res.accounts[0]?.address);
-      if (isValidUserAddress(addr)) candidate = addr;
+      const rawPub = res?.publicKey || provider.publicKey;
+      if (rawPub) {
+        const addr = typeof rawPub.toBase58 === 'function' ? rawPub.toBase58() : String(rawPub);
+        if (isValidUserAddress(addr)) candidate = addr;
+      }
     } catch (err) {
       console.warn(`connect() warning for ${type}:`, err);
-      // Re-throw if user deliberately cancelled or rejected
-      const msg = String(err);
+      const msg = String((err as any)?.message || err);
       if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
         throw err;
       }
     }
   }
 
-  // 3. Fallback: check already connected public key or accounts
-  if (!candidate && provider.publicKey) {
-    const addr = provider.publicKey.toString();
-    if (isValidUserAddress(addr)) candidate = addr;
-  }
+  // 3. Fallback: Direct inspection of provider.accounts
   if (!candidate && provider.accounts && provider.accounts.length > 0) {
-    const addr = provider.accounts[0].address || provider.accounts[0].publicKey?.toString();
+    const validAcc = provider.accounts.find((a: any) => isValidUserAddress(a.address || a.publicKey?.toString()));
+    if (validAcc) candidate = validAcc.address || validAcc.publicKey?.toString();
+  }
+
+  // 4. Fallback: Direct inspection of provider.publicKey
+  if (!candidate && provider.publicKey) {
+    const rawPub = provider.publicKey;
+    const addr = typeof rawPub.toBase58 === 'function' ? rawPub.toBase58() : String(rawPub);
     if (isValidUserAddress(addr)) candidate = addr;
   }
 
   if (!candidate || !isValidUserAddress(candidate)) {
-    throw new Error(`${type} no devolvió una cuenta pública válida. Abre la extensión, desbloquéala y autoriza la conexión.`);
+    throw new Error(`${type} did not return a valid public account. Please unlock your wallet and approve the connection.`);
   }
 
   return candidate;
@@ -230,16 +271,20 @@ export async function requestWalletSignature(
   }
 
   if (!provider) {
-    throw new Error(`Proveedor de ${type} no encontrado.`);
+    throw new Error(`Provider for ${type} not found.`);
   }
 
   const messageBytes = new TextEncoder().encode(messageText);
 
-  // Strategy 1: Standard Wallet feature (features['solana:signMessage']) - supported by Nightly, Backpack, Solflare, etc.
-  if (provider.features && provider.features['solana:signMessage']) {
+  // Strategy 1: Standard Wallet feature (standard:signMessage or solana:signMessage)
+  const stdSignMsg = provider.features?.['standard:signMessage'] || provider.features?.['solana:signMessage'];
+  if (stdSignMsg && typeof stdSignMsg.signMessage === 'function') {
     try {
-      const account = (provider.accounts || []).find((a: any) => a.address === address) || provider.accounts?.[0] || { address };
-      const signResults = await provider.features['solana:signMessage'].signMessage({
+      let account = (provider.accounts || []).find((a: any) => a.address === address) || provider.accounts?.[0];
+      if (!account) {
+        account = { address, publicKey: new solanaWeb3.PublicKey(address).toBytes() };
+      }
+      const signResults = await stdSignMsg.signMessage({
         account: account,
         message: messageBytes
       });
@@ -279,7 +324,7 @@ export async function requestWalletSignature(
     }
   }
 
-  throw new Error(`La billetera ${type} no soporta la función signMessage.`);
+  throw new Error(`Wallet ${type} does not support signMessage.`);
 }
 
 export async function ensureWalletConnected(type: WalletType, provider?: any): Promise<any> {
@@ -295,16 +340,32 @@ export async function ensureWalletConnected(type: WalletType, provider?: any): P
   }
 
   if (!activeProvider) {
-    throw new Error(`Proveedor de billetera ${type} no detectado. Asegúrate de tener la extensión instalada y activa.`);
+    throw new Error(`Wallet provider ${type} not detected. Please ensure the extension is installed and active.`);
   }
 
+  const getProviderAddress = (p: any): string | null => {
+    if (!p) return null;
+    if (p.publicKey) {
+      if (typeof p.publicKey.toBase58 === 'function') return p.publicKey.toBase58();
+      const s = String(p.publicKey);
+      if (s && s !== '[object Object]') return s;
+    }
+    if (Array.isArray(p.accounts) && p.accounts.length > 0) {
+      const acc = p.accounts[0];
+      if (typeof acc === 'string') return acc;
+      if (acc?.address) return acc.address;
+    }
+    return null;
+  };
+
+  const activeAddress = getProviderAddress(activeProvider);
   const isConnected = !!(
     activeProvider.isConnected === true ||
-    (activeProvider.publicKey && isValidUserAddress(activeProvider.publicKey.toString()))
+    (activeAddress && isValidUserAddress(activeAddress))
   );
 
   if (!isConnected) {
-    console.info(`[Wallet] ${type} no está conectado o la sesión expiró. Reconectando automáticamente...`);
+    console.info(`[Wallet] ${type} is not connected or session expired. Reconnecting...`);
     try {
       if (typeof activeProvider.connect === 'function') {
         await activeProvider.connect({ onlyIfTrusted: false });
@@ -314,8 +375,8 @@ export async function ensureWalletConnected(type: WalletType, provider?: any): P
     } catch (err: any) {
       console.warn(`[Wallet] ensureWalletConnected reconnect warning on ${type}:`, err);
       const msg = String(err?.message || err);
-      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
-        throw err;
+      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected') || msg.includes('denied')) {
+        throw new Error(`Connection cancelled in ${type}.`);
       }
     }
   }
@@ -365,6 +426,37 @@ export async function getFastBlockhash(
   });
 }
 
+export async function broadcastSignedTransaction(
+  raw: Uint8Array,
+  connection: solanaWeb3.Connection,
+  fallbackRpcUrl: string = "https://rpc.cookiescan.io"
+): Promise<string> {
+  // Attempt 1: primary connection (proxy or direct) with skipPreflight: true
+  try {
+    return await connection.sendRawTransaction(raw, {
+      skipPreflight: true,
+      maxRetries: 3
+    });
+  } catch (primaryErr: any) {
+    console.warn("[Broadcast] Primary sendRawTransaction notice, attempting direct fallback RPC:", primaryErr);
+    // Attempt 2: direct fallback RPC
+    try {
+      const fallbackConn = new solanaWeb3.Connection(fallbackRpcUrl, {
+        commitment: "confirmed",
+        wsEndpoint: ""
+      });
+      return await fallbackConn.sendRawTransaction(raw, {
+        skipPreflight: true,
+        maxRetries: 3
+      });
+    } catch (fallbackErr: any) {
+      console.error("[Broadcast] Fallback sendRawTransaction failed:", fallbackErr);
+      const detail = primaryErr?.message || fallbackErr?.message || String(primaryErr);
+      throw new Error(`Transaction signed successfully, but broadcast failed: ${detail}`);
+    }
+  }
+}
+
 export async function sendWalletTransaction(
   type: WalletType,
   provider: any,
@@ -375,55 +467,163 @@ export async function sendWalletTransaction(
   if (type === 'Session Key') {
     transaction.sign(provider);
     const rawTx = transaction.serialize();
-    return await connection.sendRawTransaction(rawTx, { skipPreflight: false });
+    return await broadcastSignedTransaction(rawTx, connection);
   }
 
   // Ensure provider is freshly resolved from window and actively connected
   const activeProvider = await ensureWalletConnected(type, provider);
 
-  const isDisconnectError = (err: any) => {
+  const isUserRejection = (err: any) => {
     const msg = String(err?.message || err).toLowerCase();
-    return msg.includes('not connected') || msg.includes('disconnected') || msg.includes('user not connected') || msg.includes('session expired');
+    return msg.includes('reject') || msg.includes('cancel') || msg.includes('denied') || msg.includes('declined') || msg.includes('user rejected');
   };
 
-  // Priority 1: Direct activeProvider.signTransaction (Nightly, Phantom, Solflare, Backpack)
-  // This opens the wallet extension popup directly and returns the signed Transaction object
-  if (typeof activeProvider.signTransaction === 'function') {
-    try {
-      const signedTx = await activeProvider.signTransaction(transaction);
-      const raw = signedTx.serialize();
-      return await connection.sendRawTransaction(raw, { skipPreflight: false });
-    } catch (err: any) {
-      console.warn(`signTransaction warning on ${type}:`, err);
-      const msg = String(err?.message || err);
-      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
-        throw err;
-      }
+  const serializedUnsigned = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
 
-      // If extension session was idle or dropped, auto-reconnect and retry once immediately
-      if (isDisconnectError(err)) {
-        try {
-          console.info(`[Wallet] Reconnecting ${type} after disconnect error and retrying sign...`);
-          if (typeof activeProvider.connect === 'function') {
-            await activeProvider.connect({ onlyIfTrusted: false });
-          }
-          const retrySignedTx = await activeProvider.signTransaction(transaction);
-          const raw = retrySignedTx.serialize();
-          return await connection.sendRawTransaction(raw, { skipPreflight: false });
-        } catch (retryErr: any) {
-          const retryMsg = String(retryErr?.message || retryErr);
-          if (retryMsg.includes('reject') || retryMsg.includes('cancel') || retryMsg.includes('User rejected')) {
-            throw retryErr;
-          }
+  // Resolve the WalletAccount object (mandatory for standard:signTransaction in Nightly/Backpack)
+  let account = (activeProvider.accounts || []).find((a: any) => a.address === connectedAddress) || activeProvider.accounts?.[0];
+
+  // If account is not cached, attempt a silent standard:connect to populate active accounts
+  if (!account && activeProvider.features?.['standard:connect']) {
+    try {
+      const connRes = await activeProvider.features['standard:connect'].connect({ silent: true }).catch(() => activeProvider.features['standard:connect'].connect());
+      account = (connRes?.accounts || activeProvider.accounts || []).find((a: any) => a.address === connectedAddress) || connRes?.accounts?.[0];
+    } catch (e) {
+      console.warn("Silent account recovery warning:", e);
+    }
+  }
+
+  // Fallback synthetic WalletAccount if extension doesn't expose it directly
+  if (!account && connectedAddress) {
+    try {
+      account = {
+        address: connectedAddress,
+        publicKey: new solanaWeb3.PublicKey(connectedAddress).toBytes(),
+        chains: ['solana:mainnet'],
+        features: ['solana:signTransaction', 'standard:signTransaction']
+      };
+    } catch {}
+  }
+
+  const withTimeout = <T>(p: Promise<T>, ms: number, errMsg: string): Promise<T> => {
+    return Promise.race([
+      p,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error(errMsg)), ms))
+    ]);
+  };
+
+  // Resolve direct Solana provider for Nightly if available on window
+  let directProvider = activeProvider;
+  if (type === 'Nightly' && typeof window !== 'undefined' && window.nightly?.solana) {
+    directProvider = window.nightly.solana;
+  }
+
+  let signedTx: any = null;
+
+  // Priority 1: Direct provider.signTransaction (Nightly, Phantom, Solflare, Backpack)
+  // This opens the wallet extension popup window immediately and returns the signed Transaction object
+  if (directProvider && typeof directProvider.signTransaction === 'function') {
+    try {
+      console.info(`[Wallet] Prompting ${type} via direct provider.signTransaction...`);
+      signedTx = await withTimeout(
+        directProvider.signTransaction(transaction),
+        60000,
+        `Signature request timed out in ${type}. Please open your extension window to approve.`
+      );
+    } catch (err: any) {
+      console.warn(`Direct signTransaction notice on ${type}:`, err);
+      if (isUserRejection(err)) {
+        throw new Error(`Transaction signing cancelled in ${type}.`);
+      }
+      // If signTransaction failed before user signed, attempt fallback signing methods below
+    }
+  }
+
+  // Once signed via Priority 1, broadcast immediately — DO NOT prompt again!
+  if (signedTx) {
+    const raw = serializeSignedTx(signedTx, transaction);
+    return await broadcastSignedTransaction(raw, connection);
+  }
+
+  // Priority 2: standard:signTransaction (Wallet Standard feature with fast 12s fallback)
+  const stdSign = activeProvider.features?.['standard:signTransaction'];
+  if (stdSign && typeof stdSign.signTransaction === 'function') {
+    try {
+      console.info(`[Wallet] Signing transaction with ${type} via standard:signTransaction...`);
+      const signRes = await withTimeout(
+        stdSign.signTransaction({
+          account: account,
+          transaction: serializedUnsigned
+        }),
+        12000,
+        "standard:signTransaction timeout"
+      );
+      if (signRes) {
+        const raw = serializeSignedTx(signRes, transaction);
+        return await broadcastSignedTransaction(raw, connection);
+      }
+    } catch (stdErr: any) {
+      console.warn(`standard:signTransaction notice on ${type}:`, stdErr);
+      if (isUserRejection(stdErr)) {
+        throw new Error(`Transaction signing cancelled in ${type}.`);
+      }
+      // If single object payload was rejected, try array format
+      try {
+        const signArrayRes = await withTimeout(
+          stdSign.signTransaction([{
+            account: account,
+            transaction: serializedUnsigned
+          }]),
+          12000,
+          "standard:signTransaction array timeout"
+        );
+        if (signArrayRes) {
+          const raw = serializeSignedTx(signArrayRes, transaction);
+          return await broadcastSignedTransaction(raw, connection);
+        }
+      } catch (arrErr: any) {
+        if (isUserRejection(arrErr)) {
+          throw new Error(`Transaction signing cancelled in ${type}.`);
         }
       }
     }
   }
 
-  // Priority 2: Direct activeProvider.signAndSendTransaction
-  if (typeof activeProvider.signAndSendTransaction === 'function') {
+  // Priority 3: solana:signTransaction (Solana Standard feature)
+  const solanaSign = activeProvider.features?.['solana:signTransaction'];
+  if (solanaSign && typeof solanaSign.signTransaction === 'function') {
     try {
-      const res = await activeProvider.signAndSendTransaction(transaction);
+      console.info(`[Wallet] Signing transaction with ${type} via solana:signTransaction...`);
+      const signResults = await withTimeout(
+        solanaSign.signTransaction({
+          account: account,
+          transaction: serializedUnsigned,
+          chain: 'solana:mainnet'
+        }),
+        15000,
+        "solana:signTransaction timeout"
+      );
+      if (signResults) {
+        const raw = serializeSignedTx(signResults, transaction);
+        return await broadcastSignedTransaction(raw, connection);
+      }
+    } catch (solErr: any) {
+      console.warn(`solana:signTransaction notice on ${type}:`, solErr);
+      if (isUserRejection(solErr)) {
+        throw new Error(`Transaction signing cancelled in ${type}.`);
+      }
+    }
+  }
+
+  // Priority 4: Direct provider.signAndSendTransaction (only for legacy providers without signTransaction)
+  if (directProvider && typeof directProvider.signAndSendTransaction === 'function') {
+    try {
+      console.info(`[Wallet] Prompting ${type} via direct provider.signAndSendTransaction...`);
+      const res: any = await withTimeout<any>(
+        directProvider.signAndSendTransaction(transaction),
+        60000,
+        `Signature request timed out in ${type}. Please open your extension window to approve.`
+      );
       if (typeof res === 'string') return res;
       if (res && res.signature) {
         if (typeof res.signature === 'string') return res.signature;
@@ -431,69 +631,14 @@ export async function sendWalletTransaction(
       }
       return typeof res === 'object' ? (res.txid || JSON.stringify(res)) : String(res);
     } catch (err: any) {
-      console.warn(`signAndSendTransaction warning on ${type}:`, err);
-      const msg = String(err?.message || err);
-      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
-        throw err;
+      if (isUserRejection(err)) {
+        throw new Error(`Transaction signing cancelled in ${type}.`);
       }
+      throw err;
     }
   }
 
-  // Priority 3: Solana Wallet Standard features (must pass requireAllSignatures: false for unsigned tx!)
-  if (activeProvider.features && activeProvider.features['solana:signTransaction']) {
-    try {
-      const account = (activeProvider.accounts || []).find((a: any) => a.address === connectedAddress) || activeProvider.accounts?.[0];
-      const serializedUnsigned = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
-      const [res] = await activeProvider.features['solana:signTransaction'].signTransaction({
-        account: account,
-        transaction: serializedUnsigned
-      });
-      if (res && res.signedTransaction) {
-        return await connection.sendRawTransaction(res.signedTransaction, { skipPreflight: false });
-      }
-    } catch (stdErr: any) {
-      console.warn(`standard:signTransaction warning on ${type}:`, stdErr);
-      const msg = String(stdErr?.message || stdErr);
-      if (msg.includes('reject') || msg.includes('cancel') || msg.includes('User rejected')) {
-        throw stdErr;
-      }
-      if (isDisconnectError(stdErr) && activeProvider.features['standard:connect']) {
-        try {
-          console.info(`[Wallet] Standard wallet reconnecting ${type} and retrying sign...`);
-          await activeProvider.features['standard:connect'].connect();
-          const account = (activeProvider.accounts || []).find((a: any) => a.address === connectedAddress) || activeProvider.accounts?.[0];
-          const serializedUnsigned = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
-          const [res] = await activeProvider.features['solana:signTransaction'].signTransaction({
-            account: account,
-            transaction: serializedUnsigned
-          });
-          if (res && res.signedTransaction) {
-            return await connection.sendRawTransaction(res.signedTransaction, { skipPreflight: false });
-          }
-        } catch (retryStdErr: any) {
-          const retryMsg = String(retryStdErr?.message || retryStdErr);
-          if (retryMsg.includes('reject') || retryMsg.includes('cancel') || retryMsg.includes('User rejected')) {
-            throw retryStdErr;
-          }
-        }
-      }
-    }
-  }
-
-  if (activeProvider.features && activeProvider.features['solana:signAndSendTransaction']) {
-    const account = (activeProvider.accounts || []).find((a: any) => a.address === connectedAddress) || activeProvider.accounts?.[0];
-    const serializedUnsigned = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
-    const [res] = await activeProvider.features['solana:signAndSendTransaction'].signAndSendTransaction({
-      account: account,
-      transaction: serializedUnsigned,
-      chain: 'solana:mainnet'
-    });
-    if (res && res.signature) {
-      return new solanaWeb3.PublicKey(res.signature).toBase58();
-    }
-  }
-
-  throw new Error(`La billetera ${type} no respondió a la solicitud de firma. Abre la extensión, verifica que esté desbloqueada e intenta nuevamente.`);
+  throw new Error(`Wallet ${type} did not open or respond to the signing prompt. Please ensure your extension is unlocked and try again.`);
 }
 
 export const COOKIE_MAINNET_MINT = '36ZrtQoab5MhhySaP1YSTwUahSk6GRVUTtZ6cuVfm9e1';
@@ -651,7 +796,7 @@ export async function executeCookieVaultDeposit(
   onStageChange?: (stage: 'preparing' | 'signing' | 'confirming') => void
 ): Promise<string> {
   if (onStageChange) onStageChange('preparing');
-  if (onLog) onLog('WALLET_CHECK', `Verificando conexión activa con ${type}...`, 'text-cyan-400');
+  if (onLog) onLog('WALLET_CHECK', `Verifying active connection with ${type}...`, 'text-cyan-400');
 
   // 1. Proactively ensure wallet is connected before building transaction
   const activeProvider = await ensureWalletConnected(type, provider);
