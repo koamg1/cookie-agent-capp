@@ -93,7 +93,7 @@ app = FastAPI(
         "### 📖 User Guide & Strategic Roadmap:\n"
         "- **User Guide**: Connect any of 9 SVM wallets (Nightly, Phantom, etc.) via SIWS, burn $COOKIE towards `1nc1nerator...` for 10x Baker Karma points, and audit Cold Vault reserves.\n"
         "- **Phase 1 (Delivered)**: 9-Wallet standard adapter, verifiable on-chain burns, Baker Karma scoring, real-time Proof of Reserves, and 14 `cookie-mcp` agent tools.\n"
-        "- **Phase 2 (In Progress)**: Bootstrapping $COOKIE/USDC liquidity on Cookoven DEX, reactivating 400ms flash arbitrage in the Atomic Vault, and retroactive 25% grant distribution.\n"
+        "- **Phase 2 (In Progress)**: Multi-node signer (k-of-n treasury payout approval), server-side SIWS auth, a second liquid Cookie Chain DEX (prerequisite for any vault trading -- none exists yet), and retroactive Baker Karma grant distribution.\n"
         "- **Phase 3 (Horizon)**: Autonomous AI swarm cross-chain rebalancing via Hyperlane and automated buy-back & burn.\n\n"
         "Full Documentation & Roadmap: [docs/USER_GUIDE_AND_ROADMAP.md](https://github.com/cookiechain/cookie_agent_capp/blob/main/docs/USER_GUIDE_AND_ROADMAP.md)"
     ),
@@ -1183,12 +1183,14 @@ async def mcp_execute(req: MCPExecuteRequest):
             raise HTTPException(status_code=400, detail="Address is required")
         return await vault_user_position(addr)
     elif t_name == "cookie_atomic_get_spreads":
-        crumbs = await cookie_client.get_arbitrage_quotes()
+        radar = await opportunities_radar()
         cross = cookie_atomic_engine.get_cross_chain_differential()
         return {
-            "local_svm_crumbs": crumbs,
-            "arbitrum_cross_chain": cross,
-            "engine_status": "Cookie Atomic Mainnet Beta Active"
+            "local_svm_crumbs": radar["crumbs"],
+            "is_simulation": radar["is_simulation"],
+            "disclaimer": radar["disclaimer"],
+            "cross_chain_differential": cross,
+            "engine_status": "Cookie Atomic Mainnet Beta -- Standby (no live arbitrage; single AMM on Cookie Chain SVM)"
         }
     elif t_name == "cookie_atomic_get_vault_status":
         return cookie_atomic_engine.get_engine_status()

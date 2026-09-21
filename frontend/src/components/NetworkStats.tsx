@@ -225,7 +225,7 @@ const NetworkStatsComponent: React.FC<NetworkStatsProps> = ({
                 Live Throughput
               </span>
               <span className="text-xs font-black text-emerald-400 mono">
-                {stats?.live_tps ? `${stats.live_tps} TPS` : '9.16 TPS'}
+                {stats?.live_tps ? `${stats.live_tps} TPS` : 'Synchronizing...'}
               </span>
             </div>
 
@@ -236,7 +236,7 @@ const NetworkStatsComponent: React.FC<NetworkStatsProps> = ({
                 Epoch Cadence
               </span>
               <span className={`text-xs font-black mono ${isDark ? 'text-slate-200' : 'text-[#0b1f3a]'}`}>
-                Epoch #{stats?.epoch || 60} ({stats?.epoch_progress_pct || 20.8}%)
+                {stats?.epoch ? `Epoch #${stats.epoch} (${stats.epoch_progress_pct}%)` : 'Synchronizing...'}
               </span>
             </div>
 
@@ -247,7 +247,7 @@ const NetworkStatsComponent: React.FC<NetworkStatsProps> = ({
                 Total Network Txns
               </span>
               <span className={`text-xs font-black mono ${isDark ? 'text-amber-400' : 'text-[#b45309]'}`}>
-                {stats?.total_transactions ? `${(stats.total_transactions / 1_000_000).toFixed(1)}M+` : '95.7M+'}
+                {stats?.total_transactions ? `${(stats.total_transactions / 1_000_000).toFixed(1)}M+` : 'Synchronizing...'}
               </span>
             </div>
 

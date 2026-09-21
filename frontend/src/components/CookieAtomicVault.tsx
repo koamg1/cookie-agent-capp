@@ -63,7 +63,6 @@ interface ProofOfReserves {
     cookie: number;
     value_usd: number;
     share_pct: number;
-    multisig_type: string;
     timelock_hours: number;
     purpose: string;
   };
@@ -72,7 +71,6 @@ interface ProofOfReserves {
     cookie: number;
     value_usd: number;
     share_pct: number;
-    multisig_type: string;
     lockup_duration_hours: number;
     purpose: string;
   };
@@ -81,7 +79,6 @@ interface ProofOfReserves {
     cookie: number;
     value_usd: number;
     share_pct: number;
-    multisig_type: string;
     lockup_duration_hours: number;
     purpose: string;
   };

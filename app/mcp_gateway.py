@@ -87,7 +87,7 @@ SUPPORTED_TOOLS = [
     ),
     MCPToolDefinition(
         name="cookie_scan_arbitrage_crumbs",
-        description="Scan real-time arbitrage spreads across Cookie Chain SVM liquidity pools and AMMs.",
+        description="Return illustrative (simulated) arbitrage spread scenarios for the Quant Lab. Not live detections -- only one AMM (Cookoven) exists on Cookie Chain SVM today, so the engine stays in standby.",
         inputSchema={
             "type": "object",
             "properties": {},
@@ -116,7 +116,7 @@ SUPPORTED_TOOLS = [
     ),
     MCPToolDefinition(
         name="cookie_vault_get_status",
-        description="Query real-time metrics of the HyperArb Dual-Leg Arbitrage Vault: TVL, projected APY, NAV share price, and 24/7 bot status.",
+        description="Query real-time vault metrics: TVL, NAV share price, and engine status. APY is honestly 0% while the engine is in standby (no second liquid Cookie Chain DEX yet).",
         inputSchema={
             "type": "object",
             "properties": {},
@@ -125,7 +125,7 @@ SUPPORTED_TOOLS = [
     ),
     MCPToolDefinition(
         name="cookie_vault_get_user_position",
-        description="Query a user's deposited position, shares (cCOOKIE-LP), accrued yield, and pool percentage in the HyperArb Vault.",
+        description="Query a user's deposited position, shares (cCOOKIE-LP), and pool percentage in the vault. Yield is 0% while the engine is in standby.",
         inputSchema={
             "type": "object",
             "properties": {
@@ -136,7 +136,7 @@ SUPPORTED_TOOLS = [
     ),
     MCPToolDefinition(
         name="cookie_atomic_get_spreads",
-        description="Query live arbitrage spreads across Cookie Chain AMMs and the Solana Mainnet (Jupiter / Raydium) ↔ Cookie Chain cross-chain price differential.",
+        description="Query COOK's only real USD market (Solana, via Jupiter/Raydium) and confirm there is no Cookie Chain USD pool to diff against yet -- no live cross-chain arbitrage exists.",
         inputSchema={
             "type": "object",
             "properties": {},
