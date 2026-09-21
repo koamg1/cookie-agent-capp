@@ -468,16 +468,24 @@ async def agents_fleet(squad: Optional[str] = None):
     wall_ms = (time.perf_counter() - t0) * 1000.0
 
     slot = 26058000
-    if isinstance(slot_res, dict) and "result" in slot_res:
+    slot_ok = isinstance(slot_res, dict) and "result" in slot_res
+    if slot_ok:
         slot = slot_res["result"]
     elif isinstance(slot_res, int):
         slot = slot_res
+        slot_ok = True
 
     # Prefer the real per-call round-trip time for the latency probe agent.
     latency_ms = slot_res.get("latency_ms", wall_ms) if isinstance(slot_res, dict) else wall_ms
 
     # --- Gather REAL metrics for the live-tier agents ---
     metrics: Dict[str, Any] = {}
+    # Honest signal: did the RPC call actually succeed, or are we on the
+    # hardcoded fallback slot? net_01_slot_finality and net_03_rpc_latency_prober
+    # read this instead of blindly trusting whatever `slot`/`latency_ms` holds.
+    metrics["slot_ok"] = slot_ok
+    if not slot_ok and isinstance(slot_res, dict) and "error" in slot_res:
+        metrics["rpc_error"] = str(slot_res["error"])[:160]
 
     # Live TPS from validator performance samples
     perf_samples = perf_res.get("result", []) if isinstance(perf_res, dict) else []

@@ -607,13 +607,23 @@ def _build_live_sample(agent_id: str, slot: int, latency: float, m: Dict[str, An
     static spec rather than fabricating a live reading).
     """
     if agent_id == "net_01_slot_finality":
+        # Only claim a confirmed slot when the RPC call actually returned one --
+        # never present the hardcoded fallback slot as a live on-chain read.
+        if not m.get("slot_ok"):
+            return None
         epoch = m.get("epoch")
         pct = m.get("epoch_progress_pct")
         base = f"slot:finality | confirmed_slot:{slot} | commitment:confirmed"
         return base + (f" | epoch:{epoch} ({pct}%)" if epoch is not None else "")
     if agent_id == "net_03_rpc_latency_prober":
-        status = "healthy" if latency < 400 else ("elevated" if latency < 1000 else "degraded")
-        return f"rpc:probe | ping:{latency}ms | status:{status} | http:200"
+        # This agent's job is to honestly report reachability, so it stays
+        # LIVE either way -- but it must report what actually happened, not
+        # a hardcoded "healthy | http:200" when the call failed/was blocked.
+        if m.get("slot_ok"):
+            status = "healthy" if latency < 400 else ("elevated" if latency < 1000 else "degraded")
+            return f"rpc:probe | ping:{latency}ms | status:{status} | http:200"
+        err = m.get("rpc_error") or "unreachable"
+        return f"rpc:probe | ping:{latency}ms | status:unreachable | error:{err}"
     if agent_id == "net_06_mempool_congestion":
         tps = m.get("tps")
         return None if tps is None else f"mempool:load | live_tps:{tps} | src:getRecentPerformanceSamples"
