@@ -29,40 +29,50 @@ Antes de hacer push (verificación anti-fugas):
 ## 2. Hilo de X (borrador, EN)
 
 **1/**
-🍪 Building on Cookie Chain (SVM): CookieAgent Gateway & Sentinel — an autonomous-agent
-gateway + verifiable on-chain burns + a transparent, security-first vault.
+🍪 Building on @TheCookieChain (SVM): CookieAgent Gateway & Sentinel — an autonomous-agent gateway + verifiable burns + security-first vault.
 
-Live: https://cookie-agent-capp.onrender.com
-Code: https://github.com/koamg1/cookie-agent-capp
-Demo: <YOUR_VIDEO_URL>
-🧵
+Built for @SuperteamEarn! 🚀
+
+🌐 Live: https://cookie-agent-capp.onrender.com
+💻 Code: https://github.com/koamg1/cookie-agent-capp
+🧵👇
 
 **2/**
-Connect any of 9 SVM wallets (Nightly recommended) via Sign-In with Solana.
-Burn $COOKIE to the canonical incinerator and earn Baker Karma — every burn is
-reconciled straight from the RPC, so the leaderboard is verifiable, not vibes.
+2/ 🌉 Onboarding & Bridge:
+• Connect any of 9 SVM wallets (@nightly_app recommended)
+• Need $COOKIE on Cookie Chain? Bridge seamlessly from Solana/Base via Hyperlane directly inside our built-in Bridge Guide modal! 
+
+Sign-in cryptographically with SIWS. 🛡️
 
 **3/**
-18 `cookie-mcp` tools expose the chain to AI agents (Claude, LangChain, …):
-network stats, balances, burns, vault status, proof-of-reserves.
-One manifest, LLM-ready.
+3/ 🔥 Verifiable Burn Oven:
+Burn $COOKIE to the canonical SVM incinerator and earn Baker Karma!
+
+Every single burn is reconciled straight from the @TheCookieChain RPC (rpc.cookiescan.io). The leaderboard is verifiable on CookieScan, not vibes.
 
 **4/**
-The vault is where we went hard on safety 👇
-• Deposits are verified on-chain — shares mint only for what actually lands in the Cold Vault.
-• The treasury key never sits on the public server. Payouts go through an isolated,
-policy-enforcing signer (caps + two-phase: pay → confirm → burn shares).
+4/ 🤖 18 `cookie-mcp` tools expose the chain to AI agents (Claude, Codex, Antigravity):
+• Real-time SVM block telemetry & live TPS
+• Wallet balances & Baker Karma
+• Cold/Warm/Hot Proof-of-Reserves
+
+One standardized manifest, LLM-ready:
+https://cookie-agent-capp.onrender.com/docs
 
 **5/**
-And we refuse to fake numbers. No fake APY, no fake TVL, no invented arbitrage.
-COOK's live USD price is shown straight from its Solana market; the vault sits in transparent
-standby (there's no COOK/USDC market on Cookie Chain to trade against yet).
-Proof-of-Reserves reads real on-chain balances or says "unavailable".
+5/ 🛡️ Security & Radical Honesty:
+• Vault deposits verified on-chain
+• Signing keys isolated off-server
+• No fake APY, no fake TVL, no simulated arb. Real on-chain data straight from the SVM validator or honest standby until a 2nd DEX launches.
 
 **6/**
-Open source, MIT, 44/46 tests green + 2 environment-dependent skips (all 46 green with live RPC access), Docker one-liner, ~45MB RAM.
-Built for Cookie Chain. Feedback welcome 🍪
-<YOUR_GITHUB_URL>
+6/ 📦 Open Source, MIT License:
+• 44/46 tests green in pytest
+• Docker 1-liner (~45MB RAM)
+• Live on @TheCookieChain SVM!
+
+Give it a spin & feedback welcome! 🍪
+https://cookie-agent-capp.onrender.com
 
 ---
 
